@@ -21,4 +21,9 @@
 - [x] Detalle: campos del formulario, o requerimiento escrito con la interpretación de IA.
 - [x] Autorizar, rechazar o delegar solicitudes Enviadas; reglas validadas en el servidor.
 - [x] Delegar con departamento y encargado sugeridos por IA (o por reglas si no hay IA), editables.
-- [ ] Bandeja del departamento para que el encargado autorice o rechace lo delegado.
+- [x] Bandeja del departamento para que el encargado autorice o rechace lo delegado.
+
+# Revisión del departamento
+- [x] Vista con las solicitudes delegadas al encargado elegido (departamento y encargado en la URL).
+- [x] Autorizar o rechazar solo lo que está En revisión y fue delegado a ese encargado; reglas validadas en el servidor.
+- [ ] Reemplazar el selector "Actuar como" por el usuario con sesión iniciada.

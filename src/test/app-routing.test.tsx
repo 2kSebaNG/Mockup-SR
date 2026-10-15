@@ -26,4 +26,10 @@ describe("App routing", () => {
 
     expect(router.matchRoutes("/gestionar-solicitudes").at(-1)?.routeId).toBe("/gestionar-solicitudes");
   });
+
+  it("matches the department review page", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+
+    expect(router.matchRoutes("/revision-departamento").at(-1)?.routeId).toBe("/revision-departamento");
+  });
 });

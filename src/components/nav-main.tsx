@@ -4,7 +4,7 @@ import { ChevronRight, type LucideIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from "@/components/ui/sidebar";
 
-type NavLink = { title: string; to: "/" | "/mis-solicitudes" | "/gestionar-solicitudes" };
+type NavLink = { title: string; to: "/" | "/mis-solicitudes" | "/gestionar-solicitudes" | "/revision-departamento" };
 export type NavItem = { title: string; icon: LucideIcon } & ({ to: NavLink["to"]; items?: never } | { to?: never; items: NavLink[] });
 
 export function NavMain({ items }: { items: NavItem[] }) {

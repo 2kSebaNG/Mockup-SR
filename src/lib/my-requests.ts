@@ -43,6 +43,13 @@ export function canCancel(status: RequestStatus) {
   return status !== "Anulado";
 }
 
+const statusWords: Record<RequestStatus, string> = { "Enviada": "enviada", "En revisión": "en revisión", "Autorizado": "autorizada", "Rechazado": "rechazada", "Anulado": "anulada" };
+
+/** The status as it reads after "la solicitud está …" (statuses are stored in masculine, as in the reference designs). */
+export function statusPhrase(status: RequestStatus) {
+  return statusWords[status];
+}
+
 /** The contract administrator authorizes, rejects or delegates only requests nobody has handled yet. */
 export function canDecide(status: RequestStatus) {
   return status === "Enviada";
@@ -116,6 +123,9 @@ export type RequestInput = z.infer<typeof requestInputSchema>;
 export const requestCodeSchema = z.object({ code: z.string().regex(/^REQ-\d{4,}$/) });
 export const requestUpdateSchema = requestCodeSchema.extend({ input: requestInputSchema });
 export const requestDecisionSchema = requestCodeSchema.extend({ decision: z.enum(["Autorizado", "Rechazado"]) });
+export const reviewerSchema = z.object({ department: z.string().max(80), assigneeName: z.string().max(120) })
+  .refine(value => findMember(value.department, value.assigneeName), "Elige un encargado del departamento seleccionado.");
+export const reviewerDecisionSchema = z.object({ reviewer: reviewerSchema, code: requestCodeSchema.shape.code, decision: z.enum(["Autorizado", "Rechazado"]) });
 export const requestDelegationSchema = requestCodeSchema.extend({ department: z.string().max(80), assigneeName: z.string().max(120) })
   .refine(value => findMember(value.department, value.assigneeName), "Elige un encargado del departamento seleccionado.");
 

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GestionarSolicitudesRouteImport } from './routes/gestionar-solicitudes'
 import { Route as MisSolicitudesRouteImport } from './routes/mis-solicitudes'
+import { Route as RevisionDepartamentoRouteImport } from './routes/revision-departamento'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,57 @@ const MisSolicitudesRoute = MisSolicitudesRouteImport.update({
   path: '/mis-solicitudes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RevisionDepartamentoRoute = RevisionDepartamentoRouteImport.update({
+  id: '/revision-departamento',
+  path: '/revision-departamento',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/gestionar-solicitudes': typeof GestionarSolicitudesRoute
   '/mis-solicitudes': typeof MisSolicitudesRoute
+  '/revision-departamento': typeof RevisionDepartamentoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/gestionar-solicitudes': typeof GestionarSolicitudesRoute
   '/mis-solicitudes': typeof MisSolicitudesRoute
+  '/revision-departamento': typeof RevisionDepartamentoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/gestionar-solicitudes': typeof GestionarSolicitudesRoute
   '/mis-solicitudes': typeof MisSolicitudesRoute
+  '/revision-departamento': typeof RevisionDepartamentoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/gestionar-solicitudes' | '/mis-solicitudes'
+  fullPaths:
+    | '/'
+    | '/gestionar-solicitudes'
+    | '/mis-solicitudes'
+    | '/revision-departamento'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/gestionar-solicitudes' | '/mis-solicitudes'
-  id: '__root__' | '/' | '/gestionar-solicitudes' | '/mis-solicitudes'
+  to:
+    | '/'
+    | '/gestionar-solicitudes'
+    | '/mis-solicitudes'
+    | '/revision-departamento'
+  id:
+    | '__root__'
+    | '/'
+    | '/gestionar-solicitudes'
+    | '/mis-solicitudes'
+    | '/revision-departamento'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   GestionarSolicitudesRoute: typeof GestionarSolicitudesRoute
   MisSolicitudesRoute: typeof MisSolicitudesRoute
+  RevisionDepartamentoRoute: typeof RevisionDepartamentoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +105,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MisSolicitudesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/revision-departamento': {
+      id: '/revision-departamento'
+      path: '/revision-departamento'
+      fullPath: '/revision-departamento'
+      preLoaderRoute: typeof RevisionDepartamentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +119,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   GestionarSolicitudesRoute: GestionarSolicitudesRoute,
   MisSolicitudesRoute: MisSolicitudesRoute,
+  RevisionDepartamentoRoute: RevisionDepartamentoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

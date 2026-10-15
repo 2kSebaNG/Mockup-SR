@@ -1,4 +1,4 @@
-import { canCancel, canDecide, canEdit, requestFromInput, type MyRequest, type RequestInput } from "./my-requests";
+import { canCancel, canDecide, canEdit, requestFromInput, statusPhrase, type MyRequest, type RequestInput } from "./my-requests";
 import { DEMO_USER, findMember, type Person } from "./organization";
 import { getRequestStore, type RequestStore } from "./requests-store.server";
 
@@ -21,7 +21,7 @@ export function createRequesterService(store: RequestStore, user: Person) {
     async update(code: string, input: RequestInput): Promise<RequestResult> {
       const current = await own(code);
       if (!current) return notFound();
-      if (!canEdit(current.status)) return failure(`La solicitud está ${current.status.toLowerCase()} y ya no se puede editar.`);
+      if (!canEdit(current.status)) return failure(`La solicitud está ${statusPhrase(current.status)} y ya no se puede editar.`);
       return saved(await store.update(code, requestFromInput(input)));
     },
     async cancel(code: string): Promise<RequestResult> {
@@ -38,7 +38,7 @@ export function createAdminService(store: RequestStore) {
   const pending = async (code: string) => {
     const current = await store.get(code);
     if (!current) return notFound();
-    if (!canDecide(current.status)) return failure(`La solicitud ya está ${current.status.toLowerCase()}; solo se gestionan solicitudes enviadas.`);
+    if (!canDecide(current.status)) return failure(`La solicitud ya está ${statusPhrase(current.status)}; solo se gestionan solicitudes enviadas.`);
     return { request: current, error: null } as RequestResult;
   };
   return {
@@ -55,6 +55,27 @@ export function createAdminService(store: RequestStore) {
       return check.error !== null ? check : saved(await store.update(code, { status: "En revisión", department, assignee }));
     },
   };
+}
+
+/** What a department reviewer can do: see the requests delegated to them and decide the ones still in review. */
+export function createReviewerService(store: RequestStore, reviewer: Person) {
+  const assigned = (request: MyRequest | null) => request?.assignee?.email === reviewer.email ? request : null;
+  return {
+    list: async () => (await store.list()).filter(request => assigned(request)),
+    async decide(code: string, decision: "Autorizado" | "Rechazado"): Promise<RequestResult> {
+      const current = assigned(await store.get(code));
+      if (!current) return notFound();
+      if (current.status !== "En revisión") return failure(`La solicitud ya está ${statusPhrase(current.status)}; solo se deciden solicitudes en revisión.`);
+      return saved(await store.update(code, { status: decision }));
+    },
+  };
+}
+
+export async function reviewerService(department: string, reviewerName: string) {
+  // No sign-in yet: the page says which reviewer it acts as, and it must be a real member of that department.
+  const reviewer = findMember(department, reviewerName);
+  if (!reviewer) throw new Error("Encargado desconocido para ese departamento.");
+  return createReviewerService(await getRequestStore(), reviewer);
 }
 
 export async function requesterService() {

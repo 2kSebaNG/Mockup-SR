@@ -7,9 +7,9 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { RequestContent } from "@/components/requests/request-content";
 import { DueWarning, PersonLink, StatusBadge, formatNumericDate } from "@/components/requests/request-list";
-import { canDecide, type MyRequest } from "@/lib/my-requests";
-import { departments, findDepartment, type Person } from "@/lib/organization";
-import { decideRequest, delegateRequest, suggestRequestDelegation } from "@/lib/requests.functions";
+import { canDecide, statusPhrase, type MyRequest } from "@/lib/my-requests";
+import { CONTRACT_ADMIN, departments, findDepartment, type Person } from "@/lib/organization";
+import { decideAsReviewer, decideRequest, delegateRequest, suggestRequestDelegation } from "@/lib/requests.functions";
 
 const requestedBy = (request: MyRequest) => `Solicitado por: ${request.requester.name} el ${formatNumericDate(request.createdAt)}`;
 
@@ -92,9 +92,13 @@ function DelegateDialog({ request, onClose, onDelegated }: { request: MyRequest 
   );
 }
 
-/** Request detail for the contract administrator, with the delegate / authorize / reject decisions. */
-export function AdminRequestDetail({ request, today, onClose, onChanged, onChat }: { request: MyRequest | null; today: string; onClose: () => void; onChanged: () => Promise<void>; onChat: (person: Person, relation: string) => void }) {
-  const decide = useServerFn(decideRequest);
+/**
+ * Request detail with the decisions. Without `reviewer` it acts as the contract administrator (delegate / authorize /
+ * reject pending requests); with `reviewer` it acts as that department reviewer (authorize / reject what is in review).
+ */
+export function AdminRequestDetail({ request, today, onClose, onChanged, onChat, reviewer }: { request: MyRequest | null; today: string; onClose: () => void; onChanged: () => Promise<void>; onChat: (person: Person, relation: string) => void; reviewer?: { department: string; assigneeName: string } }) {
+  const decideAsAdmin = useServerFn(decideRequest);
+  const decideAsDepartment = useServerFn(decideAsReviewer);
   const [busy, setBusy] = useState<"Autorizado" | "Rechazado" | null>(null);
   const [error, setError] = useState("");
   const [confirmReject, setConfirmReject] = useState(false);
@@ -105,14 +109,14 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat 
     if (!request) return;
     setBusy(decision); setError("");
     try {
-      const response = await decide({ data: { code: request.code, decision } });
+      const response = reviewer ? await decideAsDepartment({ data: { reviewer, code: request.code, decision } }) : await decideAsAdmin({ data: { code: request.code, decision } });
       if (!response.request) { setError(response.error); return; }
       setConfirmReject(false);
       await onChanged();
       onClose();
     } catch { setError("No se pudo guardar la decisión. Inténtalo de nuevo."); } finally { setBusy(null); }
   };
-  const pending = request ? canDecide(request.status) : false;
+  const pending = !request ? false : reviewer ? request.status === "En revisión" && request.assignee?.name === reviewer.assigneeName : canDecide(request.status);
 
   return <>
     <Dialog open={request !== null && delegating === null} onOpenChange={open => { if (!open && !busy) onClose(); }}>
@@ -123,14 +127,16 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat 
             <DialogDescription>Solicitado por: <PersonLink person={request.requester} onOpen={() => onChat(request.requester, `Solicitante de ${request.code}`)} /> el {formatNumericDate(request.createdAt)}</DialogDescription>
           </DialogHeader>
           <RequestContent request={request} />
-          {request.department && request.assignee && <p className="admin-assignment"><Building2 aria-hidden="true" />Delegada a <strong>{request.department}</strong> · revisa <PersonLink person={request.assignee} onOpen={() => onChat(request.assignee!, `Revisa ${request.code}`)} /></p>}
+          {request.department && request.assignee && (reviewer
+            ? <p className="admin-assignment"><Building2 aria-hidden="true" />Delegada a <strong>{request.department}</strong> por <PersonLink person={CONTRACT_ADMIN} onOpen={() => onChat(CONTRACT_ADMIN, `Delegó ${request.code}`)} /><span className="detail-role">{CONTRACT_ADMIN.role}</span></p>
+            : <p className="admin-assignment"><Building2 aria-hidden="true" />Delegada a <strong>{request.department}</strong> · revisa <PersonLink person={request.assignee} onOpen={() => onChat(request.assignee!, `Revisa ${request.code}`)} /></p>)}
           {error && <p role="alert" className="requirement-error">{error}</p>}
           <DialogFooter className="admin-detail-footer">
             {pending ? <>
-              <Button type="button" className="decision-delegate" disabled={busy !== null} onClick={() => setDelegating(request)}><Building2 />Delegar a un departamento</Button>
+              {!reviewer && <Button type="button" className="decision-delegate" disabled={busy !== null} onClick={() => setDelegating(request)}><Building2 />Delegar a un departamento</Button>}
               <Button type="button" className="decision-authorize" disabled={busy !== null} onClick={() => apply("Autorizado")}>{busy === "Autorizado" ? <Loader2 className="animate-spin" /> : <CheckSquare />}Autorizar</Button>
               <Button type="button" className="decision-reject" disabled={busy !== null} onClick={() => setConfirmReject(true)}><Trash2 />Rechazar</Button>
-            </> : <p className="admin-decided">{request.status === "En revisión" ? "En revisión por el departamento; su encargado decidirá si se autoriza o rechaza." : `Esta solicitud ya está ${request.status.toLowerCase()}.`}</p>}
+            </> : <p className="admin-decided">{request.status === "En revisión" && !reviewer ? "En revisión por el departamento; su encargado decidirá si se autoriza o rechaza." : `Esta solicitud ya está ${statusPhrase(request.status)}.`}</p>}
           </DialogFooter>
         </>}
       </DialogContent>

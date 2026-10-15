@@ -15,6 +15,7 @@ const navigation: NavItem[] = [
     items: [
       { title: "Mis solicitudes", to: "/mis-solicitudes" },
       { title: "Gestionar solicitudes", to: "/gestionar-solicitudes" },
+      { title: "Revisión del departamento", to: "/revision-departamento" },
     ],
   },
 ];

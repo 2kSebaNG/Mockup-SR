@@ -2,10 +2,10 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { requestFromInput, requestInputSchema, responsibleFor, type RequestInput } from "@/lib/my-requests";
-import { CONTRACT_ADMIN, delegationByRules, requesters, type Person } from "@/lib/organization";
+import { requestFromInput, requestInputSchema, responsibleFor, reviewerSchema, type RequestInput } from "@/lib/my-requests";
+import { CONTRACT_ADMIN, delegationByRules, findMember, requesters, type Person } from "@/lib/organization";
 import { fileStore } from "@/lib/requests-store.server";
-import { createAdminService, createRequesterService } from "@/lib/requests.server";
+import { createAdminService, createRequesterService, createReviewerService } from "@/lib/requests.server";
 
 const input: RequestInput = { category: "Personas", quantity: 2, dueDate: "2026-11-20", description: "Soldadores para turno de noche.", fields: [{ label: "Especialidad", value: "Soldador" }, { label: "Unidad", value: "Días" }], aiAssisted: false };
 const ana: Person = { name: "Ana Soto", role: "Solicitante", email: "ana@aecon.cl" };
@@ -96,7 +96,48 @@ describe("Contract administrator service", () => {
     const service = createRequesterService(store(), ana);
     const { request } = await service.create(input);
     await service.cancel(request!.code);
-    expect((await createAdminService(store()).delegate(request!.code, "Bodega", "Jorge Muñoz")).error).toMatch(/anulado/);
+    expect((await createAdminService(store()).delegate(request!.code, "Bodega", "Jorge Muñoz")).error).toMatch(/ya está anulada/);
+  });
+});
+
+describe("Department reviewer service", () => {
+  const paula = findMember("Recursos Humanos", "Paula Araya")!;
+  const maridel = findMember("Recursos Humanos", "Maridel Rojas")!;
+  const delegated = async (to = "Paula Araya") => {
+    const { request } = await createRequesterService(store(), ana).create(input);
+    await createAdminService(store()).delegate(request!.code, "Recursos Humanos", to);
+    return request!.code;
+  };
+
+  it("lists only the requests delegated to that reviewer", async () => {
+    const code = await delegated();
+    await createRequesterService(store(), ana).create(input);
+    expect((await createReviewerService(store(), paula).list()).map(r => r.code)).toEqual([code]);
+    expect(await createReviewerService(store(), maridel).list()).toEqual([]);
+  });
+  it("authorizes or rejects a request in review once, and the requester sees the decision", async () => {
+    const code = await delegated();
+    const reviewer = createReviewerService(store(), paula);
+    expect((await reviewer.decide(code, "Rechazado")).request).toMatchObject({ status: "Rechazado", assignee: { name: "Paula Araya" } });
+    expect((await reviewer.decide(code, "Autorizado")).error).toBe("La solicitud ya está rechazada; solo se deciden solicitudes en revisión.");
+    const mine = (await createRequesterService(store(), ana).list())[0]!;
+    expect(mine.status).toBe("Rechazado");
+    expect(responsibleFor(mine).name).toBe("Paula Araya");
+  });
+  it("does not let another reviewer decide, nor decide requests that were not delegated", async () => {
+    const code = await delegated();
+    expect((await createReviewerService(store(), maridel).decide(code, "Autorizado")).error).toMatch(/No encontramos/);
+    const { request } = await createRequesterService(store(), ana).create(input);
+    expect((await createReviewerService(store(), paula).decide(request!.code, "Autorizado")).error).toMatch(/No encontramos/);
+  });
+  it("does not decide a request the requester cancelled while in review", async () => {
+    const code = await delegated();
+    await createRequesterService(store(), ana).cancel(code);
+    expect((await createReviewerService(store(), paula).decide(code, "Autorizado")).error).toMatch(/ya está anulada/);
+  });
+  it("refuses a reviewer that is not part of the department", () => {
+    expect(reviewerSchema.safeParse({ department: "Bodega", assigneeName: "Paula Araya" }).success).toBe(false);
+    expect(reviewerSchema.safeParse({ department: "Recursos Humanos", assigneeName: "Paula Araya" }).success).toBe(true);
   });
 });
 
