@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Trash2, Wand2, Loader2, Check, FilePlus2 } from "lucide-react";
+import { Plus, Trash2, Wand2, Loader2, Check, FilePlus2, Save, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { categories, fieldPool, fieldsForCategory, aiInputSchema, type RequirementField } from "@/lib/requirements";
 import { describeRequirement } from "@/lib/requirements-ai.functions";
+import { requestInputSchema, type MyRequest } from "@/lib/my-requests";
+import { createMyRequest, updateMyRequest } from "@/lib/requests.functions";
 
 function FieldSelect({ field, disabled, onChange, onRemove }: { field: RequirementField; disabled: boolean; onChange: (field: RequirementField) => void; onRemove: () => void }) {
   const [editing, setEditing] = useState(false);
@@ -25,20 +27,46 @@ function FieldSelect({ field, disabled, onChange, onRemove }: { field: Requireme
   </div>;
 }
 
-export function RequirementModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+function fieldsFromRequest(request: MyRequest): RequirementField[] {
+  return request.fields.map((field, index) => {
+    const pooled = fieldPool.find(f => f.label.toLowerCase() === field.label.toLowerCase());
+    return { id: pooled?.id ?? `edit-${index}`, label: field.label, value: field.value, options: [...new Set([...(pooled?.options ?? []), field.value])] };
+  });
+}
+
+export function RequirementModal({ open, onOpenChange, request = null, onSaved }: { open: boolean; onOpenChange: (open: boolean) => void; request?: MyRequest | null; onSaved?: (request: MyRequest) => void }) {
   const [type, setType] = useState("");
   const [customType, setCustomType] = useState("");
   const [fields, setFields] = useState<RequirementField[]>([]);
   const [quantity, setQuantity] = useState("");
   const [date, setDate] = useState("");
   const [description, setDescription] = useState("");
+  const loaded = useRef<string | null>(null);
+  const load = (source: MyRequest | null) => {
+    loaded.current = source?.code ?? null;
+    const known = source ? categories.includes(source.category) : true;
+    setType(source ? (known ? source.category : "Personalizada") : "");
+    setCustomType(source && !known ? source.category : "");
+    setFields(source ? fieldsFromRequest(source) : []);
+    setQuantity(source ? String(source.quantity) : "");
+    setDate(source?.dueDate ?? "");
+    setDescription(source?.description ?? "");
+    setError(""); setNotice("");
+  };
+  useEffect(() => {
+    // Load the request being edited; going back to a new request starts from a blank form.
+    if (open && (request?.code ?? null) !== loaded.current) load(request);
+  }, [open, request]);
   const [fieldName, setFieldName] = useState("");
   const [fieldOptions, setFieldOptions] = useState("");
   const [addingField, setAddingField] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [saving, setSaving] = useState(false);
   const analyze = useServerFn(describeRequirement);
+  const createRequest = useServerFn(createMyRequest);
+  const updateRequest = useServerFn(updateMyRequest);
   const changeType = (value: string) => { setType(value); setFields(fieldsForCategory(value)); setNotice(""); setError(""); };
   const addPoolField = (id: string) => {
     const field = fieldPool.find(f => f.id === id);
@@ -73,8 +101,21 @@ export function RequirementModal({ open, onOpenChange }: { open: boolean; onOpen
       setNotice("Propuesta completada. Puedes ajustar cualquier dato.");
     } catch { setError("No se pudo conectar con la IA. Tu descripción se conserva."); } finally { setBusy(false); }
   };
+  const save = async () => {
+    setError(""); setNotice("");
+    const parsed = requestInputSchema.safeParse({ category: type === "Personalizada" ? customType : type, quantity: quantity === "" ? undefined : Number(quantity), dueDate: date, description, fields: fields.map(f => ({ label: f.label, value: f.value })) });
+    if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Revisa los datos de la solicitud."); return; }
+    setBusy(true); setSaving(true);
+    try {
+      const response = request ? await updateRequest({ data: { code: request.code, input: parsed.data } }) : await createRequest({ data: parsed.data });
+      if (!response.request) { setError(response.error); return; }
+      if (!request) load(null);
+      onSaved?.(response.request);
+      onOpenChange(false);
+    } catch { setError("No se pudo guardar la solicitud. Tus datos se conservan; inténtalo de nuevo."); } finally { setBusy(false); setSaving(false); }
+  };
   return <Dialog open={open} onOpenChange={value => { if (!busy) onOpenChange(value); }}><DialogContent className="requirement-modal" onInteractOutside={event => event.preventDefault()}>
-    <DialogHeader className="requirement-modal-header"><div className="modal-eyebrow"><FilePlus2 size={15} />SOLICITUD DE REQUERIMIENTOS</div><DialogTitle className="requirement-modal-title">Nueva solicitud</DialogTitle><DialogDescription>Detalle del requerimiento</DialogDescription></DialogHeader>
+    <DialogHeader className="requirement-modal-header"><div className="modal-eyebrow"><FilePlus2 size={15} />SOLICITUD DE REQUERIMIENTOS</div><DialogTitle className="requirement-modal-title">{request ? `Editar solicitud ${request.code}` : "Nueva solicitud"}</DialogTitle><DialogDescription>Detalle del requerimiento</DialogDescription></DialogHeader>
     <div className="requirement-modal-body">
       <div className="requirement-grid">
         <div className="requirement-field"><label id="requirement-type-label">Tipo de requerimiento</label><Select value={type} onValueChange={changeType} disabled={busy}><SelectTrigger aria-labelledby="requirement-type-label" className="requirement-control"><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger><SelectContent>{[...categories,"Personalizada"].map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent></Select></div>
@@ -89,6 +130,6 @@ export function RequirementModal({ open, onOpenChange }: { open: boolean; onOpen
       <section className="description-section"><div className="description-heading"><label htmlFor="request-description">¿No es lo que buscabas? Escríbelo</label><span className="ai-indicator"><Wand2 size={14} />Asistencia IA</span></div><Textarea id="request-description" maxLength={4000} value={description} disabled={busy} onChange={e => { setDescription(e.target.value); setNotice(""); }} placeholder="Ej. Necesito 50 litros de jugo de naranja marca Soprole para el 30 de octubre." className="requirement-description" /><div className="description-actions"><span>{description.length} / 4000</span><Button type="button" variant="outline" onClick={fillWithAi} disabled={busy || !description.trim()}>{busy ? <Loader2 className="animate-spin" /> : <Wand2 />}{busy ? "Analizando…" : "Completar con IA"}</Button></div></section>
       {error && <p role="alert" className="requirement-error">{error}</p>}{notice && <p role="status" className="requirement-notice"><Check size={16} />{notice}</p>}
     </div>
-    <footer className="requirement-modal-footer"><span>Requerimiento en preparación</span><Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cerrar</Button></footer>
+    <footer className="requirement-modal-footer"><span>{request ? `Autoriza ${request.authorizer.name}` : "Se enviará a la persona que autoriza según el tipo"}</span><div className="requirement-footer-actions"><Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cerrar</Button><Button type="button" disabled={busy} onClick={save}>{saving ? <Loader2 className="animate-spin" /> : request ? <Save /> : <Send />}{saving ? "Guardando…" : request ? "Guardar cambios" : "Enviar solicitud"}</Button></div></footer>
   </DialogContent></Dialog>;
 }

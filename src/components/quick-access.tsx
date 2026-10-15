@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link, useRouter } from "@tanstack/react-router";
 import { ClipboardList, FilePlus2, MessageSquare, Plus, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RequirementModal } from "@/components/requirement-modal";
@@ -7,6 +8,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLab
 export function QuickAccess() {
   const [open, setOpen] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
+  const router = useRouter();
   return (
     <div className="quick-access">
       <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
@@ -20,12 +22,12 @@ export function QuickAccess() {
           <DropdownMenuSeparator className="quick-access-divider" />
           <DropdownMenuItem className="quick-access-item" onSelect={() => setRequestOpen(true)}><FilePlus2 /><span>Nueva solicitud</span><ChevronRight className="ml-auto" /></DropdownMenuItem>
           <DropdownMenuSeparator className="quick-access-divider" />
-          <DropdownMenuItem className="quick-access-item"><ClipboardList /><span>Mis solicitudes</span><ChevronRight className="ml-auto" /></DropdownMenuItem>
+          <DropdownMenuItem className="quick-access-item" asChild><Link to="/mis-solicitudes"><ClipboardList /><span>Mis solicitudes</span><ChevronRight className="ml-auto" /></Link></DropdownMenuItem>
           <DropdownMenuSeparator className="quick-access-divider" />
           <DropdownMenuItem className="quick-access-item"><MessageSquare /><span>Chat Interno</span><ChevronRight className="ml-auto" /></DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <RequirementModal open={requestOpen} onOpenChange={setRequestOpen} />
+      <RequirementModal open={requestOpen} onOpenChange={setRequestOpen} onSaved={async () => { await router.invalidate(); await router.navigate({ to: "/mis-solicitudes" }); }} />
     </div>
   );
 }
