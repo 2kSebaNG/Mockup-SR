@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Grid2X2, LogOut, Folder, Pause, Play, SkipForward } from "lucide-react";
+import { Folder, Pause, Play, SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QuickAccess } from "@/components/quick-access";
+import { SiteHeader } from "@/components/site-header";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -23,13 +24,7 @@ function Index() {
   const [slide, setSlide] = useState(3);
   return (
     <>
-      <header className="site-header">
-        <div className="header-inner">
-          <div className="brand"><span className="brand-mark">X</span><div><div className="brand-name">ECOSISTEMA X</div><div className="brand-caption">GESTIÓN CONECTADA</div></div></div>
-          <Button variant="charcoal"><Grid2X2 />Módulos</Button>
-          <div className="account"><span className="avatar">SN</span><span className="account-email">snunez@aecon.cl</span><Button variant="charcoal"><LogOut />Salir</Button></div>
-        </div>
-      </header>
+      <SiteHeader />
       <main className="welcome">
         <p className="eyebrow">BIENVENIDO, SNUNEZ</p>
         <h1 className="page-heading">Video de bienvenida</h1>
