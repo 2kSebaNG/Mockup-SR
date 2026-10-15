@@ -1,0 +1,94 @@
+import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { Plus, Trash2, Wand2, Loader2, Check, FilePlus2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { categories, fieldPool, fieldsForCategory, aiInputSchema, type RequirementField } from "@/lib/requirements";
+import { describeRequirement } from "@/lib/requirements-ai.functions";
+
+function FieldSelect({ field, disabled, onChange, onRemove }: { field: RequirementField; disabled: boolean; onChange: (field: RequirementField) => void; onRemove: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [option, setOption] = useState("");
+  const addOption = () => {
+    const value = option.trim();
+    if (!value || field.options.length >= 30) return;
+    onChange({ ...field, value, options: [...new Set([...field.options, value])] });
+    setOption(""); setEditing(false);
+  };
+  return <div className="requirement-field">
+    <div className="field-label-row"><label id={`label-${field.id}`}>{field.label}</label><Button type="button" variant="ghost" size="icon" disabled={disabled} onClick={onRemove} aria-label={`Quitar ${field.label}`} title={`Quitar ${field.label}`} className="field-small-button"><Trash2 /></Button></div>
+    <div className="field-control-row"><Select value={field.value} onValueChange={value => onChange({ ...field, value })} disabled={disabled}><SelectTrigger aria-labelledby={`label-${field.id}`} className="requirement-control"><SelectValue placeholder="Seleccionar" /></SelectTrigger><SelectContent>{field.options.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent></Select><Button type="button" variant="outline" size="icon" disabled={disabled} className="field-add-button" aria-label={`Añadir opción a ${field.label}`} title="Añadir opción" onClick={() => setEditing(!editing)}><Plus /></Button></div>
+    {editing && <div className="option-editor"><Input autoFocus aria-label={`Nueva opción de ${field.label}`} placeholder="Nueva opción" maxLength={100} value={option} onChange={e => setOption(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addOption(); } }} /><Button type="button" size="icon" onClick={addOption} disabled={!option.trim()} aria-label="Confirmar opción"><Check /></Button></div>}
+  </div>;
+}
+
+export function RequirementModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [type, setType] = useState("");
+  const [customType, setCustomType] = useState("");
+  const [fields, setFields] = useState<RequirementField[]>([]);
+  const [quantity, setQuantity] = useState("");
+  const [date, setDate] = useState("");
+  const [description, setDescription] = useState("");
+  const [fieldName, setFieldName] = useState("");
+  const [fieldOptions, setFieldOptions] = useState("");
+  const [addingField, setAddingField] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const analyze = useServerFn(describeRequirement);
+  const changeType = (value: string) => { setType(value); setFields(fieldsForCategory(value)); setNotice(""); setError(""); };
+  const addPoolField = (id: string) => {
+    const field = fieldPool.find(f => f.id === id);
+    if (field && !fields.some(f => f.label.toLowerCase() === field.label.toLowerCase()) && fields.length < 16) setFields([...fields, { ...field, options: [...field.options], value: "" }]);
+  };
+  const addCustomField = () => {
+    const label = fieldName.trim();
+    const options = [...new Set(fieldOptions.split(/[,\n]/).map(v => v.trim().slice(0, 100)).filter(Boolean))].slice(0,30);
+    if (!label || !options.length || fields.length >= 16) return;
+    if (fields.some(f => f.label.toLowerCase() === label.toLowerCase())) { setError("Ya existe un campo con ese nombre."); return; }
+    setFields([...fields, { id: crypto.randomUUID(), label, options, value: "" }]);
+    setFieldName(""); setFieldOptions(""); setAddingField(false); setError("");
+  };
+  const fillWithAi = async () => {
+    setError(""); setNotice("");
+    const parsed = aiInputSchema.safeParse({ description, category: type === "Personalizada" ? customType : type, fields });
+    if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Revisa la descripción."); return; }
+    setBusy(true);
+    try {
+      const response = await analyze({ data: parsed.data });
+      if (response.error || !response.result) { setError(response.error ?? "No se recibió una propuesta."); return; }
+      const result = response.result;
+      if (categories.includes(result.category)) { setType(result.category); } else { setType("Personalizada"); setCustomType(result.category); }
+      const generatedFields = result.fields.map((f, index) => {
+        const existing = fields.find(old => old.label.toLowerCase() === f.label.toLowerCase());
+        const pooled = fieldPool.find(old => old.label.toLowerCase() === f.label.toLowerCase());
+        return { ...f, id: existing?.id ?? pooled?.id ?? `ai-${index}-${crypto.randomUUID()}`, options: [...new Set([...(existing?.options ?? []), ...f.options])].slice(0, 30), value: f.value || existing?.value || "" };
+      });
+      setFields([...generatedFields, ...fields.filter(f => !generatedFields.some(g => g.label.toLowerCase() === f.label.toLowerCase()))].slice(0,16));
+      if (result.quantity !== null) setQuantity(String(result.quantity));
+      if (result.requiredDate) setDate(result.requiredDate);
+      setNotice("Propuesta completada. Puedes ajustar cualquier dato.");
+    } catch { setError("No se pudo conectar con la IA. Tu descripción se conserva."); } finally { setBusy(false); }
+  };
+  return <Dialog open={open} onOpenChange={value => { if (!busy) onOpenChange(value); }}><DialogContent className="requirement-modal" onInteractOutside={event => event.preventDefault()}>
+    <DialogHeader className="requirement-modal-header"><div className="modal-eyebrow"><FilePlus2 size={15} />SOLICITUD DE REQUERIMIENTOS</div><DialogTitle className="requirement-modal-title">Nueva solicitud</DialogTitle><DialogDescription>Detalle del requerimiento</DialogDescription></DialogHeader>
+    <div className="requirement-modal-body">
+      <div className="requirement-grid">
+        <div className="requirement-field"><label id="requirement-type-label">Tipo de requerimiento</label><Select value={type} onValueChange={changeType} disabled={busy}><SelectTrigger aria-labelledby="requirement-type-label" className="requirement-control"><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger><SelectContent>{[...categories,"Personalizada"].map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent></Select></div>
+        <div className="requirement-field"><label htmlFor="request-quantity">Cantidad</label><Input id="request-quantity" type="number" min="0.01" max="1000000" step="any" placeholder="Ej. 10" value={quantity} disabled={busy} onChange={e => setQuantity(e.target.value)} className="requirement-control" /></div>
+        <div className="requirement-field"><label htmlFor="request-date">Fecha requerida</label><Input id="request-date" type="date" value={date} disabled={busy} onChange={e => setDate(e.target.value)} className="requirement-control" /></div>
+        {type === "Personalizada" && <div className="requirement-field custom-type-field"><label htmlFor="custom-type">Nombre del tipo</label><Input id="custom-type" maxLength={80} placeholder="Ej. Bebestible" value={customType} disabled={busy} onChange={e => setCustomType(e.target.value)} className="requirement-control" /></div>}
+        {fields.map(field => <FieldSelect key={field.id} field={field} disabled={busy} onChange={updated => setFields(fields.map(f => f.id === field.id ? updated : f))} onRemove={() => setFields(fields.filter(f => f.id !== field.id))} />)}
+      </div>
+      {type && <section className="field-pool"><div className="pool-heading"><h3>Campos del requerimiento</h3><span>{fields.length} / 16</span></div><div className="pool-options">{fieldPool.map(field => <Button type="button" key={field.id} variant={fields.some(f => f.id === field.id) ? "secondary" : "outline"} size="sm" disabled={busy || fields.some(f => f.id === field.id) || fields.length >= 16} onClick={() => addPoolField(field.id)}>{fields.some(f => f.id === field.id) ? <Check /> : <Plus />}{field.label}</Button>)}<Button type="button" variant="outline" size="sm" disabled={busy || fields.length >= 16} onClick={() => setAddingField(!addingField)}><Plus />Campo personalizado</Button></div>
+      {addingField && <div className="custom-field-editor"><div className="requirement-field"><label htmlFor="field-name">Nombre del campo</label><Input id="field-name" placeholder="Ej. Tipo de bebestible" maxLength={80} value={fieldName} onChange={e => setFieldName(e.target.value)} /></div><div className="requirement-field"><label htmlFor="field-options">Opciones, separadas por coma</label><Input id="field-options" placeholder="Jugo, Agua, Gaseosa" maxLength={3000} value={fieldOptions} onChange={e => setFieldOptions(e.target.value)} /></div><Button type="button" onClick={addCustomField} disabled={!fieldName.trim() || !fieldOptions.trim()}><Plus />Añadir campo</Button></div>}
+      </section>}
+      <section className="description-section"><div className="description-heading"><label htmlFor="request-description">¿No es lo que buscabas? Escríbelo</label><span className="ai-indicator"><Wand2 size={14} />Asistencia IA</span></div><Textarea id="request-description" maxLength={4000} value={description} disabled={busy} onChange={e => { setDescription(e.target.value); setNotice(""); }} placeholder="Ej. Necesito 50 litros de jugo de naranja marca Soprole para el 30 de octubre." className="requirement-description" /><div className="description-actions"><span>{description.length} / 4000</span><Button type="button" variant="outline" onClick={fillWithAi} disabled={busy || !description.trim()}>{busy ? <Loader2 className="animate-spin" /> : <Wand2 />}{busy ? "Analizando…" : "Completar con IA"}</Button></div></section>
+      {error && <p role="alert" className="requirement-error">{error}</p>}{notice && <p role="status" className="requirement-notice"><Check size={16} />{notice}</p>}
+    </div>
+    <footer className="requirement-modal-footer"><span>Requerimiento en preparación</span><Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cerrar</Button></footer>
+  </DialogContent></Dialog>;
+}
