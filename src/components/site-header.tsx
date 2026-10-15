@@ -1,14 +1,31 @@
-import { Link } from "@tanstack/react-router";
-import { Grid2X2, LogOut } from "lucide-react";
+import { Fragment } from "react";
+import { Grid2X2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 
-export function SiteHeader() {
+export function SiteHeader({ trail }: { trail: string[] }) {
   return (
     <header className="site-header">
       <div className="header-inner">
-        <Link to="/" className="brand"><span className="brand-mark">X</span><div><div className="brand-name">ECOSISTEMA X</div><div className="brand-caption">GESTIÓN CONECTADA</div></div></Link>
+        <div className="header-trail">
+          <SidebarTrigger className="header-sidebar-trigger" />
+          <Separator orientation="vertical" className="header-divider" />
+          <Breadcrumb>
+            <BreadcrumbList className="header-breadcrumb">
+              {trail.map((step, index) => index < trail.length - 1 ? (
+                <Fragment key={step}>
+                  <BreadcrumbItem className="header-crumb-parent">{step}</BreadcrumbItem>
+                  <BreadcrumbSeparator className="header-crumb-parent" />
+                </Fragment>
+              ) : (
+                <BreadcrumbItem key={step}><BreadcrumbPage className="header-crumb-current">{step}</BreadcrumbPage></BreadcrumbItem>
+              ))}
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
         <Button variant="charcoal"><Grid2X2 />Módulos</Button>
-        <div className="account"><span className="avatar">SN</span><span className="account-email">snunez@aecon.cl</span><Button variant="charcoal"><LogOut />Salir</Button></div>
       </div>
     </header>
   );

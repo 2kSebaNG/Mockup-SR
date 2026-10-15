@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canCancel, canEdit, countByStatus, dueState, emptyFilters, filterRequests, paginate, sampleRequests, sortByDueDate } from "@/lib/my-requests";
+import { canCancel, canDecide, canEdit, countByStatus, dueState, emptyFilters, filterRequests, paginate, sampleRequests, seedRequests, sortByDueDate } from "@/lib/my-requests";
 
 const today = "2026-10-15";
 const requests = sampleRequests(today);
@@ -19,6 +19,15 @@ describe("My requests", () => {
     expect(dueState({ status: "Enviada", dueDate: "2026-10-19" }, today)).toBeNull();
     expect(dueState({ status: "Enviada", dueDate: "2026-10-14" }, today)).toBe("overdue");
     expect(dueState({ status: "Autorizado", dueDate: "2026-10-16" }, today)).toBeNull();
+  });
+  it("seeds other requesters and keeps delegated requests assigned", () => {
+    const seeded = seedRequests(today);
+    expect(new Set(seeded.map(r => r.requester.email)).size).toBeGreaterThan(1);
+    expect(new Set(seeded.map(r => r.code)).size).toBe(seeded.length);
+    expect(seeded.filter(r => r.status === "En revisión").every(r => r.department && r.assignee)).toBe(true);
+    expect(seeded.filter(r => r.status === "Enviada").every(r => !r.department && !r.assignee)).toBe(true);
+    expect(canDecide("Enviada")).toBe(true);
+    expect(canDecide("En revisión")).toBe(false);
   });
   it("matches the reference summary counts", () => {
     const counts = countByStatus(requests);

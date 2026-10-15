@@ -2,8 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Folder, Pause, Play, SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { QuickAccess } from "@/components/quick-access";
-import { SiteHeader } from "@/components/site-header";
+import { AppShell } from "@/components/app-shell";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -23,9 +22,8 @@ function Index() {
   const [playing, setPlaying] = useState(true);
   const [slide, setSlide] = useState(3);
   return (
-    <>
-      <SiteHeader />
-      <main className="welcome">
+    <AppShell trail={["Inicio"]}>
+      <div className="welcome">
         <p className="eyebrow">BIENVENIDO, SNUNEZ</p>
         <h1 className="page-heading">Video de bienvenida</h1>
         <p className="page-description">Conoce cómo opera la plataforma y su objetivo: conectar a la empresa a través del Ecosistema X.</p>
@@ -45,8 +43,7 @@ function Index() {
           </div>
         </section>
         <section className="next-section"><p className="eyebrow">CONSULTA EJECUTIVA</p><h2>La información, conectada.</h2><p>Un mismo ecosistema para todas las áreas de la empresa.</p></section>
-      </main>
-      <QuickAccess />
-    </>
+      </div>
+    </AppShell>
   );
 }

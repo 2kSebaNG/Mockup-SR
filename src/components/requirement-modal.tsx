@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { categories, fieldPool, fieldsForCategory, aiInputSchema, type RequirementField } from "@/lib/requirements";
 import { describeRequirement } from "@/lib/requirements-ai.functions";
-import { requestInputSchema, type MyRequest } from "@/lib/my-requests";
+import { requestInputSchema, responsibleFor, type MyRequest } from "@/lib/my-requests";
 import { createMyRequest, updateMyRequest } from "@/lib/requests.functions";
 
 function FieldSelect({ field, disabled, onChange, onRemove }: { field: RequirementField; disabled: boolean; onChange: (field: RequirementField) => void; onRemove: () => void }) {
@@ -41,6 +41,7 @@ export function RequirementModal({ open, onOpenChange, request = null, onSaved }
   const [quantity, setQuantity] = useState("");
   const [date, setDate] = useState("");
   const [description, setDescription] = useState("");
+  const [aiAssisted, setAiAssisted] = useState(false);
   const loaded = useRef<string | null>(null);
   const load = (source: MyRequest | null) => {
     loaded.current = source?.code ?? null;
@@ -51,6 +52,7 @@ export function RequirementModal({ open, onOpenChange, request = null, onSaved }
     setQuantity(source ? String(source.quantity) : "");
     setDate(source?.dueDate ?? "");
     setDescription(source?.description ?? "");
+    setAiAssisted(source?.aiAssisted ?? false);
     setError(""); setNotice("");
   };
   useEffect(() => {
@@ -98,12 +100,13 @@ export function RequirementModal({ open, onOpenChange, request = null, onSaved }
       setFields([...generatedFields, ...fields.filter(f => !generatedFields.some(g => g.label.toLowerCase() === f.label.toLowerCase()))].slice(0,16));
       if (result.quantity !== null) setQuantity(String(result.quantity));
       if (result.requiredDate) setDate(result.requiredDate);
+      setAiAssisted(true);
       setNotice("Propuesta completada. Puedes ajustar cualquier dato.");
     } catch { setError("No se pudo conectar con la IA. Tu descripción se conserva."); } finally { setBusy(false); }
   };
   const save = async () => {
     setError(""); setNotice("");
-    const parsed = requestInputSchema.safeParse({ category: type === "Personalizada" ? customType : type, quantity: quantity === "" ? undefined : Number(quantity), dueDate: date, description, fields: fields.map(f => ({ label: f.label, value: f.value })) });
+    const parsed = requestInputSchema.safeParse({ category: type === "Personalizada" ? customType : type, quantity: quantity === "" ? undefined : Number(quantity), dueDate: date, description, fields: fields.map(f => ({ label: f.label, value: f.value })), aiAssisted });
     if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Revisa los datos de la solicitud."); return; }
     setBusy(true); setSaving(true);
     try {
@@ -130,6 +133,6 @@ export function RequirementModal({ open, onOpenChange, request = null, onSaved }
       <section className="description-section"><div className="description-heading"><label htmlFor="request-description">¿No es lo que buscabas? Escríbelo</label><span className="ai-indicator"><Wand2 size={14} />Asistencia IA</span></div><Textarea id="request-description" maxLength={4000} value={description} disabled={busy} onChange={e => { setDescription(e.target.value); setNotice(""); }} placeholder="Ej. Necesito 50 litros de jugo de naranja marca Soprole para el 30 de octubre." className="requirement-description" /><div className="description-actions"><span>{description.length} / 4000</span><Button type="button" variant="outline" onClick={fillWithAi} disabled={busy || !description.trim()}>{busy ? <Loader2 className="animate-spin" /> : <Wand2 />}{busy ? "Analizando…" : "Completar con IA"}</Button></div></section>
       {error && <p role="alert" className="requirement-error">{error}</p>}{notice && <p role="status" className="requirement-notice"><Check size={16} />{notice}</p>}
     </div>
-    <footer className="requirement-modal-footer"><span>{request ? `Autoriza ${request.authorizer.name}` : "Se enviará a la persona que autoriza según el tipo"}</span><div className="requirement-footer-actions"><Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cerrar</Button><Button type="button" disabled={busy} onClick={save}>{saving ? <Loader2 className="animate-spin" /> : request ? <Save /> : <Send />}{saving ? "Guardando…" : request ? "Guardar cambios" : "Enviar solicitud"}</Button></div></footer>
+    <footer className="requirement-modal-footer"><span>{request ? `Responsable: ${responsibleFor(request).name}` : "Se enviará al Administrador de Contrato para su revisión"}</span><div className="requirement-footer-actions"><Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cerrar</Button><Button type="button" disabled={busy} onClick={save}>{saving ? <Loader2 className="animate-spin" /> : request ? <Save /> : <Send />}{saving ? "Guardando…" : request ? "Guardar cambios" : "Enviar solicitud"}</Button></div></footer>
   </DialogContent></Dialog>;
 }

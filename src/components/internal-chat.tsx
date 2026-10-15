@@ -3,9 +3,10 @@ import { MessageSquare, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import type { Authorizer } from "@/lib/my-requests";
+import type { Person } from "@/lib/organization";
 
-export type ChatTarget = { person: Authorizer; requestCode: string };
+/** `relation` says why this person is linked to the request, e.g. "Revisa REQ-1234". */
+export type ChatTarget = { person: Person; requestCode: string; relation: string };
 
 /** Local preview of the internal chat: messages live in memory until the chat backend exists. */
 export function InternalChat({ target, onOpenChange }: { target: ChatTarget | null; onOpenChange: (open: boolean) => void }) {
@@ -24,7 +25,7 @@ export function InternalChat({ target, onOpenChange }: { target: ChatTarget | nu
         <SheetHeader className="chat-header">
           <div className="modal-eyebrow"><MessageSquare size={15} />CHAT INTERNO</div>
           <SheetTitle className="chat-title">{target?.person.name}</SheetTitle>
-          <SheetDescription>{target?.person.role} · Autoriza {target?.requestCode}</SheetDescription>
+          <SheetDescription>{target?.person.role} · {target?.relation}</SheetDescription>
         </SheetHeader>
         <div className="chat-messages" aria-live="polite">
           {messages.length === 0 ? <p className="chat-empty">Aún no hay mensajes en esta conversación.</p> : messages.map((message, index) => <p key={index} className="chat-bubble">{message}</p>)}

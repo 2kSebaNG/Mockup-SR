@@ -20,4 +20,10 @@ describe("App routing", () => {
 
     expect(router.matchRoutes("/mis-solicitudes").at(-1)?.routeId).toBe("/mis-solicitudes");
   });
+
+  it("matches the contract administrator's page", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+
+    expect(router.matchRoutes("/gestionar-solicitudes").at(-1)?.routeId).toBe("/gestionar-solicitudes");
+  });
 });

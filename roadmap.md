@@ -12,6 +12,13 @@
 - [x] Enviar solicitudes desde el modal y listarlas desde el servidor.
 - [x] Guardar edición y anulación, validando las reglas también en el servidor.
 - [ ] Aplicar la migración `supabase/migrations/20261015120000_create_requests.sql` en Lovable Cloud.
-- [ ] Iniciar sesión real (hoy todo se guarda a nombre de la cuenta demo).
-- [ ] Flujo del autorizador para pasar solicitudes a En revisión, Autorizado o Rechazado.
+- [ ] Iniciar sesión real y roles (hoy el solicitante es la cuenta demo y cualquiera abre la vista del ADC).
 - [ ] Conectar el chat interno real.
+
+# Gestionar solicitudes (Administrador de Contrato)
+- [x] Sidebar (shadcn sidebar-07) con la sección Solicitudes: Mis solicitudes y Gestionar solicitudes.
+- [x] Bandeja con resumen (autorizadas, delegadas, rechazadas, pendientes), depto. y encargado asignados, solicitante y filtros.
+- [x] Detalle: campos del formulario, o requerimiento escrito con la interpretación de IA.
+- [x] Autorizar, rechazar o delegar solicitudes Enviadas; reglas validadas en el servidor.
+- [x] Delegar con departamento y encargado sugeridos por IA (o por reglas si no hay IA), editables.
+- [ ] Bandeja del departamento para que el encargado autorice o rechace lo delegado.

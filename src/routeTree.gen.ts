@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GestionarSolicitudesRouteImport } from './routes/gestionar-solicitudes'
 import { Route as MisSolicitudesRouteImport } from './routes/mis-solicitudes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GestionarSolicitudesRoute = GestionarSolicitudesRouteImport.update({
+  id: '/gestionar-solicitudes',
+  path: '/gestionar-solicitudes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MisSolicitudesRoute = MisSolicitudesRouteImport.update({
@@ -25,27 +31,31 @@ const MisSolicitudesRoute = MisSolicitudesRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/gestionar-solicitudes': typeof GestionarSolicitudesRoute
   '/mis-solicitudes': typeof MisSolicitudesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/gestionar-solicitudes': typeof GestionarSolicitudesRoute
   '/mis-solicitudes': typeof MisSolicitudesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/gestionar-solicitudes': typeof GestionarSolicitudesRoute
   '/mis-solicitudes': typeof MisSolicitudesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/mis-solicitudes'
+  fullPaths: '/' | '/gestionar-solicitudes' | '/mis-solicitudes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/mis-solicitudes'
-  id: '__root__' | '/' | '/mis-solicitudes'
+  to: '/' | '/gestionar-solicitudes' | '/mis-solicitudes'
+  id: '__root__' | '/' | '/gestionar-solicitudes' | '/mis-solicitudes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  GestionarSolicitudesRoute: typeof GestionarSolicitudesRoute
   MisSolicitudesRoute: typeof MisSolicitudesRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gestionar-solicitudes': {
+      id: '/gestionar-solicitudes'
+      path: '/gestionar-solicitudes'
+      fullPath: '/gestionar-solicitudes'
+      preLoaderRoute: typeof GestionarSolicitudesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mis-solicitudes': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  GestionarSolicitudesRoute: GestionarSolicitudesRoute,
   MisSolicitudesRoute: MisSolicitudesRoute,
 }
 export const routeTree = rootRouteImport
