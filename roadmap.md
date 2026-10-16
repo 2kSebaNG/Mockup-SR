@@ -43,3 +43,10 @@
 - [x] Elementos nuevos quedan pendientes hasta que el ADC los aprueba (con corrección o unión a uno existente).
 - [x] Categorías nuevas: EPP, Servicios, Vehículos, Combustibles y lubricantes, con sus catálogos maestros.
 - [ ] Aplicar la migración `supabase/migrations/20261017090000_requirement_elements.sql` (pg_trgm) en Lovable Cloud y probar las sugerencias allí.
+
+# Gestión del catálogo
+- [x] Página por categoría: Por aprobar, catálogo maestro y selects, con contadores en el panel lateral.
+- [x] Crear, renombrar (con alias) y eliminar categorías; cambiar el nombre del campo de elemento.
+- [x] Agregar, renombrar y eliminar elementos del catálogo maestro.
+- [x] Selects: crear, renombrar, quitar de una categoría, agregar existentes, eliminar; agregar y quitar opciones.
+- [ ] Probar en Lovable Cloud el renombre y borrado de categorías (usa ON UPDATE / ON DELETE CASCADE).

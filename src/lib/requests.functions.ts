@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { normalizeForSearch } from "./elements";
+import { catalogActionSchema } from "./catalog-admin";
 
 const elementSearchSchema = z.object({ category: z.string().trim().min(1).max(80), query: z.string().max(120) });
 import { catalogItemDecisionSchema, requestCodeSchema, requestDecisionSchema, requestDelegationSchema, requestInputSchema, requestUpdateSchema, reviewerDecisionSchema, reviewerSchema } from "./my-requests";
@@ -54,6 +55,11 @@ export const decideAsReviewer = createServerFn({ method: "POST" })
 export const decideCatalogItems = createServerFn({ method: "POST" })
   .inputValidator(input => catalogItemDecisionSchema.parse(input))
   .handler(async ({ data }) => (await admin()).decideItems(data.targets, data.status, data.edit));
+
+/** The administrator's direct edits on the Catálogo page. */
+export const manageCatalog = createServerFn({ method: "POST" })
+  .inputValidator(input => catalogActionSchema.parse(input))
+  .handler(async ({ data }) => (await admin()).manageCatalog(data));
 
 export const getCatalogReview = createServerFn({ method: "GET" })
   .handler(async () => (await admin()).catalogReview());

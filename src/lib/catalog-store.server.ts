@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { defaultCatalog, type Catalog } from "./catalog";
 import { DEFAULT_ELEMENT_LABEL } from "./elements";
 
-/** The approved catalog. Only an approved proposal (see requests.server.ts) may call `update`. */
+/** The approved catalog. Only approved proposals and the administrator's edits (see requests.server.ts) call `update`. */
 export interface CatalogStore {
   get(): Promise<Catalog>;
   update(change: (catalog: Catalog) => Catalog): Promise<Catalog>;
@@ -64,11 +64,27 @@ async function supabaseCatalogStore(): Promise<CatalogStore> {
   return {
     get,
     async update(change) {
-      const next = change(await get());
+      const previous = await get();
+      const next = change(structuredClone(previous));
+      // A renamed category keeps its row (its master-catalog elements follow by ON UPDATE CASCADE) instead of being
+      // re-inserted under the new name and having the old row, and its elements, deleted below.
+      const nextNames = new Set(next.categories.map(category => category.name));
+      for (const old of previous.categories.filter(category => !nextNames.has(category.name))) {
+        const renamed = next.categories.find(category => (category.aliases ?? []).includes(old.name) && !previous.categories.some(p => p.name === category.name));
+        if (!renamed) continue;
+        const moved = await db.from("requirement_categories").update({ name: renamed.name }).eq("name", old.name);
+        if (moved.error) fail(moved.error);
+      }
       const fields = await db.from("requirement_fields").upsert(next.fields.map(field => ({ id: field.id, label: field.label, options: field.options, aliases: field.aliases ?? [], option_aliases: field.optionAliases ?? {} })));
       if (fields.error) fail(fields.error);
       const categories = await db.from("requirement_categories").upsert(next.categories.map(category => ({ name: category.name, field_ids: category.fieldIds, aliases: category.aliases ?? [], element_label: category.elementLabel ?? DEFAULT_ELEMENT_LABEL })));
       if (categories.error) fail(categories.error);
+      const keptFields = new Set(next.fields.map(field => field.id));
+      const removedFields = previous.fields.filter(field => !keptFields.has(field.id)).map(field => field.id);
+      if (removedFields.length) { const removed = await db.from("requirement_fields").delete().in("id", removedFields); if (removed.error) fail(removed.error); }
+      const removedCategories = previous.categories.map(category => category.name).filter(name => !nextNames.has(name) && !next.categories.some(category => (category.aliases ?? []).includes(name)));
+      // Deleting a category also deletes its master-catalog elements (ON DELETE CASCADE).
+      if (removedCategories.length) { const removed = await db.from("requirement_categories").delete().in("name", removedCategories); if (removed.error) fail(removed.error); }
       return next;
     },
   };

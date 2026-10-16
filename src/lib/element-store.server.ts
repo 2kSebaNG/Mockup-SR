@@ -10,7 +10,15 @@ export interface ElementStore {
   resolve(pairs: { category: string; name: string }[]): Promise<Map<string, string>>;
   all(): Promise<Record<string, MasterElement[]>>;
   add(category: string, name: string, alias?: string): Promise<void>;
+  /** Renames an element, keeping the old name as an alias. Fails if the new name is already taken. */
+  rename(category: string, name: string, to: string): Promise<void>;
+  remove(category: string, name: string): Promise<void>;
+  /** Moves or drops a whole category's master catalog when the category is renamed or deleted. */
+  renameCategory(from: string, to: string): Promise<void>;
+  removeCategory(category: string): Promise<void>;
 }
+
+export class ElementEditError extends Error {}
 
 /** Lookup key for `resolve`: the same category and element regardless of case and accents. */
 export const elementKey = (category: string, name: string) => `${normalizeForSearch(category)}|${normalizeForSearch(name)}`;
@@ -48,6 +56,37 @@ function documentStore(read: () => Promise<Record<string, MasterElement[]>>, wri
       data[existingCategory] = elements;
       await write(data);
     },
+    async rename(category, name, to) {
+      const data = await read();
+      const elements = inCategory(data, category);
+      const element = elements.find(entry => normalizeForSearch(entry.name) === normalizeForSearch(name));
+      if (!element) throw new ElementEditError(`«${name}» ya no está en el catálogo maestro.`);
+      const clash = elements.find(entry => entry !== element && normalizeForSearch(entry.name) === normalizeForSearch(to));
+      if (clash) throw new ElementEditError(`Ya existe «${clash.name}» en el catálogo maestro.`);
+      element.aliases = [...element.aliases.filter(alias => normalizeForSearch(alias) !== normalizeForSearch(to)), ...(normalizeForSearch(element.name) !== normalizeForSearch(to) ? [element.name] : [])];
+      element.name = to.trim();
+      await write(data);
+    },
+    async remove(category, name) {
+      const data = await read();
+      const key = Object.keys(data).find(entry => normalizeForSearch(entry) === normalizeForSearch(category));
+      if (!key) return;
+      data[key] = data[key]!.filter(entry => normalizeForSearch(entry.name) !== normalizeForSearch(name));
+      await write(data);
+    },
+    async renameCategory(from, to) {
+      const data = await read();
+      const key = Object.keys(data).find(entry => normalizeForSearch(entry) === normalizeForSearch(from));
+      if (!key) return;
+      data[to] = [...(data[to] ?? []), ...data[key]!];
+      if (key !== to) delete data[key];
+      await write(data);
+    },
+    async removeCategory(category) {
+      const data = await read();
+      for (const key of Object.keys(data)) if (normalizeForSearch(key) === normalizeForSearch(category)) delete data[key];
+      await write(data);
+    },
   };
 }
 
@@ -81,6 +120,10 @@ export function fileElementStore(path: string): ElementStore {
     resolve: pairs => serial(() => store.resolve(pairs)),
     all: () => serial(() => store.all()),
     add: (category, name, alias) => serial(() => store.add(category, name, alias)),
+    rename: (category, name, to) => serial(() => store.rename(category, name, to)),
+    remove: (category, name) => serial(() => store.remove(category, name)),
+    renameCategory: (from, to) => serial(() => store.renameCategory(from, to)),
+    removeCategory: category => serial(() => store.removeCategory(category)),
   };
 }
 
@@ -131,6 +174,27 @@ async function supabaseElementStore(): Promise<ElementStore> {
         if (updated.error) fail(updated.error);
       }
     },
+    async rename(category, name, to) {
+      const { data, error } = await db.from("requirement_elements").select("id, name, aliases").eq("category", category);
+      if (error) fail(error);
+      const rows = data as (ElementRow & { id: number })[];
+      const element = rows.find(row => normalizeForSearch(row.name) === normalizeForSearch(name));
+      if (!element) throw new ElementEditError(`«${name}» ya no está en el catálogo maestro.`);
+      const clash = rows.find(row => row.id !== element.id && normalizeForSearch(row.name) === normalizeForSearch(to));
+      if (clash) throw new ElementEditError(`Ya existe «${clash.name}» en el catálogo maestro.`);
+      const aliases = [...(element.aliases ?? []).filter(alias => normalizeForSearch(alias) !== normalizeForSearch(to)), ...(normalizeForSearch(element.name) !== normalizeForSearch(to) ? [element.name] : [])];
+      const updated = await db.from("requirement_elements").update({ name: to.trim(), aliases }).eq("id", element.id);
+      if (updated.error) fail(updated.error);
+    },
+    async remove(category, name) {
+      const { data, error } = await db.from("requirement_elements").select("id, name").eq("category", category);
+      if (error) fail(error);
+      const ids = (data as { id: number; name: string }[]).filter(row => normalizeForSearch(row.name) === normalizeForSearch(name)).map(row => row.id);
+      if (ids.length) { const removed = await db.from("requirement_elements").delete().in("id", ids); if (removed.error) fail(removed.error); }
+    },
+    // In Lovable Cloud elements follow their category row through ON UPDATE / ON DELETE CASCADE.
+    async renameCategory() {},
+    async removeCategory() {},
   };
 }
 

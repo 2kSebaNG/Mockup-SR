@@ -1,6 +1,7 @@
 import { canCancel, canDecide, canEdit, requestFromInput, statusPhrase, type MyRequest, type RequestInput, type ReviewedRequest } from "./my-requests";
 import { applyItem, elementLookup, findCategory, groupPendingItems, proposalFor, recordDecision, reviewOf, type Catalog, type ItemEdit, type StoredProposal } from "./catalog";
-import { elementKey, getElementStore, memoryElementStore, type ElementStore } from "./element-store.server";
+import { ElementEditError, elementKey, getElementStore, memoryElementStore, type ElementStore } from "./element-store.server";
+import { applyCatalogAction, CatalogEditError, type CatalogAction } from "./catalog-admin";
 import { DEMO_USER, findMember, type Person } from "./organization";
 import { getCatalogStore, type CatalogStore } from "./catalog-store.server";
 import { getRequestStore, type RequestStore } from "./requests-store.server";
@@ -119,6 +120,32 @@ export function createAdminService(store: RequestStore, catalogs: CatalogStore, 
       for (const target of targets) results.push(await this.decideItem(target.code, target.key, status, edit));
       const decided = results.filter(result => result.request !== null).length;
       return decided ? { decided, error: null } : { decided, error: results[0]?.error ?? "No hay nada pendiente que decidir." };
+    },
+    /**
+     * Direct edits from the Catálogo page: categories, their element label and master catalog, selects and options.
+     * Returns a message instead of throwing when the edit is not possible (duplicate name, already deleted…).
+     */
+    async manageCatalog(action: CatalogAction): Promise<{ error: string | null }> {
+      try {
+        if (action.action === "element.add" || action.action === "element.rename" || action.action === "element.delete") {
+          const category = findCategory(await catalogs.get(), action.category);
+          if (!category) return { error: `No existe la categoría «${action.category}».` };
+          if (action.action === "element.add") {
+            if ((await elements.resolve([{ category: category.name, name: action.name }])).size) return { error: `«${action.name}» ya está en el catálogo maestro de ${category.name}.` };
+            await elements.add(category.name, action.name.trim());
+          } else if (action.action === "element.rename") await elements.rename(category.name, action.name, action.to);
+          else await elements.remove(category.name, action.name);
+          return { error: null };
+        }
+        const before = action.action === "category.rename" || action.action === "category.delete" ? findCategory(await catalogs.get(), action.name)?.name : undefined;
+        await catalogs.update(catalog => applyCatalogAction(catalog, action));
+        if (action.action === "category.rename" && before) await elements.renameCategory(before, action.to.trim());
+        if (action.action === "category.delete" && before) await elements.removeCategory(before);
+        return { error: null };
+      } catch (error) {
+        if (error instanceof CatalogEditError || error instanceof ElementEditError) return { error: error.message };
+        throw error;
+      }
     },
     /** Everything still waiting for a decision across all requests, grouped so each novelty is decided once. */
     async catalogReview() {
