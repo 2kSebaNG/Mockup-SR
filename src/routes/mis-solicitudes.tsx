@@ -5,8 +5,8 @@ import { Ban, Building2, CheckCircle2, ClipboardList, Clock3, Eye, Loader2, Penc
 import { AppShell } from "@/components/app-shell";
 import { RequirementModal } from "@/components/requirement-modal";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
-import { RequestContent } from "@/components/requests/request-content";
-import { ActionButton, DueDateHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, formatNumericDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
+import { RequestContent, RequestOutcome } from "@/components/requests/request-content";
+import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, formatNumericDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -77,20 +77,22 @@ function MyRequestsPage() {
                   <TableRow>
                     <TableHead>Código</TableHead>
                     <TableHead>Categoría</TableHead>
-                    <DueDateHead list={list} />
+                    <SortableHead list={list} column="createdAt" />
+                    <SortableHead list={list} column="dueDate" />
                     <TableHead>Estado</TableHead>
                     <TableHead className="actions-head">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {list.pageData.items.length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="requests-empty">No hay solicitudes que coincidan con la búsqueda o los filtros.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="requests-empty">No hay solicitudes que coincidan con la búsqueda o los filtros.</TableCell></TableRow>
                   )}
                   {list.pageData.items.map(request => (
                     <TableRow key={request.code}>
                       <TableCell className="request-code">{request.code}</TableCell>
                       <TableCell><span className="category-cell">{request.category}{request.element && <span className="element-cell">{request.element}</span>}</span></TableCell>
-                      <TableCell className="request-date">{formatDate(request.dueDate)}</TableCell>
+                      <TableCell className="request-date">{formatDate(request.createdAt)}</TableCell>
+                      <TableCell className="request-date"><DueDateCell request={request} /></TableCell>
                       <TableCell>
                         <div className="status-cell">
                           <div className="status-line"><StatusBadge status={request.status} /><DueWarning request={request} today={today} /></div>
@@ -123,6 +125,7 @@ function MyRequestsPage() {
                 <DialogDescription>Creada el {formatNumericDate(viewing.createdAt)}</DialogDescription>
               </DialogHeader>
               <RequestContent request={viewing} />
+              <RequestOutcome request={viewing} />
               <p className="admin-assignment"><Building2 aria-hidden="true" />{viewing.department ? <>Delegada a <strong>{viewing.department}</strong> · revisa </> : <>Responsable: </>}<PersonLink person={responsibleFor(viewing)} onOpen={() => { openChat(viewing); setViewing(null); }} /><span className="detail-role">{responsibleFor(viewing).role}</span></p>
             </>}
           </DialogContent>

@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Bot, Building2, CheckSquare, Loader2, Trash2, Wand2 } from "lucide-react";
+import { Bot, Building2, CalendarClock, CheckSquare, Loader2, Save, Trash2, Wand2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { RequestContent } from "@/components/requests/request-content";
+import { RequestContent, RequestOutcome } from "@/components/requests/request-content";
 import { DueWarning, PersonLink, StatusBadge, formatNumericDate } from "@/components/requests/request-list";
-import { canDecide, statusPhrase, type MyRequest, type ReviewedRequest } from "@/lib/my-requests";
+import { canDecide, canEstimate, REJECTION_REASON_MIN, statusPhrase, todayIso, type MyRequest, type ReviewedRequest } from "@/lib/my-requests";
 import { ClassificationReview } from "@/components/requests/classification-review";
 import { CONTRACT_ADMIN, departments, findDepartment, type Person } from "@/lib/organization";
-import { decideAsReviewer, decideRequest, delegateRequest, suggestRequestDelegation } from "@/lib/requests.functions";
+import { decideAsReviewer, decideRequest, delegateRequest, setEstimatedResolution, suggestRequestDelegation } from "@/lib/requests.functions";
 
 const requestedBy = (request: MyRequest) => `Solicitado por: ${request.requester.name} el ${formatNumericDate(request.createdAt)}`;
 
@@ -93,6 +95,39 @@ function DelegateDialog({ request, onClose, onDelegated }: { request: MyRequest 
   );
 }
 
+/** Sets the date the request is expected to be resolved; the requester sees it in their detail and table. */
+function EstimateEditor({ request, reviewer, onChanged }: { request: MyRequest; reviewer?: { department: string; assigneeName: string } | undefined; onChanged: () => Promise<void> }) {
+  const save = useServerFn(setEstimatedResolution);
+  const [date, setDate] = useState(request.estimatedResolution ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { setDate(request.estimatedResolution ?? ""); }, [request.code, request.estimatedResolution]);
+  useEffect(() => { setError(""); setSaved(false); }, [request.code]);
+  const store = async (value: string | null) => {
+    setBusy(true); setError(""); setSaved(false);
+    try {
+      const response = await save({ data: { code: request.code, date: value, ...(reviewer && { reviewer }) } });
+      if (!response.request) { setError(response.error); return; }
+      await onChanged();
+      setSaved(true);
+    } catch { setError("No se pudo guardar la fecha estimada. Inténtalo de nuevo."); } finally { setBusy(false); }
+  };
+  const min = request.createdAt > todayIso() ? request.createdAt : todayIso();
+  return (
+    <section className="estimate-editor" aria-labelledby={`estimate-${request.code}`}>
+      <label id={`estimate-${request.code}`} htmlFor={`estimate-input-${request.code}`}><CalendarClock aria-hidden="true" />Fecha estimada de resolución</label>
+      <div className="estimate-row">
+        <Input id={`estimate-input-${request.code}`} type="date" value={date} min={min} disabled={busy} onChange={event => { setDate(event.target.value); setSaved(false); }} />
+        <Button type="button" size="sm" variant="outline" disabled={busy || !date || date === request.estimatedResolution} onClick={() => store(date)}>{busy ? <Loader2 className="animate-spin" /> : <Save />}{request.estimatedResolution ? "Cambiar" : "Asignar"}</Button>
+        {request.estimatedResolution && <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => store(null)}><X />Quitar</Button>}
+      </div>
+      <p className="estimate-note" role="status">{saved ? "Fecha guardada. El solicitante ya la ve en su solicitud." : request.estimatedResolution ? `${request.requester.name} ve esta fecha en su solicitud.` : `Opcional: indica a ${request.requester.name} cuándo esperas resolverla.`}</p>
+      {error && <p role="alert" className="requirement-error">{error}</p>}
+    </section>
+  );
+}
+
 /**
  * Request detail with the decisions. Without `reviewer` it acts as the contract administrator (delegate / authorize /
  * reject pending requests); with `reviewer` it acts as that department reviewer (authorize / reject what is in review).
@@ -103,21 +138,28 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat,
   const [busy, setBusy] = useState<"Autorizado" | "Rechazado" | null>(null);
   const [error, setError] = useState("");
   const [confirmReject, setConfirmReject] = useState(false);
+  const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState("");
   const [delegating, setDelegating] = useState<MyRequest | null>(null);
-  useEffect(() => { setError(""); setBusy(null); }, [request?.code]);
+  useEffect(() => { setError(""); setBusy(null); setReason(""); setReasonError(""); }, [request?.code]);
 
   const apply = async (decision: "Autorizado" | "Rechazado") => {
     if (!request) return;
-    setBusy(decision); setError("");
+    const why = decision === "Rechazado" ? reason.trim() : undefined;
+    if (why !== undefined && why.length < REJECTION_REASON_MIN) { setReasonError(`Escribe la razón del rechazo (al menos ${REJECTION_REASON_MIN} caracteres).`); return; }
+    setBusy(decision); setError(""); setReasonError("");
     try {
-      const response = reviewer ? await decideAsDepartment({ data: { reviewer, code: request.code, decision } }) : await decideAsAdmin({ data: { code: request.code, decision } });
+      const data = { code: request.code, decision, ...(why !== undefined && { reason: why }) };
+      const response = reviewer ? await decideAsDepartment({ data: { reviewer, ...data } }) : await decideAsAdmin({ data });
       if (!response.request) { setError(response.error); return; }
-      setConfirmReject(false);
+      setConfirmReject(false); setReason("");
       await onChanged();
       onClose();
     } catch { setError("No se pudo guardar la decisión. Inténtalo de nuevo."); } finally { setBusy(null); }
   };
   const pending = !request ? false : reviewer ? request.status === "En revisión" && request.assignee?.name === reviewer.assigneeName : canDecide(request.status);
+  // The administrator may set the estimate before or after delegating; a reviewer only for what they are reviewing.
+  const estimable = !request ? false : reviewer ? pending : canEstimate(request.status);
 
   return <>
     <Dialog open={request !== null && delegating === null} onOpenChange={open => { if (!open && !busy) onClose(); }}>
@@ -133,6 +175,7 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat,
           {request.department && request.assignee && (reviewer
             ? <p className="admin-assignment"><Building2 aria-hidden="true" />Delegada a <strong>{request.department}</strong> por <PersonLink person={CONTRACT_ADMIN} onOpen={() => onChat(CONTRACT_ADMIN, `Delegó ${request.code}`)} /><span className="detail-role">{CONTRACT_ADMIN.role}</span></p>
             : <p className="admin-assignment"><Building2 aria-hidden="true" />Delegada a <strong>{request.department}</strong> · revisa <PersonLink person={request.assignee} onOpen={() => onChat(request.assignee!, `Revisa ${request.code}`)} /></p>)}
+          {estimable ? <EstimateEditor request={request} reviewer={reviewer} onChanged={onChanged} /> : <RequestOutcome request={request} />}
           {error && <p role="alert" className="requirement-error">{error}</p>}
           <DialogFooter className="admin-detail-footer">
             {pending ? <>
@@ -145,16 +188,23 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat,
       </DialogContent>
     </Dialog>
 
-    <AlertDialog open={confirmReject} onOpenChange={open => { if (!open && !busy) setConfirmReject(false); }}>
-      <AlertDialogContent>
+    <AlertDialog open={confirmReject} onOpenChange={open => { if (!open && !busy) { setConfirmReject(false); setReasonError(""); } }}>
+      {/* Start in the reason box: it has to be filled before rejecting. */}
+      <AlertDialogContent onOpenAutoFocus={event => { event.preventDefault(); document.getElementById("reject-reason")?.focus(); }}>
         <AlertDialogHeader>
           <AlertDialogTitle>¿Rechazar la solicitud {request?.code}?</AlertDialogTitle>
-          <AlertDialogDescription>{request?.requester.name} verá la solicitud como rechazada. Esta acción no se puede deshacer.</AlertDialogDescription>
+          <AlertDialogDescription>{request?.requester.name} verá la solicitud como rechazada junto con la razón que escribas. Esta acción no se puede deshacer.</AlertDialogDescription>
         </AlertDialogHeader>
-        {error && <p role="alert" className="requirement-error">{error}</p>}
+        <div className="requirement-field reject-reason">
+          <label htmlFor="reject-reason">Razón del rechazo<span className="required-mark" aria-hidden="true">*</span></label>
+          <Textarea id="reject-reason" required maxLength={1000} value={reason} disabled={busy !== null} aria-invalid={reasonError ? true : undefined} aria-describedby="reject-reason-help"
+            placeholder="Ej. Ya hay stock en bodega; retíralo con un vale de consumo." onChange={event => { setReason(event.target.value); setReasonError(""); }} />
+          <span id="reject-reason-help" className="reject-reason-help">{reason.trim().length < REJECTION_REASON_MIN ? `Obligatoria · mínimo ${REJECTION_REASON_MIN} caracteres` : "Se mostrará al solicitante"} · {reason.length} / 1000</span>
+        </div>
+        {(reasonError || error) && <p role="alert" className="requirement-error">{reasonError || error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy !== null}>Volver</AlertDialogCancel>
-          <AlertDialogAction className="cancel-confirm" disabled={busy !== null} onClick={event => { event.preventDefault(); void apply("Rechazado"); }}>{busy === "Rechazado" ? <Loader2 className="animate-spin" /> : <Trash2 />}{busy === "Rechazado" ? "Rechazando…" : "Rechazar solicitud"}</AlertDialogAction>
+          <AlertDialogAction className="cancel-confirm" disabled={busy !== null || reason.trim().length < REJECTION_REASON_MIN} onClick={event => { event.preventDefault(); void apply("Rechazado"); }}>{busy === "Rechazado" ? <Loader2 className="animate-spin" /> : <Trash2 />}{busy === "Rechazado" ? "Rechazando…" : "Rechazar solicitud"}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -4,7 +4,7 @@ import { DEFAULT_ELEMENT_LABEL } from "./elements";
 
 /**
  * Direct edits the contract administrator makes on the Catálogo page. Renames keep the old name as an alias, so
- * existing requests and future ones that use it still map to the right category, select or option. Deleting only
+ * existing requests and future ones that use it still map to the right category, attribute or option. Deleting only
  * affects what is offered from now on: requests keep the values they were written with.
  */
 
@@ -21,7 +21,8 @@ export const catalogActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("element.add"), category: name, name: element }),
   z.object({ action: z.literal("element.rename"), category: name, name: element, to: element }),
   z.object({ action: z.literal("element.delete"), category: name, name: element }),
-  z.object({ action: z.literal("field.create"), label: name, options: z.array(option).min(1, "Agrega al menos una opción.").max(30), category: name.optional() }),
+  // A new attribute may start linked to the categories that will use it (none keeps it shared until linked).
+  z.object({ action: z.literal("field.create"), label: name, options: z.array(option).min(1, "Agrega al menos una opción.").max(30), categories: z.array(name).max(50).default([]) }),
   z.object({ action: z.literal("field.rename"), id: fieldId, label: name }),
   z.object({ action: z.literal("field.delete"), id: fieldId }),
   z.object({ action: z.literal("field.link"), id: fieldId, category: name }),
@@ -45,7 +46,7 @@ function category(catalog: Catalog, wanted: string) {
 
 function field(catalog: Catalog, id: string) {
   const found = catalog.fields.find(entry => entry.id === id);
-  if (!found) throw new CatalogEditError("Ese select ya no existe.");
+  if (!found) throw new CatalogEditError("Ese atributo ya no existe.");
   return found;
 }
 
@@ -82,16 +83,16 @@ export function applyCatalogAction(current: Catalog, action: CatalogAction): Cat
       return catalog;
     }
     case "field.create": {
-      if (findField(catalog, action.label)) throw new CatalogEditError(`Ya existe el select «${action.label}»; agrégalo desde la lista de selects existentes.`);
+      if (findField(catalog, action.label)) throw new CatalogEditError(`Ya existe el atributo «${action.label}»; agrégalo desde la lista de atributos existentes.`);
       const id = newFieldId(catalog, action.label);
       catalog.fields.push({ id, label: action.label.trim(), options: uniqueValues(action.options) });
-      if (action.category) category(catalog, action.category).fieldIds.push(id);
+      for (const wanted of new Set(action.categories.map(entry => category(catalog, entry)))) wanted.fieldIds.push(id);
       return catalog;
     }
     case "field.rename": {
       const target = field(catalog, action.id);
       const clash = findField(catalog, action.label);
-      if (clash && clash !== target) throw new CatalogEditError(`Ya existe el select «${clash.label}».`);
+      if (clash && clash !== target) throw new CatalogEditError(`Ya existe el atributo «${clash.label}».`);
       target.aliases = uniqueValues([...(target.aliases ?? []), target.label]).filter(alias => !same(alias, action.label));
       target.label = action.label.trim();
       return catalog;

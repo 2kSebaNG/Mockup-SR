@@ -45,8 +45,17 @@
 - [ ] Aplicar la migración `supabase/migrations/20261017090000_requirement_elements.sql` (pg_trgm) en Lovable Cloud y probar las sugerencias allí.
 
 # Gestión del catálogo
-- [x] Página por categoría: Por aprobar, catálogo maestro y selects, con contadores en el panel lateral.
+- [x] Página por categoría: Por aprobar, catálogo maestro y atributos, con contadores en el panel lateral.
 - [x] Crear, renombrar (con alias) y eliminar categorías; cambiar el nombre del campo de elemento.
 - [x] Agregar, renombrar y eliminar elementos del catálogo maestro.
-- [x] Selects: crear, renombrar, quitar de una categoría, agregar existentes, eliminar; agregar y quitar opciones.
+- [x] Atributos: crear, renombrar, quitar de una categoría, agregar existentes, eliminar; agregar y quitar opciones.
 - [ ] Probar en Lovable Cloud el renombre y borrado de categorías (usa ON UPDATE / ON DELETE CASCADE).
+
+# Ajustes de solicitudes
+- [x] Fecha de vencimiento obligatoria (no anterior a hoy) y campos obligatorios marcados con *.
+- [x] "Select" pasa a llamarse "Atributo" en toda la interfaz.
+- [x] "Nuevo atributo" en el Catálogo, con opciones y categorías que lo usan (opcional).
+- [x] Columna Fecha de creación en las tablas; orden por creación (más recientes primero, por defecto) o por fecha límite.
+- [x] Razón del rechazo obligatoria (mínimo 10 caracteres), visible para el solicitante.
+- [x] Fecha estimada de resolución asignable por el ADC (antes o después de delegar) o por el encargado del departamento.
+- [ ] Aplicar la migración `supabase/migrations/20261018090000_request_resolution.sql` en Lovable Cloud.

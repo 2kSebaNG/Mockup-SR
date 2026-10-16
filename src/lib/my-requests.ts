@@ -31,6 +31,10 @@ export type MyRequest = {
   fields: { label: string; value: string }[];
   /** New types, attributes or options this request proposes for the catalog, pending the administrator's decision. */
   proposal: StoredProposal | null;
+  /** Why it was rejected; required to reject. */
+  rejectionReason: string | null;
+  /** When the administrator or the reviewing department expects to resolve it. */
+  estimatedResolution: string | null;
 };
 
 /** A request as the server returns it: with its proposal compared against the current catalog. */
@@ -38,6 +42,10 @@ export type ReviewedRequest = MyRequest & { review: ProposalReview | null };
 
 export type RequestFilters = { query: string; statuses: RequestStatus[]; categories: string[]; from: string; to: string };
 export type SortDirection = "asc" | "desc";
+export type SortKey = "createdAt" | "dueDate";
+export type RequestSort = { key: SortKey; direction: SortDirection };
+/** Newest requests first unless the user sorts otherwise. */
+export const defaultSort: RequestSort = { key: "createdAt", direction: "desc" };
 export type DueState = "overdue" | "soon" | null;
 
 export const DUE_SOON_DAYS = 3;
@@ -58,6 +66,11 @@ const statusWords: Record<RequestStatus, string> = { "Enviada": "enviada", "En r
 /** The status as it reads after "la solicitud está …" (statuses are stored in masculine, as in the reference designs). */
 export function statusPhrase(status: RequestStatus) {
   return statusWords[status];
+}
+
+/** An estimated resolution date can be set while the request still waits on a decision. */
+export function canEstimate(status: RequestStatus) {
+  return pending.includes(status);
 }
 
 /** The contract administrator authorizes, rejects or delegates only requests nobody has handled yet. */
@@ -108,9 +121,10 @@ export function filterRequests<T extends MyRequest>(requests: T[], filters: Requ
     (!filters.to || request.dueDate <= filters.to));
 }
 
-export function sortByDueDate<T extends MyRequest>(requests: T[], direction: SortDirection): T[] {
+/** Sorts by creation or due date; requests on the same day follow their code (later codes are newer). */
+export function sortRequests<T extends MyRequest>(requests: T[], { key, direction }: RequestSort): T[] {
   const sign = direction === "asc" ? 1 : -1;
-  return [...requests].sort((a, b) => sign * a.dueDate.localeCompare(b.dueDate) || a.code.localeCompare(b.code));
+  return [...requests].sort((a, b) => sign * (a[key].localeCompare(b[key]) || a.code.localeCompare(b.code)));
 }
 
 export function paginate<T>(items: T[], page: number, pageSize: number) {
@@ -126,7 +140,7 @@ export const requestInputSchema = z.object({
   element: z.string().trim().min(2, "Indica el tipo de elemento que necesitas.").max(120),
   elementLabel: z.string().trim().min(1).max(80).default("Tipo de elemento"),
   quantity: z.number({ invalid_type_error: "Indica la cantidad." }).positive("La cantidad debe ser mayor a 0.").max(1_000_000),
-  dueDate: isoDate,
+  dueDate: z.string().min(1, "La fecha de vencimiento es obligatoria.").pipe(isoDate),
   description: z.string().trim().max(4000),
   fields: z.array(z.object({ label: z.string().trim().min(1).max(80), value: z.string().trim().max(100), options: z.array(z.string().trim().max(100)).max(30).default([]) })).max(16),
   aiAssisted: z.boolean().default(false),
@@ -140,10 +154,16 @@ const itemEditSchema = z.object({
 });
 const itemTargetSchema = z.object({ code: requestCodeSchema.shape.code, key: z.string().max(300) });
 export const catalogItemDecisionSchema = z.object({ targets: z.array(itemTargetSchema).min(1).max(200), status: z.enum(["aprobada", "rechazada"]), edit: itemEditSchema.default({}) });
-export const requestDecisionSchema = requestCodeSchema.extend({ decision: z.enum(["Autorizado", "Rechazado"]) });
+const decisionFields = { decision: z.enum(["Autorizado", "Rechazado"]), reason: z.string().trim().max(1000).optional() };
+export const REJECTION_REASON_MIN = 10;
+const reasonRequired = (value: { decision: string; reason?: string | undefined }) => value.decision !== "Rechazado" || (value.reason?.length ?? 0) >= REJECTION_REASON_MIN;
+const reasonMessage = { message: `Escribe la razón del rechazo (al menos ${REJECTION_REASON_MIN} caracteres).`, path: ["reason"] };
+export const requestDecisionSchema = requestCodeSchema.extend(decisionFields).refine(reasonRequired, reasonMessage);
 export const reviewerSchema = z.object({ department: z.string().max(80), assigneeName: z.string().max(120) })
   .refine(value => findMember(value.department, value.assigneeName), "Elige un encargado del departamento seleccionado.");
-export const reviewerDecisionSchema = z.object({ reviewer: reviewerSchema, code: requestCodeSchema.shape.code, decision: z.enum(["Autorizado", "Rechazado"]) });
+export const reviewerDecisionSchema = z.object({ reviewer: reviewerSchema, code: requestCodeSchema.shape.code, ...decisionFields }).refine(reasonRequired, reasonMessage);
+/** Sets (or clears, with null) the estimated resolution date; with `reviewer`, as that department reviewer. */
+export const estimateSchema = requestCodeSchema.extend({ date: isoDate.nullable(), reviewer: reviewerSchema.optional() });
 export const requestDelegationSchema = requestCodeSchema.extend({ department: z.string().max(80), assigneeName: z.string().max(120) })
   .refine(value => findMember(value.department, value.assigneeName), "Elige un encargado del departamento seleccionado.");
 
@@ -153,6 +173,8 @@ export function requestFromInput(input: RequestInput) {
   const unit = fields.find(field => field.label.toLowerCase() === "unidad")?.value ?? "Unidades";
   return { category: input.category, element: input.element, elementLabel: input.elementLabel, quantity: input.quantity, unit, dueDate: input.dueDate, description: input.description, fields, aiAssisted: input.aiAssisted && input.description.length > 0 };
 }
+
+const sampleRejection = "No hay presupuesto disponible este mes para este requerimiento; vuelve a solicitarlo el próximo período.";
 
 type Sample = Pick<MyRequest, "category" | "element" | "quantity" | "unit" | "description" | "fields" | "aiAssisted">;
 const samples: Sample[] = [
@@ -194,9 +216,12 @@ function buildSample(today: string, requester: Person, status: RequestStatus, in
     ...sampleAssignment(sample, status, index),
     code: `REQ-${String(code).padStart(4, "0")}`,
     requester,
-    createdAt: created < today ? created : addDays(today, -1),
+    // Spread creation days so sorting by creation date shows a realistic mix.
+    createdAt: [created, addDays(today, -1 - (index % 9))].sort()[0]!,
     dueDate,
     status,
+    rejectionReason: status === "Rechazado" ? sampleRejection : null,
+    estimatedResolution: status === "En revisión" || (status === "Enviada" && index % 3 === 0) ? addDays(dueDate, -2) : null,
     // The seed proposes the same things a requester would: e.g. the new "Bebestible" type or the "Tipo de tornillo" attribute.
     elementLabel: elementLabelFor(defaultCatalog, sample.category),
     proposal: proposalFor(defaultCatalog, sample.category, sample.fields.map(field => ({ ...field, options: [] })), sample.element, seededElement),

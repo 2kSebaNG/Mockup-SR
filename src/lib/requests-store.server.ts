@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { seedRequests, todayIso, type MyRequest } from "./my-requests";
 
-export type NewRequest = Omit<MyRequest, "code" | "createdAt" | "status" | "department" | "assignee">;
+export type NewRequest = Omit<MyRequest, "code" | "createdAt" | "status" | "department" | "assignee" | "rejectionReason" | "estimatedResolution">;
 export type RequestPatch = Partial<Omit<MyRequest, "code" | "createdAt" | "requester">>;
 
 /** Plain persistence; who may see or change a request is decided in requests.server.ts. */
@@ -17,6 +17,7 @@ type RequestRow = {
   unit: string; description: string; ai_assisted: boolean; fields: { label: string; value: string }[]; due_date: string;
   status: MyRequest["status"]; department: string | null; assignee_name: string | null; assignee_role: string | null;
   assignee_email: string | null; catalog_proposal: MyRequest["proposal"]; created_at: string;
+  rejection_reason: string | null; estimated_resolution: string | null;
 };
 
 const fromRow = (row: RequestRow): MyRequest => ({
@@ -25,6 +26,7 @@ const fromRow = (row: RequestRow): MyRequest => ({
   fields: row.fields ?? [], dueDate: row.due_date, status: row.status, createdAt: row.created_at.slice(0, 10), department: row.department,
   assignee: row.assignee_name ? { name: row.assignee_name, role: row.assignee_role ?? "", email: row.assignee_email ?? "" } : null,
   proposal: row.catalog_proposal ?? null,
+  rejectionReason: row.rejection_reason ?? null, estimatedResolution: row.estimated_resolution ?? null,
 });
 
 function toRow(patch: RequestPatch & Partial<Pick<MyRequest, "requester">>) {
@@ -42,6 +44,8 @@ function toRow(patch: RequestPatch & Partial<Pick<MyRequest, "requester">>) {
   if (patch.status !== undefined) row.status = patch.status;
   if (patch.department !== undefined) row.department = patch.department;
   if (patch.proposal !== undefined) row.catalog_proposal = patch.proposal;
+  if (patch.rejectionReason !== undefined) row.rejection_reason = patch.rejectionReason;
+  if (patch.estimatedResolution !== undefined) row.estimated_resolution = patch.estimatedResolution;
   if (patch.assignee !== undefined) { row.assignee_name = patch.assignee?.name ?? null; row.assignee_role = patch.assignee?.role ?? null; row.assignee_email = patch.assignee?.email ?? null; }
   return row;
 }
@@ -53,7 +57,7 @@ async function supabaseStore(): Promise<RequestStore> {
   const fail = (error: { message: string }): never => { throw new Error(`[requests] ${error.message}`); };
   return {
     async list(filter) {
-      let query = table().select("*").order("due_date");
+      let query = table().select("*").order("created_at", { ascending: false });
       if (filter?.requesterEmail) query = query.eq("requester", filter.requesterEmail);
       const { data, error } = await query;
       if (error) fail(error);
@@ -83,7 +87,7 @@ export function fileStore(path: string, seed: () => MyRequest[] = () => seedRequ
   const serial = <T>(task: () => Promise<T>) => { const next = queue.then(task, task); queue = next.catch(() => undefined); return next; };
   const read = async (): Promise<MyRequest[]> => {
     const fs = await import("node:fs/promises");
-    try { return (JSON.parse(await fs.readFile(path, "utf8")) as MyRequest[]).map(request => ({ ...request, element: request.element ?? "", elementLabel: request.elementLabel ?? "Tipo de elemento", proposal: request.proposal ?? null })); } catch (error) {
+    try { return (JSON.parse(await fs.readFile(path, "utf8")) as MyRequest[]).map(request => ({ ...request, element: request.element ?? "", elementLabel: request.elementLabel ?? "Tipo de elemento", proposal: request.proposal ?? null, rejectionReason: request.rejectionReason ?? null, estimatedResolution: request.estimatedResolution ?? null })); } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       const seeded = seed();
       await write(seeded);
@@ -103,7 +107,7 @@ export function fileStore(path: string, seed: () => MyRequest[] = () => seedRequ
     create: request => serial(async () => {
       const requests = await read();
       const next = Math.max(1200, ...requests.map(r => Number(r.code.slice(4)) || 0)) + 1;
-      const created: MyRequest = { ...request, code: `REQ-${String(next).padStart(4, "0")}`, createdAt: todayIso(), status: "Enviada", department: null, assignee: null };
+      const created: MyRequest = { ...request, code: `REQ-${String(next).padStart(4, "0")}`, createdAt: todayIso(), status: "Enviada", department: null, assignee: null, rejectionReason: null, estimatedResolution: null };
       await write([...requests, created]);
       return created;
     }),

@@ -4,7 +4,7 @@ import { normalizeForSearch } from "./elements";
 import { catalogActionSchema } from "./catalog-admin";
 
 const elementSearchSchema = z.object({ category: z.string().trim().min(1).max(80), query: z.string().max(120) });
-import { catalogItemDecisionSchema, requestCodeSchema, requestDecisionSchema, requestDelegationSchema, requestInputSchema, requestUpdateSchema, reviewerDecisionSchema, reviewerSchema } from "./my-requests";
+import { catalogItemDecisionSchema, estimateSchema, requestCodeSchema, requestDecisionSchema, requestDelegationSchema, requestInputSchema, requestUpdateSchema, reviewerDecisionSchema, reviewerSchema } from "./my-requests";
 
 const requester = async () => (await import("./requests.server")).requesterService();
 const admin = async () => (await import("./requests.server")).adminService();
@@ -33,7 +33,7 @@ export const listAllRequests = createServerFn({ method: "GET" })
 
 export const decideRequest = createServerFn({ method: "POST" })
   .inputValidator(input => requestDecisionSchema.parse(input))
-  .handler(async ({ data }) => (await admin()).decide(data.code, data.decision));
+  .handler(async ({ data }) => (await admin()).decide(data.code, data.decision, data.reason));
 
 export const delegateRequest = createServerFn({ method: "POST" })
   .inputValidator(input => requestDelegationSchema.parse(input))
@@ -49,7 +49,14 @@ export const listReviewerRequests = createServerFn({ method: "GET" })
 
 export const decideAsReviewer = createServerFn({ method: "POST" })
   .inputValidator(input => reviewerDecisionSchema.parse(input))
-  .handler(async ({ data }) => (await reviewer(data.reviewer.department, data.reviewer.assigneeName)).decide(data.code, data.decision));
+  .handler(async ({ data }) => (await reviewer(data.reviewer.department, data.reviewer.assigneeName)).decide(data.code, data.decision, data.reason));
+
+/** Estimated resolution date, set by the contract administrator or, with `reviewer`, by the assigned department reviewer. */
+export const setEstimatedResolution = createServerFn({ method: "POST" })
+  .inputValidator(input => estimateSchema.parse(input))
+  .handler(async ({ data }) => data.reviewer
+    ? (await reviewer(data.reviewer.department, data.reviewer.assigneeName)).estimate(data.code, data.date)
+    : (await admin()).estimate(data.code, data.date));
 
 /** Approves or rejects one novelty in one or several requests (the latter from the Catálogo page). */
 export const decideCatalogItems = createServerFn({ method: "POST" })

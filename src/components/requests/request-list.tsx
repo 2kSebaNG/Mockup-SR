@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Info, Search, TriangleAlert } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Info, Search, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -7,8 +7,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { TableHead } from "@/components/ui/table";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
-  requestStatuses, emptyFilters, dueState, filterRequests, sortByDueDate, paginate, daysBetween,
-  type MyRequest, type RequestStatus, type RequestFilters, type SortDirection,
+  requestStatuses, emptyFilters, defaultSort, dueState, filterRequests, sortRequests, paginate, daysBetween,
+  type MyRequest, type RequestStatus, type RequestFilters, type RequestSort, type SortKey,
 } from "@/lib/my-requests";
 import type { Person } from "@/lib/organization";
 
@@ -80,14 +80,14 @@ export function SummaryCards({ cards, counts }: { cards: SummaryCard[]; counts: 
 
 const pageSizes = [10, 25, 50];
 
-/** Search, filters, due-date sorting and pagination shared by the requester and administrator tables. */
+/** Search, filters, sorting by creation or due date (newest first by default) and pagination shared by every request table. */
 export function useRequestList<T extends MyRequest>(requests: T[]) {
   const [filters, setFilters] = useState<RequestFilters>(emptyFilters);
-  const [direction, setDirection] = useState<SortDirection>("asc");
+  const [sort, setSort] = useState<RequestSort>(defaultSort);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const categories = useMemo(() => [...new Set(requests.map(request => request.category))].sort((a, b) => a.localeCompare(b, "es")), [requests]);
-  const visible = useMemo(() => sortByDueDate(filterRequests(requests, filters), direction), [requests, filters, direction]);
+  const visible = useMemo(() => sortRequests(filterRequests(requests, filters), sort), [requests, filters, sort]);
   const pageData = paginate(visible, page, pageSize);
   const updateFilters = (patch: Partial<RequestFilters>) => { setFilters(current => ({ ...current, ...patch })); setPage(1); };
   const toggleFilter = (key: "statuses" | "categories", option: string, checked: boolean) => {
@@ -97,20 +97,33 @@ export function useRequestList<T extends MyRequest>(requests: T[]) {
     });
     setPage(1);
   };
-  return { filters, updateFilters, toggleFilter, direction, setDirection, page, setPage, pageSize, setPageSize, categories, visible, pageData };
+  // A column clicked for the first time starts where it is most useful: newest created, or soonest due.
+  const sortBy = (key: SortKey) => { setSort(current => current.key === key ? { key, direction: current.direction === "asc" ? "desc" : "asc" } : { key, direction: key === "createdAt" ? "desc" : "asc" }); setPage(1); };
+  return { filters, updateFilters, toggleFilter, sort, sortBy, page, setPage, pageSize, setPageSize, categories, visible, pageData };
 }
 export type RequestList<T extends MyRequest = MyRequest> = ReturnType<typeof useRequestList<T>>;
 
-export function DueDateHead({ list }: { list: RequestList }) {
-  const { direction, setDirection } = list;
+const sortLabels: Record<SortKey, string> = { createdAt: "Fecha de creación", dueDate: "Fecha límite" };
+
+/** A date column header that sorts the table; the active one shows its direction. */
+export function SortableHead({ list, column }: { list: RequestList; column: SortKey }) {
+  const { sort, sortBy } = list;
+  const active = sort.key === column;
+  const Icon = !active ? ArrowUpDown : sort.direction === "asc" ? ArrowUp : ArrowDown;
   return (
-    <TableHead aria-sort={direction === "asc" ? "ascending" : "descending"}>
-      <button type="button" className="sort-button" onClick={() => setDirection(direction === "asc" ? "desc" : "asc")}>
-        Fecha límite{direction === "asc" ? <ArrowUp /> : <ArrowDown />}
-        <span className="sr-only">{direction === "asc" ? "orden ascendente, cambiar a descendente" : "orden descendente, cambiar a ascendente"}</span>
+    <TableHead aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
+      <button type="button" className={`sort-button${active ? " active" : ""}`} onClick={() => sortBy(column)}>
+        {sortLabels[column]}<Icon />
+        <span className="sr-only">{active ? (sort.direction === "asc" ? "orden ascendente, cambiar a descendente" : "orden descendente, cambiar a ascendente") : "ordenar por esta columna"}</span>
       </button>
     </TableHead>
   );
+}
+
+/** The due date, with the estimated resolution date under it while the request waits on a decision. */
+export function DueDateCell({ request }: { request: MyRequest }) {
+  const estimate = request.estimatedResolution && (request.status === "Enviada" || request.status === "En revisión") ? request.estimatedResolution : null;
+  return <span className="date-cell">{formatDate(request.dueDate)}{estimate && <span className="estimate-cell" title="Fecha estimada de resolución">Estimada: {formatDate(estimate)}</span>}</span>;
 }
 
 export function PaginationFooter({ list }: { list: RequestList }) {

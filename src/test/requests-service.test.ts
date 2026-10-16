@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { requestFromInput, requestInputSchema, responsibleFor, reviewerSchema, type RequestInput } from "@/lib/my-requests";
+import { requestDecisionSchema, requestFromInput, requestInputSchema, responsibleFor, reviewerSchema, type RequestInput } from "@/lib/my-requests";
 import { CONTRACT_ADMIN, delegationByRules, findMember, requesters, type Person } from "@/lib/organization";
 import { fileStore } from "@/lib/requests-store.server";
 import { memoryCatalogStore, type CatalogStore } from "@/lib/catalog-store.server";
@@ -81,7 +81,30 @@ describe("Contract administrator service", () => {
     const { request } = await createRequesterService(store(), catalogs, ana).create(input);
     const admin = createAdminService(store(), catalogs);
     expect((await admin.decide(request!.code, "Autorizado")).request?.status).toBe("Autorizado");
-    expect((await admin.decide(request!.code, "Rechazado")).error).toMatch(/solo se gestionan solicitudes enviadas/);
+    expect((await admin.decide(request!.code, "Rechazado", "Ya no se necesita.")).error).toMatch(/solo se gestionan solicitudes enviadas/);
+  });
+  it("requires a reason to reject, and shows it to the requester", async () => {
+    const { request } = await createRequesterService(store(), catalogs, ana).create(input);
+    const admin = createAdminService(store(), catalogs);
+    expect((await admin.decide(request!.code, "Rechazado")).error).toMatch(/razón del rechazo/);
+    expect((await admin.decide(request!.code, "Rechazado", "corto")).error).toMatch(/al menos 10/);
+    expect(requestDecisionSchema.safeParse({ code: request!.code, decision: "Rechazado", reason: "  " }).success).toBe(false);
+    expect((await admin.decide(request!.code, "Rechazado", "  Ya hay soldadores disponibles en el turno.  ")).request).toMatchObject({ status: "Rechazado", rejectionReason: "Ya hay soldadores disponibles en el turno." });
+    expect((await createRequesterService(store(), catalogs, ana).list())[0]!.rejectionReason).toBe("Ya hay soldadores disponibles en el turno.");
+  });
+  it("refuses a due date earlier than today", async () => {
+    expect((await createRequesterService(store(), catalogs, ana).create({ ...input, dueDate: "2020-01-01" })).error).toMatch(/no puede ser anterior a hoy/);
+    expect(requestInputSchema.safeParse({ ...input, dueDate: "" }).error?.issues[0]?.message).toBe("La fecha de vencimiento es obligatoria.");
+  });
+  it("lets the administrator set an estimated resolution date while the request waits, before or after delegating", async () => {
+    const { request } = await createRequesterService(store(), catalogs, ana).create(input);
+    const admin = createAdminService(store(), catalogs);
+    expect((await admin.estimate(request!.code, "2026-11-10")).request?.estimatedResolution).toBe("2026-11-10");
+    expect((await admin.estimate(request!.code, "2020-01-01")).error).toMatch(/anterior a la creación/);
+    await admin.delegate(request!.code, "Recursos Humanos", "Paula Araya");
+    expect((await admin.estimate(request!.code, null)).request?.estimatedResolution).toBeNull();
+    await createReviewerService(store(), catalogs, findMember("Recursos Humanos", "Paula Araya")!).decide(request!.code, "Autorizado");
+    expect((await admin.estimate(request!.code, "2026-11-12")).error).toMatch(/solo se asigna mientras espera/);
   });
   it("delegates to a department member, which puts the request in review and makes that person responsible", async () => {
     const { request } = await createRequesterService(store(), catalogs, ana).create(input);
@@ -209,7 +232,10 @@ describe("Department reviewer service", () => {
   it("authorizes or rejects a request in review once, and the requester sees the decision", async () => {
     const code = await delegated();
     const reviewer = createReviewerService(store(), catalogs, paula);
-    expect((await reviewer.decide(code, "Rechazado")).request).toMatchObject({ status: "Rechazado", assignee: { name: "Paula Araya" } });
+    expect((await reviewer.decide(code, "Rechazado")).error).toMatch(/razón del rechazo/);
+    expect((await reviewer.estimate(code, "2026-11-05")).request?.estimatedResolution).toBe("2026-11-05");
+    expect((await createReviewerService(store(), catalogs, maridel).estimate(code, "2026-11-06")).error).toMatch(/No encontramos/);
+    expect((await reviewer.decide(code, "Rechazado", "No corresponde a Recursos Humanos.")).request).toMatchObject({ status: "Rechazado", assignee: { name: "Paula Araya" }, rejectionReason: "No corresponde a Recursos Humanos." });
     expect((await reviewer.decide(code, "Autorizado")).error).toBe("La solicitud ya está rechazada; solo se deciden solicitudes en revisión.");
     const mine = (await createRequesterService(store(), catalogs, ana).list())[0]!;
     expect(mine.status).toBe("Rechazado");

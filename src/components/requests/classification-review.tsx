@@ -18,9 +18,9 @@ export function NoveltyTag({ status, pendingLabel = "Nuevo", as }: { status: Ite
 export function itemTitle(item: { kind: CatalogItemKind; name: string; category: string; field?: string | undefined }) {
   if (item.kind === "type") return <>Categoría nueva <strong>«{item.name}»</strong></>;
   if (item.kind === "element") return <>Elemento nuevo <strong>«{item.name}»</strong> <span className="novelty-context">en el catálogo maestro de {item.category}</span></>;
-  if (item.kind === "field") return <>Select nuevo <strong>«{item.name}»</strong> <span className="novelty-context">en {item.category}</span></>;
-  if (item.kind === "link") return <>Asociar el select <strong>«{item.name}»</strong> <span className="novelty-context">a la categoría {item.category}</span></>;
-  return <>Opción nueva <strong>«{item.name}»</strong> <span className="novelty-context">en el select {item.field}</span></>;
+  if (item.kind === "field") return <>Atributo nuevo <strong>«{item.name}»</strong> <span className="novelty-context">en {item.category}</span></>;
+  if (item.kind === "link") return <>Asociar el atributo <strong>«{item.name}»</strong> <span className="novelty-context">a la categoría {item.category}</span></>;
+  return <>Opción nueva <strong>«{item.name}»</strong> <span className="novelty-context">en el atributo {item.field}</span></>;
 }
 
 /** Existing names the administrator can map a novelty to instead of creating it. */
@@ -79,7 +79,7 @@ export function NoveltyEditor({ item, catalog, onDecide }: { item: { kind: Catal
           <label htmlFor={`${id}-options`}>Opciones, separadas por coma</label>
           <Input id={`${id}-options`} value={options} maxLength={3000} disabled={busy !== null} onChange={event => setOptions(event.target.value)} />
         </>}
-        <p className="novelty-hint">{match ? <>Ya existe <strong>«{match}»</strong>: se unirá a {item.kind === "option" ? "esa opción" : item.kind === "type" ? "esa categoría" : item.kind === "element" ? "ese elemento" : "ese select"} en vez de crear uno nuevo.</> : name.trim() !== item.name ? <>Se guardará corregido como <strong>«{name.trim()}»</strong>.</> : "Escribe otro nombre para corregirlo, o el de uno existente para unirlo."}</p>
+        <p className="novelty-hint">{match ? <>Ya existe <strong>«{match}»</strong>: se unirá a {item.kind === "option" ? "esa opción" : item.kind === "type" ? "esa categoría" : item.kind === "element" ? "ese elemento" : "ese atributo"} en vez de crear uno nuevo.</> : name.trim() !== item.name ? <>Se guardará corregido como <strong>«{name.trim()}»</strong>.</> : "Escribe otro nombre para corregirlo, o el de uno existente para unirlo."}</p>
       </div>}
       <div className="catalog-actions">
         <Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => decide("rechazada")}>{busy === "rechazada" ? <Loader2 className="animate-spin" /> : <X />}Rechazar</Button>

@@ -17,11 +17,19 @@ describe("Catalog edits", () => {
   });
   it("refuses names that already exist, ignoring case", () => {
     expect(() => applyCatalogAction(defaultCatalog, { action: "category.create", name: "personas", elementLabel: "Cargo" })).toThrow(CatalogEditError);
-    expect(() => applyCatalogAction(defaultCatalog, { action: "field.rename", id: "marca", label: "unidad" })).toThrow(/Ya existe el select/);
+    expect(() => applyCatalogAction(defaultCatalog, { action: "field.rename", id: "marca", label: "unidad" })).toThrow(/Ya existe el atributo/);
     expect(() => applyCatalogAction(defaultCatalog, { action: "option.add", id: "marca", option: "bosch" })).toThrow(/ya es una opción/);
   });
-  it("creates a select inside a category and lets it be unlinked, relinked and deleted everywhere", () => {
-    let catalog = applyCatalogAction(defaultCatalog, { action: "field.create", label: "Talla", options: ["S", "M", "L", "M"], category: "EPP" });
+  it("creates an attribute linked to several categories, or to none", () => {
+    const catalog = applyCatalogAction(defaultCatalog, { action: "field.create", label: "Color", options: ["Rojo", "Azul"], categories: ["EPP", "vehículos", "EPP"] });
+    expect(fieldsForCategory(catalog, "EPP").filter(f => f.label === "Color")).toHaveLength(1);
+    expect(fieldsForCategory(catalog, "Vehículos").map(f => f.label)).toContain("Color");
+    const shared = applyCatalogAction(defaultCatalog, { action: "field.create", label: "Color", options: ["Rojo"], categories: [] });
+    expect(shared.categories.some(category => category.fieldIds.includes("color"))).toBe(false);
+    expect(() => applyCatalogAction(defaultCatalog, { action: "field.create", label: "Color", options: ["Rojo"], categories: ["Inexistente"] })).toThrow(/No existe la categoría/);
+  });
+  it("creates an attribute inside a category and lets it be unlinked, relinked and deleted everywhere", () => {
+    let catalog = applyCatalogAction(defaultCatalog, { action: "field.create", label: "Talla", options: ["S", "M", "L", "M"], categories: ["EPP"] });
     expect(findField(catalog, "Talla")).toMatchObject({ id: "talla", options: ["S", "M", "L"] });
     expect(fieldsForCategory(catalog, "EPP").map(f => f.label)).toContain("Talla");
     catalog = applyCatalogAction(catalog, { action: "field.unlink", id: "talla", category: "EPP" });

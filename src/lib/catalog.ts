@@ -219,8 +219,8 @@ export function pendingSummary(review: ProposalReview | null) {
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   return [
     count("type") > 0 && "Categoría nueva",
-    count("field") > 0 && plural(count("field"), "select nuevo", "selects nuevos"),
-    count("link") > 0 && plural(count("link"), "select por asociar", "selects por asociar"),
+    count("field") > 0 && plural(count("field"), "atributo nuevo", "atributos nuevos"),
+    count("link") > 0 && plural(count("link"), "atributo por asociar", "atributos por asociar"),
     count("option") > 0 && plural(count("option"), "opción nueva", "opciones nuevas"),
     count("element") > 0 && "Elemento nuevo",
   ].filter(Boolean).join(" · ");

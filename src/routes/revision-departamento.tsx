@@ -4,11 +4,11 @@ import { Ban, CheckCircle2, ClipboardCheck, SquareArrowOutUpRight, XCircle } fro
 import { AppShell } from "@/components/app-shell";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs";
-import { ActionButton, DueDateHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
+import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { countByStatus, todayIso, type ReviewedRequest } from "@/lib/my-requests";
+import { countByStatus, todayIso } from "@/lib/my-requests";
 import { departments, findDepartment, findMember } from "@/lib/organization";
 import { listReviewerRequests } from "@/lib/requests.functions";
 
@@ -52,7 +52,9 @@ function DepartmentReviewPage() {
   const router = useRouter();
   const list = useRequestList(requests);
   const counts = useMemo(() => countByStatus(requests), [requests]);
-  const [reviewing, setReviewing] = useState<ReviewedRequest | null>(null);
+  // Keep the code, not a copy, so the open detail shows fresh data after every change.
+  const [reviewingCode, setReviewingCode] = useState<string | null>(null);
+  const reviewing = requests.find(request => request.code === reviewingCode) ?? null;
   const [chat, setChat] = useState<ChatTarget | null>(null);
   const members = findDepartment(reviewer.department)?.members ?? [];
   const actAs = (department: string, assigneeName?: string) => navigate({ search: { departamento: department, encargado: assigneeName ?? findDepartment(department)!.members[0]!.name } });
@@ -92,7 +94,8 @@ function DepartmentReviewPage() {
                   <TableRow>
                     <TableHead>Código</TableHead>
                     <TableHead>Categoría</TableHead>
-                    <DueDateHead list={list} />
+                    <SortableHead list={list} column="createdAt" />
+                    <SortableHead list={list} column="dueDate" />
                     <TableHead>Estado</TableHead>
                     <TableHead>Solicitante</TableHead>
                     <TableHead className="actions-head">Acciones</TableHead>
@@ -100,18 +103,19 @@ function DepartmentReviewPage() {
                 </TableHeader>
                 <TableBody>
                   {list.pageData.items.length === 0 && (
-                    <TableRow><TableCell colSpan={6} className="requests-empty">{requests.length ? "No hay solicitudes que coincidan con la búsqueda o los filtros." : `No hay solicitudes delegadas a ${reviewer.assigneeName}.`}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="requests-empty">{requests.length ? "No hay solicitudes que coincidan con la búsqueda o los filtros." : `No hay solicitudes delegadas a ${reviewer.assigneeName}.`}</TableCell></TableRow>
                   )}
                   {list.pageData.items.map(request => (
                     <TableRow key={request.code}>
                       <TableCell className="request-code">{request.code}</TableCell>
                       <TableCell><span className="category-cell">{request.category}{request.element && <span className="element-cell">{request.element}</span>}</span></TableCell>
-                      <TableCell className="request-date">{formatDate(request.dueDate)}</TableCell>
+                      <TableCell className="request-date">{formatDate(request.createdAt)}</TableCell>
+                      <TableCell className="request-date"><DueDateCell request={request} /></TableCell>
                       <TableCell><div className="status-line"><StatusBadge status={request.status} /><DueWarning request={request} today={today} /></div></TableCell>
                       <TableCell className="authorizer">Por <PersonLink person={request.requester} onOpen={() => setChat({ person: request.requester, requestCode: request.code, relation: `Solicitante de ${request.code}` })} /></TableCell>
                       <TableCell>
                         <div className="row-actions">
-                          <ActionButton label={`Revisar ${request.code}`} onClick={() => setReviewing(request)}><SquareArrowOutUpRight /></ActionButton>
+                          <ActionButton label={`Revisar ${request.code}`} onClick={() => setReviewingCode(request.code)}><SquareArrowOutUpRight /></ActionButton>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -124,8 +128,8 @@ function DepartmentReviewPage() {
           </div>
         </div>
 
-        <AdminRequestDetail request={reviewing} today={today} reviewer={reviewer} onClose={() => setReviewing(null)} onChanged={() => router.invalidate()}
-          onChat={(person, relation) => { setChat({ person, requestCode: reviewing?.code ?? "", relation }); setReviewing(null); }} />
+        <AdminRequestDetail request={reviewing} today={today} reviewer={reviewer} onClose={() => setReviewingCode(null)} onChanged={() => router.invalidate()}
+          onChat={(person, relation) => { setChat({ person, requestCode: reviewing?.code ?? "", relation }); setReviewingCode(null); }} />
         <InternalChat target={chat} onOpenChange={open => { if (!open) setChat(null); }} />
       </TooltipProvider>
     </AppShell>

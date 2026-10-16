@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { FolderPlus, Inbox, Layers, ListChecks, Loader2, Plus, Sparkles } from "lucide-react";
+import { FolderPlus, Inbox, Layers, ListChecks, ListPlus, Loader2, Plus, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { ConfirmDelete, EditableText, ElementsTab, PendingList, SelectCard, SelectsTab, useCatalogAction } from "@/components/catalog/catalog-editors";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { findCategory, type Catalog, type CatalogGroup } from "@/lib/catalog";
+import { findCategory, uniqueValues, type Catalog, type CatalogGroup } from "@/lib/catalog";
 import { DEFAULT_ELEMENT_LABEL, normalizeForSearch } from "@/lib/elements";
 import { getCatalogReview } from "@/lib/requests.functions";
 
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/catalogo")({
   component: CatalogPage,
   head: () => ({ meta: [
     { title: "Catálogo | Ecosistema X" },
-    { name: "description", content: "Categorías, catálogos maestros, selects y opciones de los requerimientos, y las novedades que esperan aprobación." },
+    { name: "description", content: "Categorías, catálogos maestros, atributos y opciones de los requerimientos, y las novedades que esperan aprobación." },
     { property: "og:title", content: "Catálogo | Ecosistema X" },
     { property: "og:description", content: "Gestiona el catálogo de requerimientos por categoría." },
   ] }),
@@ -53,9 +54,50 @@ function NewCategoryForm({ onCreated }: { onCreated: (name: string) => void }) {
       <div className="new-category-form">
         <div className="requirement-field"><label htmlFor="new-category-name">Nombre</label><Input id="new-category-name" placeholder="Ej. Topografía" value={name} maxLength={80} disabled={busy} onChange={event => setName(event.target.value)} /></div>
         <div className="requirement-field"><label htmlFor="new-category-label">Nombre del campo de elemento</label><Input id="new-category-label" placeholder="Ej. Tipo de instrumento" value={label} maxLength={80} disabled={busy} onChange={event => setLabel(event.target.value)} /></div>
-        <p className="select-card-note">El campo de elemento es el que se completa con sugerencias al pedir esta categoría (por ejemplo «Cargo» en Personas). Después podrás llenar su catálogo maestro y agregarle selects.</p>
+        <p className="select-card-note">El campo de elemento es el que se completa con sugerencias al pedir esta categoría (por ejemplo «Cargo» en Personas). Después podrás llenar su catálogo maestro y agregarle atributos.</p>
         {error && <p role="alert" className="requirement-error">{error}</p>}
         <div className="catalog-actions"><Button type="button" disabled={busy || !name.trim()} onClick={create}>{busy ? <Loader2 className="animate-spin" /> : <Plus />}Crear categoría</Button></div>
+      </div>
+    </section>
+  );
+}
+
+/** Creates an attribute with its options, optionally linked right away to the categories that will ask for it. */
+function NewAttributeForm({ catalog, onCreated }: { catalog: Catalog; onCreated: () => void }) {
+  const act = useCatalogAction();
+  const [label, setLabel] = useState("");
+  const [options, setOptions] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const parsed = uniqueValues(options.split(/[,\n]/)).slice(0, 30);
+  const sorted = [...catalog.categories].sort((a, b) => a.name.localeCompare(b.name, "es"));
+  const toggle = (name: string, checked: boolean) => setCategories(current => checked ? [...new Set([...current, name])] : current.filter(entry => entry !== name));
+  const create = async () => {
+    setBusy(true); setError("");
+    const failure = await act({ action: "field.create", label: label.trim(), options: parsed, categories });
+    setBusy(false);
+    if (failure) setError(failure); else onCreated();
+  };
+  return (
+    <section className="catalog-panel">
+      <header className="catalog-panel-header"><div><p className="eyebrow">NUEVO ATRIBUTO</p><h2 className="catalog-panel-title">Crear atributo</h2></div></header>
+      <div className="new-category-form">
+        <div className="requirement-field"><label htmlFor="new-attribute-name">Nombre</label><Input id="new-attribute-name" placeholder="Ej. Talla" value={label} maxLength={80} disabled={busy} onChange={event => setLabel(event.target.value)} /></div>
+        <div className="requirement-field"><label htmlFor="new-attribute-options">Opciones, separadas por coma</label><Input id="new-attribute-options" placeholder="Ej. S, M, L, XL" value={options} maxLength={3000} disabled={busy} onChange={event => setOptions(event.target.value)} /></div>
+        {parsed.length > 0 && <ul className="option-chips new-attribute-preview" aria-label="Opciones del atributo nuevo">{parsed.map(option => <li key={option} className="option-chip">{option}</li>)}</ul>}
+        <fieldset className="attribute-categories">
+          <legend>Categorías que lo usan <span className="select-card-note">(opcional)</span></legend>
+          <div className="attribute-category-grid">
+            {sorted.map(category => {
+              const id = `new-attribute-${category.name}`.replace(/\s+/g, "-").toLowerCase();
+              return <label key={category.name} htmlFor={id} className="filter-option"><Checkbox id={id} disabled={busy} checked={categories.includes(category.name)} onCheckedChange={checked => toggle(category.name, checked === true)} />{category.name}</label>;
+            })}
+          </div>
+        </fieldset>
+        <p className="select-card-note">Un atributo es una lista de opciones que se elige al pedir (por ejemplo «Marca» o «Unidad»). Si no eliges categorías queda en Atributos compartidos y puedes asociarlo después desde cada categoría.</p>
+        {error && <p role="alert" className="requirement-error">{error}</p>}
+        <div className="catalog-actions"><Button type="button" disabled={busy || !label.trim() || parsed.length === 0} onClick={create}>{busy ? <Loader2 className="animate-spin" /> : <Plus />}Crear atributo</Button></div>
       </div>
     </section>
   );
@@ -94,18 +136,18 @@ function CategoryPanel({ catalog, masters, groups, name, onRenamed, onDeleted }:
           </p>
         </div>
         <ConfirmDelete compact={false} label="Eliminar categoría" title={`¿Eliminar la categoría «${category.name}»?`}
-          description={<>Dejará de ofrecerse en Nueva solicitud y se eliminará su catálogo maestro ({elements.length === 1 ? "1 elemento" : `${elements.length} elementos`}). Los selects se conservan para otras categorías. Las solicitudes existentes no cambian.</>}
+          description={<>Dejará de ofrecerse en Nueva solicitud y se eliminará su catálogo maestro ({elements.length === 1 ? "1 elemento" : `${elements.length} elementos`}). Los atributos se conservan para otras categorías. Las solicitudes existentes no cambian.</>}
           onConfirm={async () => { const failure = await act({ action: "category.delete", name: category.name }); if (!failure) onDeleted(); return failure; }} />
       </header>
       <Tabs defaultValue={pending.length ? "pendientes" : "elementos"} className="catalog-tabs">
         <TabsList className="catalog-tab-list">
           <TabsTrigger value="pendientes">Por aprobar{pending.length > 0 ? <span className="tab-badge">{pending.length}</span> : <span className="tab-count">0</span>}</TabsTrigger>
           <TabsTrigger value="elementos">{label}<span className="tab-count">{elements.length}</span></TabsTrigger>
-          <TabsTrigger value="selects">Selects<span className="tab-count">{category.fieldIds.length}</span></TabsTrigger>
+          <TabsTrigger value="atributos">Atributos<span className="tab-count">{category.fieldIds.length}</span></TabsTrigger>
         </TabsList>
         <TabsContent value="pendientes">{pending.length ? <PendingList groups={pending} catalog={catalog} /> : <p className="catalog-empty">Nada pendiente en {category.name}.</p>}</TabsContent>
         <TabsContent value="elementos"><ElementsTab category={category.name} elementLabel={label} elements={elements} /></TabsContent>
-        <TabsContent value="selects"><SelectsTab catalog={catalog} category={category.name} /></TabsContent>
+        <TabsContent value="atributos"><SelectsTab catalog={catalog} category={category.name} /></TabsContent>
       </Tabs>
     </section>
   );
@@ -130,7 +172,7 @@ function CatalogPage() {
       <div className="my-requests catalog-page">
         <p className="eyebrow">ADMINISTRADOR DE CONTRATO</p>
         <h1 className="page-heading">Catálogo de requerimientos</h1>
-        <p className="page-description">Gestiona cada categoría: su catálogo maestro, sus selects y lo que los solicitantes propusieron. Solo lo aprobado aparece en Nueva solicitud.</p>
+        <p className="page-description">Gestiona cada categoría: su catálogo maestro, sus atributos y lo que los solicitantes propusieron. Solo lo aprobado aparece en Nueva solicitud.</p>
 
         <div className="catalog-layout">
           <nav className="catalog-nav" aria-label="Categorías del catálogo">
@@ -146,8 +188,11 @@ function CatalogPage() {
               {proposed.map(name => navItem(`c:${name}`, <><Sparkles aria-hidden="true" /><span className="catalog-nav-name">{name}<small>Categoría propuesta</small></span><span className="tab-badge">{pendingFor(catalog, groups, name).length}</span></>))}
               {navItem("nueva", <><FolderPlus aria-hidden="true" /><span className="catalog-nav-name">Nueva categoría</span></>)}
             </ul>
-            <p className="catalog-nav-heading">Selects</p>
-            <ul>{navItem("selects", <><ListChecks aria-hidden="true" /><span className="catalog-nav-name">Selects compartidos<small>Usados por varias categorías</small></span><span className="tab-count">{catalog.fields.length}</span></>)}</ul>
+            <p className="catalog-nav-heading">Atributos</p>
+            <ul>
+              {navItem("atributos", <><ListChecks aria-hidden="true" /><span className="catalog-nav-name">Atributos compartidos<small>Usados por varias categorías</small></span><span className="tab-count">{catalog.fields.length}</span></>)}
+              {navItem("nuevo-atributo", <><ListPlus aria-hidden="true" /><span className="catalog-nav-name">Nuevo atributo</span></>)}
+            </ul>
           </nav>
 
           <div className="catalog-main">
@@ -164,10 +209,14 @@ function CatalogPage() {
               </section>
             )}
             {view === "nueva" && <NewCategoryForm onCreated={name => show(`c:${name}`)} />}
-            {view === "selects" && (
+            {view === "nuevo-atributo" && <NewAttributeForm catalog={catalog} onCreated={() => show("atributos")} />}
+            {view === "atributos" && (
               <section className="catalog-panel">
-                <header className="catalog-panel-header"><div><p className="eyebrow">SELECTS COMPARTIDOS</p><h2 className="catalog-panel-title">Todos los selects</h2></div></header>
-                <p className="select-card-note">Un mismo select puede usarse en varias categorías: renombrarlo o cambiar sus opciones afecta a todas. Para asociarlo a una categoría, entra a esa categoría.</p>
+                <header className="catalog-panel-header">
+                  <div><p className="eyebrow">ATRIBUTOS COMPARTIDOS</p><h2 className="catalog-panel-title">Todos los atributos</h2></div>
+                  <Button type="button" size="sm" onClick={() => show("nuevo-atributo")}><Plus />Nuevo atributo</Button>
+                </header>
+                <p className="select-card-note">Un mismo atributo puede usarse en varias categorías: renombrarlo o cambiar sus opciones afecta a todas. Para asociarlo a una categoría, entra a esa categoría.</p>
                 <div className="select-grid">{[...catalog.fields].sort((a, b) => a.label.localeCompare(b.label, "es")).map(field => <SelectCard key={field.id} field={field} catalog={catalog} />)}</div>
               </section>
             )}

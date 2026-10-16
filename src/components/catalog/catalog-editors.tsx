@@ -110,10 +110,10 @@ function AddInline({ label, placeholder, onAdd, maxLength = 100 }: { label: stri
   );
 }
 
-/** Categories that use a select, so editing a shared select shows who else is affected. */
+/** Categories that use an attribute, so editing a shared one shows who else is affected. */
 export const categoriesUsing = (catalog: Catalog, fieldId: string) => catalog.categories.filter(category => category.fieldIds.includes(fieldId)).map(category => category.name);
 
-/** One select with its options as removable chips. Within a category it can be unlinked; on the shared view, deleted. */
+/** One attribute with its options as removable chips. Within a category it can be unlinked; on the shared view, deleted. */
 export function SelectCard({ field, catalog, category }: { field: CatalogField; catalog: Catalog; category?: string }) {
   const act = useCatalogAction();
   const usedBy = categoriesUsing(catalog, field.id);
@@ -123,13 +123,13 @@ export function SelectCard({ field, catalog, category }: { field: CatalogField; 
   return (
     <article className="select-card">
       <header className="select-card-header">
-        <EditableText value={field.label} label={`nombre del select ${field.label}`} onSave={label => act({ action: "field.rename", id: field.id, label })}><strong>{field.label}</strong></EditableText>
+        <EditableText value={field.label} label={`nombre del atributo ${field.label}`} onSave={label => act({ action: "field.rename", id: field.id, label })}><strong>{field.label}</strong></EditableText>
         <div className="select-card-actions">
           {category
             ? <ConfirmDelete label={`Quitar ${field.label} de ${category}`} title={`¿Quitar «${field.label}» de ${category}?`}
-                description={<>Dejará de aparecer al pedir {category}. El select sigue existiendo{others.length ? <> y se mantiene en {others.join(", ")}</> : null}.</>}
+                description={<>Dejará de aparecer al pedir {category}. El atributo sigue existiendo{others.length ? <> y se mantiene en {others.join(", ")}</> : null}.</>}
                 onConfirm={() => act({ action: "field.unlink", id: field.id, category })} />
-            : <ConfirmDelete label={`Eliminar el select ${field.label}`} title={`¿Eliminar el select «${field.label}»?`}
+            : <ConfirmDelete label={`Eliminar el atributo ${field.label}`} title={`¿Eliminar el atributo «${field.label}»?`}
                 description={<>Se quitará de {usedBy.length ? usedBy.join(", ") : "todas las categorías"} y ya no se ofrecerá en Nueva solicitud. Las solicitudes existentes conservan lo que eligieron.</>}
                 onConfirm={() => act({ action: "field.delete", id: field.id })} />}
         </div>
@@ -148,7 +148,7 @@ export function SelectCard({ field, catalog, category }: { field: CatalogField; 
   );
 }
 
-/** Selects of a category, plus adding an existing select or creating a new one. */
+/** Attributes of a category, plus adding an existing attribute or creating a new one. */
 export function SelectsTab({ catalog, category }: { catalog: Catalog; category: string }) {
   const act = useCatalogAction();
   const linked = catalog.categories.find(entry => entry.name === category)?.fieldIds ?? [];
@@ -162,21 +162,21 @@ export function SelectsTab({ catalog, category }: { catalog: Catalog; category: 
   const run = async (action: CatalogAction, reset: () => void) => { setBusy(true); setError(""); const failure = await act(action); setBusy(false); if (failure) setError(failure); else reset(); };
   return (
     <div className="catalog-tab">
-      {fields.length === 0 && <p className="catalog-empty">{category} todavía no tiene selects. Agrega uno existente o crea uno nuevo.</p>}
+      {fields.length === 0 && <p className="catalog-empty">{category} todavía no tiene atributos. Agrega uno existente o crea uno nuevo.</p>}
       <div className="select-grid">{fields.map(field => <SelectCard key={field.id} field={field} catalog={catalog} category={category} />)}</div>
       <section className="add-select">
-        <h4>Agregar un select a {category}</h4>
+        <h4>Agregar un atributo a {category}</h4>
         <div className="add-select-row">
           <Select value={existing} onValueChange={setExisting} disabled={busy || available.length === 0}>
-            <SelectTrigger aria-label="Select existente" className="add-select-trigger"><SelectValue placeholder={available.length ? "Elegir un select existente" : "No quedan selects por agregar"} /></SelectTrigger>
+            <SelectTrigger aria-label="Atributo existente" className="add-select-trigger"><SelectValue placeholder={available.length ? "Elegir un atributo existente" : "No quedan atributos por agregar"} /></SelectTrigger>
             <SelectContent>{available.map(field => <SelectItem key={field.id} value={field.id}>{field.label}</SelectItem>)}</SelectContent>
           </Select>
           <Button type="button" size="sm" variant="outline" disabled={busy || !existing} onClick={() => run({ action: "field.link", id: existing, category }, () => setExisting(""))}><Plus />Agregar</Button>
         </div>
         <div className="add-select-row">
-          <Input aria-label="Nombre del select nuevo" placeholder="O crea uno nuevo: nombre (ej. Talla)" value={label} maxLength={80} disabled={busy} onChange={event => setLabel(event.target.value)} />
-          <Input aria-label="Opciones del select nuevo" placeholder="Opciones separadas por coma (ej. S, M, L)" value={options} maxLength={3000} disabled={busy} onChange={event => setOptions(event.target.value)} />
-          <Button type="button" size="sm" disabled={busy || !label.trim() || !options.trim()} onClick={() => run({ action: "field.create", label: label.trim(), options: uniqueValues(options.split(",")).slice(0, 30), category }, () => { setLabel(""); setOptions(""); })}><Plus />Crear</Button>
+          <Input aria-label="Nombre del atributo nuevo" placeholder="O crea uno nuevo: nombre (ej. Talla)" value={label} maxLength={80} disabled={busy} onChange={event => setLabel(event.target.value)} />
+          <Input aria-label="Opciones del atributo nuevo" placeholder="Opciones separadas por coma (ej. S, M, L)" value={options} maxLength={3000} disabled={busy} onChange={event => setOptions(event.target.value)} />
+          <Button type="button" size="sm" disabled={busy || !label.trim() || !options.trim()} onClick={() => run({ action: "field.create", label: label.trim(), options: uniqueValues(options.split(",")).slice(0, 30), categories: [category] }, () => { setLabel(""); setOptions(""); })}><Plus />Crear</Button>
         </div>
         {error && <p role="alert" className="editable-error">{error}</p>}
       </section>

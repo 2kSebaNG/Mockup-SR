@@ -4,7 +4,7 @@ import { CheckCircle2, Hourglass, SquareArrowOutUpRight, Users, XCircle } from "
 import { AppShell } from "@/components/app-shell";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs";
-import { ActionButton, DueDateHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
+import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { countByStatus, todayIso } from "@/lib/my-requests";
@@ -65,7 +65,8 @@ function ManageRequestsPage() {
                     <TableHead>Categoría</TableHead>
                     <TableHead>Depto. asignado</TableHead>
                     <TableHead>Encargado asignado</TableHead>
-                    <DueDateHead list={list} />
+                    <SortableHead list={list} column="createdAt" />
+                    <SortableHead list={list} column="dueDate" />
                     <TableHead>Estado</TableHead>
                     <TableHead>Solicitante</TableHead>
                     <TableHead className="actions-head">Acciones</TableHead>
@@ -73,7 +74,7 @@ function ManageRequestsPage() {
                 </TableHeader>
                 <TableBody>
                   {list.pageData.items.length === 0 && (
-                    <TableRow><TableCell colSpan={8} className="requests-empty">No hay solicitudes que coincidan con la búsqueda o los filtros.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={9} className="requests-empty">No hay solicitudes que coincidan con la búsqueda o los filtros.</TableCell></TableRow>
                   )}
                   {list.pageData.items.map(request => (
                     <TableRow key={request.code}>
@@ -81,7 +82,8 @@ function ManageRequestsPage() {
                       <TableCell><span className="category-cell">{request.category}{request.element && <span className="element-cell">{request.element}</span>}{pendingSummary(request.review) && <span className="catalog-flag" title="Novedades para el catálogo por aprobar">{pendingSummary(request.review)}</span>}</span></TableCell>
                       <TableCell>{request.department ?? <Unassigned />}</TableCell>
                       <TableCell>{request.assignee ? <PersonLink person={request.assignee} onOpen={() => setChat({ person: request.assignee!, requestCode: request.code, relation: `Revisa ${request.code}` })} /> : <Unassigned />}</TableCell>
-                      <TableCell className="request-date">{formatDate(request.dueDate)}</TableCell>
+                      <TableCell className="request-date">{formatDate(request.createdAt)}</TableCell>
+                      <TableCell className="request-date"><DueDateCell request={request} /></TableCell>
                       <TableCell><div className="status-line"><StatusBadge status={request.status} /><DueWarning request={request} today={today} /></div></TableCell>
                       <TableCell className="authorizer">Por <PersonLink person={request.requester} onOpen={() => setChat({ person: request.requester, requestCode: request.code, relation: `Solicitante de ${request.code}` })} /></TableCell>
                       <TableCell>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canCancel, canDecide, canEdit, countByStatus, dueState, emptyFilters, filterRequests, paginate, sampleRequests, seedRequests, sortByDueDate } from "@/lib/my-requests";
+import { canCancel, canDecide, canEdit, countByStatus, defaultSort, dueState, emptyFilters, filterRequests, paginate, sampleRequests, seedRequests, sortRequests } from "@/lib/my-requests";
 
 const today = "2026-10-15";
 const requests = sampleRequests(today);
@@ -43,9 +43,18 @@ describe("My requests", () => {
     expect(ranged.every(r => r.dueDate >= today && r.dueDate <= "2026-10-20")).toBe(true);
   });
   it("sorts by due date in both directions", () => {
-    const asc = sortByDueDate(requests, "asc").map(r => r.dueDate);
+    const asc = sortRequests(requests, { key: "dueDate", direction: "asc" }).map(r => r.dueDate);
     expect(asc).toEqual([...asc].sort());
-    expect(sortByDueDate(requests, "desc").map(r => r.dueDate)).toEqual([...asc].reverse());
+    expect(sortRequests(requests, { key: "dueDate", direction: "desc" }).map(r => r.dueDate)).toEqual([...asc].reverse());
+  });
+  it("sorts by creation date, newest first by default, with later codes first on the same day", () => {
+    const newest = sortRequests(requests, defaultSort);
+    expect(newest.map(r => r.createdAt)).toEqual(requests.map(r => r.createdAt).sort().reverse());
+    const sameDay = newest.filter(r => r.createdAt === newest[0]!.createdAt).map(r => r.code);
+    expect(sameDay).toEqual([...sameDay].sort().reverse());
+  });
+  it("gives seeded rejections a reason", () => {
+    expect(requests.filter(r => r.status === "Rechazado").every(r => (r.rejectionReason?.length ?? 0) >= 10)).toBe(true);
   });
   it("clamps pagination to the available pages", () => {
     const page = paginate(requests, 99, 10);

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Sparkles } from "lucide-react";
+import { CalendarClock, MessageSquareX, Sparkles } from "lucide-react";
 import { NoveltyTag } from "@/components/requests/classification-review";
 import { formatDate } from "@/components/requests/request-list";
 import { itemKey, type ProposalReview } from "@/lib/catalog";
@@ -7,7 +7,7 @@ import type { MyRequest } from "@/lib/my-requests";
 
 type Box = { label: string; value: string; tags?: ReactNode };
 
-/** Tags for what in this box is new to the catalog: the type, the select itself, or the option chosen in it. */
+/** Tags for what in this box is new to the catalog: the category, the attribute itself, or the option chosen in it. */
 function noveltyTags(review: ProposalReview | undefined, field: { label: string; value: string } | "type" | "element"): ReactNode {
   if (!review) return null;
   const find = (key: string) => review.items.find(item => item.key === key);
@@ -24,7 +24,7 @@ function noveltyTags(review: ProposalReview | undefined, field: { label: string;
   const option = find(itemKey.option(field.label, field.value));
   if (!select && !link && !option) return null;
   return <>
-    {select && <NoveltyTag status={select.status} pendingLabel="Select nuevo" as={select.as} />}
+    {select && <NoveltyTag status={select.status} pendingLabel="Atributo nuevo" as={select.as} />}
     {link && <NoveltyTag status={link.status} pendingLabel="Por asociar a la categoría" />}
     {option && <NoveltyTag status={option.status} pendingLabel="Opción nueva" as={option.as} />}
   </>;
@@ -37,7 +37,8 @@ function FieldGrid({ request, review }: { request: MyRequest; review?: ProposalR
     ...(request.element ? [{ label: request.elementLabel, value: request.element, tags: noveltyTags(review, "element") }] : []),
     { label: "Cantidad", value: String(request.quantity) },
     { label: "Unidad", value: request.unit, tags: unit && noveltyTags(review, unit) },
-    { label: "Fecha límite", value: formatDate(request.dueDate) },
+    { label: "Fecha de creación", value: formatDate(request.createdAt) },
+    { label: "Fecha de vencimiento", value: formatDate(request.dueDate) },
     ...request.fields.filter(field => field.label.toLowerCase() !== "unidad").map(field => ({ ...field, tags: noveltyTags(review, field) })),
   ];
   return (
@@ -45,6 +46,19 @@ function FieldGrid({ request, review }: { request: MyRequest; review?: ProposalR
       {boxes.map(box => <div key={box.label} className={box.tags ? "has-novelty" : undefined}><dt>{box.label}</dt><dd>{box.value}</dd>{box.tags && <div className="novelty-tags">{box.tags}</div>}</div>)}
     </dl>
   );
+}
+
+/** The rejection reason and the estimated resolution date, when there are. */
+export function RequestOutcome({ request }: { request: MyRequest }) {
+  if (!request.rejectionReason && !request.estimatedResolution) return null;
+  return <>
+    {request.status === "Rechazado" && request.rejectionReason && (
+      <section className="rejection-reason" aria-label="Razón del rechazo"><MessageSquareX aria-hidden="true" /><div><strong>Razón del rechazo</strong><p>{request.rejectionReason}</p></div></section>
+    )}
+    {request.estimatedResolution && (request.status === "Enviada" || request.status === "En revisión") && (
+      <p className="estimate-line"><CalendarClock aria-hidden="true" />Resolución estimada: <strong>{formatDate(request.estimatedResolution)}</strong></p>
+    )}
+  </>;
 }
 
 /**
