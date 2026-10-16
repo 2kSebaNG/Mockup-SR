@@ -388,6 +388,19 @@
 .catalog-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .catalog-card { display: flex; flex-direction: column; gap: 12px; padding: 18px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; }
 @media (max-width: 800px) { .catalog-grid { grid-template-columns: 1fr; } }
+.element-field { grid-column: span 2; }
+.element-input { position: relative; }
+.element-input-control { position: relative; }
+.element-input-control > svg:first-child { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted-foreground); pointer-events: none; }
+.element-input-control input { padding-left: 36px; padding-right: 34px; }
+.element-input-spinner { position: absolute; right: 12px; top: 50%; margin-top: -8px; width: 16px; height: 16px; color: var(--muted-foreground); }
+.element-suggestions { position: absolute; z-index: 60; top: calc(100% + 4px); left: 0; right: 0; margin: 0; padding: 4px; list-style: none; background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 12px 30px oklch(0.2 0 0 / 14%); max-height: 260px; overflow-y: auto; }
+.element-suggestions li { padding: 8px 10px; border-radius: 4px; font-size: 14px; cursor: pointer; }
+.element-suggestions li:hover, .element-suggestions li.active { background: var(--accent); }
+.element-cell { color: var(--muted-foreground); font-size: 13px; }
+.catalog-card-wide { grid-column: 1 / -1; }
+.catalog-card-wide .catalog-items li { flex-direction: column; align-items: flex-start; gap: 2px; }
+@media (max-width: 700px) { .element-field { grid-column: 1 / -1; } }
 @media (max-width: 1100px) { .requests-layout { grid-template-columns: 1fr; } .requests-sidebar { order: -1; display: grid; grid-template-columns: 1fr 1fr; align-items: start; } .requests-note { grid-column: 1 / -1; } .summary-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .my-requests { padding: 32px 20px 110px; } .requests-sidebar { grid-template-columns: 1fr; } .summary-card { padding: 16px; gap: 12px; } .summary-card strong { font-size: 30px; } .page-number { display: none; } }
 @media (max-width: 480px) { .summary-cards { gap: 10px; } .summary-icon { display: none; } .summary-card { padding: 14px; } .summary-card div > span { font-size: 13px; } }

@@ -1,4 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { normalizeForSearch } from "./elements";
+
+const elementSearchSchema = z.object({ category: z.string().trim().min(1).max(80), query: z.string().max(120) });
 import { catalogItemDecisionSchema, requestCodeSchema, requestDecisionSchema, requestDelegationSchema, requestInputSchema, requestUpdateSchema, reviewerDecisionSchema, reviewerSchema } from "./my-requests";
 
 const requester = async () => (await import("./requests.server")).requesterService();
@@ -55,6 +59,15 @@ export const getCatalogReview = createServerFn({ method: "GET" })
   .handler(async () => (await admin()).catalogReview());
 
 // Catalog ("Nueva solicitud" shows only approved types, attributes and options)
+
+/** Element suggestions for the category being written (debounced by the form). */
+export const searchElementSuggestions = createServerFn({ method: "GET" })
+  .inputValidator(input => elementSearchSchema.parse(input))
+  .handler(async ({ data }) => {
+    if (normalizeForSearch(data.query).length < 2) return [];
+    const { getElementStore } = await import("./element-store.server");
+    return (await getElementStore()).search(data.category, data.query);
+  });
 
 export const getCatalog = createServerFn({ method: "GET" })
   .handler(async () => (await (await import("./catalog-store.server")).getCatalogStore()).get());

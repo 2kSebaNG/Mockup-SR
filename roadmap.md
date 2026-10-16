@@ -35,3 +35,11 @@
 - [x] Página Catálogo: novedades pendientes agrupadas entre solicitudes y catálogo vigente.
 - [x] Los nombres corregidos quedan como alias, así no se vuelven a pedir.
 - [ ] Aplicar la migración `supabase/migrations/20261016090000_requirement_catalog.sql` en Lovable Cloud.
+
+# Tipo de elemento y catálogos maestros
+- [x] "Tipo de requerimiento" pasa a llamarse "Categoría".
+- [x] Campo de elemento siempre presente, con nombre según la categoría (Cargo, Tipo de máquina, Producto…).
+- [x] Sugerencias mientras se escribe (debounce de 350 ms) desde el catálogo maestro de la categoría.
+- [x] Elementos nuevos quedan pendientes hasta que el ADC los aprueba (con corrección o unión a uno existente).
+- [x] Categorías nuevas: EPP, Servicios, Vehículos, Combustibles y lubricantes, con sus catálogos maestros.
+- [ ] Aplicar la migración `supabase/migrations/20261017090000_requirement_elements.sql` (pg_trgm) en Lovable Cloud y probar las sugerencias allí.

@@ -89,7 +89,7 @@ function MyRequestsPage() {
                   {list.pageData.items.map(request => (
                     <TableRow key={request.code}>
                       <TableCell className="request-code">{request.code}</TableCell>
-                      <TableCell>{request.category}</TableCell>
+                      <TableCell><span className="category-cell">{request.category}{request.element && <span className="element-cell">{request.element}</span>}</span></TableCell>
                       <TableCell className="request-date">{formatDate(request.dueDate)}</TableCell>
                       <TableCell>
                         <div className="status-cell">

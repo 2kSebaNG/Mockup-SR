@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Check, Loader2, Tags, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ElementInput } from "@/components/requests/element-input";
 import { defaultCatalog, findCategory, findField, uniqueValues, type Catalog, type CatalogItem, type CatalogItemKind, type ItemEdit, type ItemStatus } from "@/lib/catalog";
 import type { ReviewedRequest } from "@/lib/my-requests";
 import { decideCatalogItems, getCatalog } from "@/lib/requests.functions";
@@ -15,9 +16,10 @@ export function NoveltyTag({ status, pendingLabel = "Nuevo", as }: { status: Ite
 }
 
 export function itemTitle(item: { kind: CatalogItemKind; name: string; category: string; field?: string | undefined }) {
-  if (item.kind === "type") return <>Tipo nuevo <strong>«{item.name}»</strong></>;
+  if (item.kind === "type") return <>Categoría nueva <strong>«{item.name}»</strong></>;
+  if (item.kind === "element") return <>Elemento nuevo <strong>«{item.name}»</strong> <span className="novelty-context">en el catálogo maestro de {item.category}</span></>;
   if (item.kind === "field") return <>Select nuevo <strong>«{item.name}»</strong> <span className="novelty-context">en {item.category}</span></>;
-  if (item.kind === "link") return <>Asociar el select <strong>«{item.name}»</strong> <span className="novelty-context">al tipo {item.category}</span></>;
+  if (item.kind === "link") return <>Asociar el select <strong>«{item.name}»</strong> <span className="novelty-context">a la categoría {item.category}</span></>;
   return <>Opción nueva <strong>«{item.name}»</strong> <span className="novelty-context">en el select {item.field}</span></>;
 }
 
@@ -49,7 +51,9 @@ export function NoveltyEditor({ item, catalog, onDecide }: { item: { kind: Catal
   const [busy, setBusy] = useState<"aprobada" | "rechazada" | null>(null);
   const [error, setError] = useState("");
   const editable = item.kind !== "link";
-  const match = editable ? existingMatch(catalog, item, name) : undefined;
+  // Elements are looked up in the category's master catalog through the same suggestions as the request form.
+  const [elementMatch, setElementMatch] = useState<boolean | null>(null);
+  const match = item.kind === "element" ? (elementMatch ? name.trim() : undefined) : editable ? existingMatch(catalog, item, name) : undefined;
   const optionList = uniqueValues(options.split(",")).slice(0, 30);
 
   const decide = async (status: "aprobada" | "rechazada") => {
@@ -65,13 +69,17 @@ export function NoveltyEditor({ item, catalog, onDecide }: { item: { kind: Catal
     <div className="novelty-editor">
       {editable && <div className="novelty-fields">
         <label htmlFor={`${id}-name`}>Guardar como</label>
-        <Input id={`${id}-name`} list={`${id}-existing`} value={name} maxLength={80} disabled={busy !== null} onChange={event => setName(event.target.value)} />
-        <datalist id={`${id}-existing`}>{existingNames(catalog, item).map(existing => <option key={existing} value={existing} />)}</datalist>
+        {item.kind === "element"
+          ? <ElementInput id={`${id}-name`} category={item.category} value={name} onChange={setName} onKnownChange={setElementMatch} disabled={busy !== null} />
+          : <>
+            <Input id={`${id}-name`} list={`${id}-existing`} value={name} maxLength={80} disabled={busy !== null} onChange={event => setName(event.target.value)} />
+            <datalist id={`${id}-existing`}>{existingNames(catalog, item).map(existing => <option key={existing} value={existing} />)}</datalist>
+          </>}
         {item.kind === "field" && <>
           <label htmlFor={`${id}-options`}>Opciones, separadas por coma</label>
           <Input id={`${id}-options`} value={options} maxLength={3000} disabled={busy !== null} onChange={event => setOptions(event.target.value)} />
         </>}
-        <p className="novelty-hint">{match ? <>Ya existe <strong>«{match}»</strong>: se unirá a ese{item.kind === "option" ? "a opción" : item.kind === "type" ? " tipo" : " select"} en vez de crear uno nuevo.</> : name.trim() !== item.name ? <>Se guardará corregido como <strong>«{name.trim()}»</strong>.</> : "Escribe otro nombre para corregirlo, o el de uno existente para unirlo."}</p>
+        <p className="novelty-hint">{match ? <>Ya existe <strong>«{match}»</strong>: se unirá a {item.kind === "option" ? "esa opción" : item.kind === "type" ? "esa categoría" : item.kind === "element" ? "ese elemento" : "ese select"} en vez de crear uno nuevo.</> : name.trim() !== item.name ? <>Se guardará corregido como <strong>«{name.trim()}»</strong>.</> : "Escribe otro nombre para corregirlo, o el de uno existente para unirlo."}</p>
       </div>}
       <div className="catalog-actions">
         <Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => decide("rechazada")}>{busy === "rechazada" ? <Loader2 className="animate-spin" /> : <X />}Rechazar</Button>

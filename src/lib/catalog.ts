@@ -1,4 +1,5 @@
 import { categories as baseCategories, fieldPool, type RequirementField } from "./requirements";
+import { DEFAULT_ELEMENT_LABEL, elementLabels } from "./elements";
 
 /**
  * The approved catalog of request types ("categorías") and their select attributes ("campos").
@@ -10,7 +11,8 @@ import { categories as baseCategories, fieldPool, type RequirementField } from "
  * approved as "Tetra Pak"), so other requests with the old name are recognized instead of being asked about again.
  */
 export type CatalogField = { id: string; label: string; options: string[]; aliases?: string[]; optionAliases?: Record<string, string> };
-export type CatalogCategory = { name: string; fieldIds: string[]; aliases?: string[] };
+/** `elementLabel` names the category's element input (e.g. "Cargo" for Personas), backed by its master catalog. */
+export type CatalogCategory = { name: string; fieldIds: string[]; aliases?: string[]; elementLabel?: string };
 export type Catalog = { categories: CatalogCategory[]; fields: CatalogField[] };
 
 const baseCategoryFields: Record<string, string[]> = {
@@ -19,10 +21,14 @@ const baseCategoryFields: Record<string, string[]> = {
   Personas: ["unidad", "especialidad"],
   Materiales: ["unidad", "material", "dimensiones"],
   Alimentos: ["unidad", "formato"],
+  EPP: ["unidad", "marca", "dimensiones"],
+  Servicios: ["unidad"],
+  Vehículos: ["unidad", "capacidad", "alimentacion"],
+  "Combustibles y lubricantes": ["unidad", "formato"],
 };
 
 export const defaultCatalog: Catalog = {
-  categories: baseCategories.map(name => ({ name, fieldIds: baseCategoryFields[name] ?? [] })),
+  categories: [...baseCategories, "EPP", "Servicios", "Vehículos", "Combustibles y lubricantes"].map(name => ({ name, fieldIds: baseCategoryFields[name] ?? [], elementLabel: elementLabels[name] ?? DEFAULT_ELEMENT_LABEL })),
   fields: fieldPool.map(field => ({ ...field, options: [...field.options] })),
 };
 
@@ -51,6 +57,11 @@ export function hasOption(field: CatalogField, option: string) {
 
 const addAlias = (aliases: string[] | undefined, canonical: string, alias: string) =>
   key(alias) === key(canonical) ? aliases : uniqueValues([...(aliases ?? []), alias]);
+
+/** Name of the category's element input; new or unknown categories use "Tipo de elemento". */
+export function elementLabelFor(catalog: Catalog, category: string) {
+  return findCategory(catalog, category)?.elementLabel ?? DEFAULT_ELEMENT_LABEL;
+}
 
 export function fieldsForCategory(catalog: Catalog, category: string): RequirementField[] {
   const ids = findCategory(catalog, category)?.fieldIds ?? [];
@@ -106,14 +117,19 @@ export const hasOptionChanges = (diff: CatalogDiff) => diff.newOptions.length > 
  * - `field`: a select that does not exist yet (with the options the requester gave it).
  * - `link`: an existing select used with an existing type it is not associated with yet.
  * - `option`: a new option for an existing select.
+ * - `element`: an element type (e.g. a "Cargo") that is not in the category's master catalog yet.
  */
-export type CatalogItemKind = "type" | "field" | "link" | "option";
+export type CatalogItemKind = "type" | "field" | "link" | "option" | "element";
 export type ItemStatus = "pendiente" | "aprobada" | "rechazada";
 /** What was decided, and the name it was saved under when the administrator corrected it or mapped it to an existing one. */
 export type ItemDecision = { status: "aprobada" | "rechazada"; as?: string; options?: string[] };
 
 /** What a request proposes for the catalog, kept on the request: the request's own type and selects, plus the decisions so far. */
-export type StoredProposal = { category: string; fields: ProposedField[]; decisions: Record<string, ItemDecision> };
+export type StoredProposal = { category: string; fields: ProposedField[]; element?: string; decisions: Record<string, ItemDecision> };
+
+/** Whether an element is already in a category's master catalog (looked up in the element store by the server). */
+export type ElementCheck = (category: string, element: string) => boolean;
+const unknownElements: ElementCheck = () => false;
 
 export type CatalogItem = {
   key: string;
@@ -135,6 +151,7 @@ export type ProposalReview = { category: string; items: CatalogItem[] };
 
 export const itemKey = {
   type: () => "type",
+  element: () => "element",
   field: (label: string) => `field:${key(label)}`,
   link: (label: string) => `link:${key(label)}`,
   option: (field: string, value: string) => `option:${key(field)}:${key(value)}`,
@@ -148,7 +165,14 @@ const distinctFields = (fields: ProposedField[]) => fields.filter((field, index)
  * Every novelty of a proposal compared with today's catalog. Decided items keep their decision; pending ones that the
  * catalog already has (because another request got them approved) drop out instead of being asked for twice.
  */
-export function reviewOf(catalog: Catalog, proposal: StoredProposal | null): ProposalReview | null {
+/** The (approved category, element) a proposal's element would be filed under, to look it up in the master catalog. */
+export function elementLookup(catalog: Catalog, proposal: StoredProposal | null) {
+  if (!proposal?.element?.trim()) return null;
+  const category = resolvedCategory(proposal);
+  return { category: findCategory(catalog, category)?.name ?? category.trim(), name: proposal.element.trim() };
+}
+
+export function reviewOf(catalog: Catalog, proposal: StoredProposal | null, isKnownElement: ElementCheck = unknownElements): ProposalReview | null {
   if (!proposal) return null;
   const decisions = proposal.decisions ?? {};
   const decided = (itemKeyValue: string) => decisions[itemKeyValue];
@@ -161,6 +185,10 @@ export function reviewOf(catalog: Catalog, proposal: StoredProposal | null): Pro
 
   const typeDecision = decided(itemKey.type());
   if (typeDecision || !category) push({ key: itemKey.type(), kind: "type", name: proposal.category.trim() }, typeDecision);
+
+  const element = elementLookup(catalog, proposal);
+  const elementDecision = decided(itemKey.element());
+  if (element && (elementDecision || !isKnownElement(element.category, element.name))) push({ key: itemKey.element(), kind: "element", name: element.name }, elementDecision);
 
   for (const field of distinctFields(proposal.fields)) {
     const options = uniqueValues([...field.options, field.value]);
@@ -190,17 +218,18 @@ export function pendingSummary(review: ProposalReview | null) {
   const count = (kind: CatalogItemKind) => pending.filter(item => item.kind === kind).length;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   return [
-    count("type") > 0 && "Tipo nuevo",
+    count("type") > 0 && "Categoría nueva",
     count("field") > 0 && plural(count("field"), "select nuevo", "selects nuevos"),
     count("link") > 0 && plural(count("link"), "select por asociar", "selects por asociar"),
     count("option") > 0 && plural(count("option"), "opción nueva", "opciones nuevas"),
+    count("element") > 0 && "Elemento nuevo",
   ].filter(Boolean).join(" · ");
 }
 
 /** The proposal to keep on a request, or null when everything it uses is already in the catalog. */
-export function proposalFor(catalog: Catalog, category: string, fields: ProposedField[]): StoredProposal | null {
-  const proposal: StoredProposal = { category, fields, decisions: {} };
-  return reviewOf(catalog, proposal) ? proposal : null;
+export function proposalFor(catalog: Catalog, category: string, fields: ProposedField[], element = "", isKnownElement: ElementCheck = unknownElements): StoredProposal | null {
+  const proposal: StoredProposal = { category, fields, ...(element.trim() && { element: element.trim() }), decisions: {} };
+  return reviewOf(catalog, proposal, isKnownElement) ? proposal : null;
 }
 
 export type ItemEdit = { as?: string | undefined; options?: string[] | undefined };
@@ -236,6 +265,8 @@ export function applyItem(catalog: Catalog, proposal: StoredProposal, item: Cata
     link(next, resolvedCategory(proposal), name);
   } else if (item.kind === "link") {
     link(next, resolvedCategory(proposal), item.name);
+  } else if (item.kind === "element") {
+    // Elements live in the category's master catalog (element store), not in this catalog.
   } else {
     const field = findField(next, resolvedField(proposal, item.field ?? ""));
     if (field) {
@@ -272,6 +303,7 @@ export function groupPendingItems(requests: { code: string; requester: { name: s
       const id = item.kind === "type" ? `type:${key(item.name)}`
         : item.kind === "field" ? `field:${key(item.name)}`
         : item.kind === "link" ? `link:${key(item.category)}:${key(item.name)}`
+        : item.kind === "element" ? `element:${key(item.category)}:${key(item.name)}`
         : `option:${key(item.field ?? "")}:${key(item.name)}`;
       const group = groups.get(id) ?? { id, kind: item.kind, name: item.name, category: item.category, ...(item.field && { field: item.field }), options: [], requests: [], targets: [] };
       group.options = uniqueValues([...group.options, ...(item.options ?? [])]);
@@ -280,6 +312,6 @@ export function groupPendingItems(requests: { code: string; requester: { name: s
       groups.set(id, group);
     }
   }
-  const order: CatalogItemKind[] = ["type", "field", "link", "option"];
+  const order: CatalogItemKind[] = ["type", "element", "field", "link", "option"];
   return [...groups.values()].sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind) || b.requests.length - a.requests.length || a.name.localeCompare(b.name, "es"));
 }

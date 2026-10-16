@@ -13,7 +13,7 @@ export interface RequestStore {
 }
 
 type RequestRow = {
-  code: string; requester: string; requester_name: string; requester_role: string; category: string; quantity: number | string;
+  code: string; requester: string; requester_name: string; requester_role: string; category: string; element: string | null; element_label: string | null; quantity: number | string;
   unit: string; description: string; ai_assisted: boolean; fields: { label: string; value: string }[]; due_date: string;
   status: MyRequest["status"]; department: string | null; assignee_name: string | null; assignee_role: string | null;
   assignee_email: string | null; catalog_proposal: MyRequest["proposal"]; created_at: string;
@@ -21,7 +21,7 @@ type RequestRow = {
 
 const fromRow = (row: RequestRow): MyRequest => ({
   code: row.code, requester: { email: row.requester, name: row.requester_name, role: row.requester_role },
-  category: row.category, quantity: Number(row.quantity), unit: row.unit, description: row.description, aiAssisted: row.ai_assisted,
+  category: row.category, element: row.element ?? "", elementLabel: row.element_label ?? "Tipo de elemento", quantity: Number(row.quantity), unit: row.unit, description: row.description, aiAssisted: row.ai_assisted,
   fields: row.fields ?? [], dueDate: row.due_date, status: row.status, createdAt: row.created_at.slice(0, 10), department: row.department,
   assignee: row.assignee_name ? { name: row.assignee_name, role: row.assignee_role ?? "", email: row.assignee_email ?? "" } : null,
   proposal: row.catalog_proposal ?? null,
@@ -31,6 +31,8 @@ function toRow(patch: RequestPatch & Partial<Pick<MyRequest, "requester">>) {
   const row: Partial<Omit<RequestRow, "code" | "created_at">> = {};
   if (patch.requester !== undefined) { row.requester = patch.requester.email; row.requester_name = patch.requester.name; row.requester_role = patch.requester.role; }
   if (patch.category !== undefined) row.category = patch.category;
+  if (patch.element !== undefined) row.element = patch.element;
+  if (patch.elementLabel !== undefined) row.element_label = patch.elementLabel;
   if (patch.quantity !== undefined) row.quantity = patch.quantity;
   if (patch.unit !== undefined) row.unit = patch.unit;
   if (patch.description !== undefined) row.description = patch.description;
@@ -81,7 +83,7 @@ export function fileStore(path: string, seed: () => MyRequest[] = () => seedRequ
   const serial = <T>(task: () => Promise<T>) => { const next = queue.then(task, task); queue = next.catch(() => undefined); return next; };
   const read = async (): Promise<MyRequest[]> => {
     const fs = await import("node:fs/promises");
-    try { return (JSON.parse(await fs.readFile(path, "utf8")) as MyRequest[]).map(request => ({ ...request, proposal: request.proposal ?? null })); } catch (error) {
+    try { return (JSON.parse(await fs.readFile(path, "utf8")) as MyRequest[]).map(request => ({ ...request, element: request.element ?? "", elementLabel: request.elementLabel ?? "Tipo de elemento", proposal: request.proposal ?? null })); } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       const seeded = seed();
       await write(seeded);

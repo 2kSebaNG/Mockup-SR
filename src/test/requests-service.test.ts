@@ -6,10 +6,11 @@ import { requestFromInput, requestInputSchema, responsibleFor, reviewerSchema, t
 import { CONTRACT_ADMIN, delegationByRules, findMember, requesters, type Person } from "@/lib/organization";
 import { fileStore } from "@/lib/requests-store.server";
 import { memoryCatalogStore, type CatalogStore } from "@/lib/catalog-store.server";
+import { memoryElementStore } from "@/lib/element-store.server";
 import { fieldsForCategory, findCategory, findField } from "@/lib/catalog";
 import { createAdminService, createRequesterService, createReviewerService } from "@/lib/requests.server";
 
-const input: RequestInput = { category: "Personas", quantity: 2, dueDate: "2026-11-20", description: "Soldadores para turno de noche.", fields: [{ label: "Especialidad", value: "Soldador", options: [] }, { label: "Unidad", value: "Días", options: [] }], aiAssisted: false };
+const input: RequestInput = { category: "Personas", element: "Soldador", elementLabel: "Cargo", quantity: 2, dueDate: "2026-11-20", description: "Soldadores para turno de noche.", fields: [{ label: "Especialidad", value: "Soldador", options: [] }, { label: "Unidad", value: "Días", options: [] }], aiAssisted: false };
 const ana: Person = { name: "Ana Soto", role: "Solicitante", email: "ana@aecon.cl" };
 const otro: Person = { name: "Otro Usuario", role: "Solicitante", email: "otro@aecon.cl" };
 
@@ -104,12 +105,12 @@ describe("Contract administrator service", () => {
 });
 
 describe("Catalog approval", () => {
-  const drink: RequestInput = { ...input, category: "Bebestible", fields: [{ label: "Tipo de bebestible", value: "Jugo", options: ["Jugo", "Agua"] }, { label: "Formato", value: "Tetra", options: ["Botella", "Tetra"] }] };
+  const drink: RequestInput = { ...input, category: "Bebestible", element: "Jugo natural", elementLabel: "Tipo de elemento", fields: [{ label: "Tipo de bebestible", value: "Jugo", options: ["Jugo", "Agua"] }, { label: "Formato", value: "Tetra", options: ["Botella", "Tetra"] }] };
   const keyOf = (request: { review: { items: { kind: string; key: string }[] } | null }, kind: string) => request.review!.items.find(item => item.kind === kind)!.key;
 
   it("keeps each novelty pending on the request without touching the catalog", async () => {
     const { request } = await createRequesterService(store(), catalogs, ana).create(drink);
-    expect(request!.review!.items.map(item => [item.kind, item.name, item.status])).toEqual([["type", "Bebestible", "pendiente"], ["field", "Tipo de bebestible", "pendiente"], ["option", "Tetra", "pendiente"]]);
+    expect(request!.review!.items.map(item => [item.kind, item.name, item.status])).toEqual([["type", "Bebestible", "pendiente"], ["element", "Jugo natural", "pendiente"], ["field", "Tipo de bebestible", "pendiente"], ["option", "Tetra", "pendiente"]]);
     const catalog = await catalogs.get();
     expect(findCategory(catalog, "Bebestible")).toBeUndefined();
     expect(findField(catalog, "Tipo de bebestible")).toBeUndefined();
@@ -128,7 +129,7 @@ describe("Catalog approval", () => {
     expect(findField(catalog, "Tipo de bebestible")?.options).toEqual(["Jugo", "Agua", "Té"]);
     expect(findField(catalog, "Formato")?.options).toContain("Tetra Pak");
     const reviewed = (await admin.list()).find(r => r.code === code)!;
-    expect(reviewed.review!.items.map(item => [item.kind, item.status, item.as])).toEqual([["type", "aprobada", "Bebidas"], ["field", "aprobada", undefined], ["option", "aprobada", "Tetra Pak"]]);
+    expect(reviewed.review!.items.map(item => [item.kind, item.status, item.as])).toEqual([["type", "aprobada", "Bebidas"], ["element", "pendiente", undefined], ["field", "aprobada", undefined], ["option", "aprobada", "Tetra Pak"]]);
   });
   it("keeps a rejected item out of the catalog and refuses deciding it twice", async () => {
     const { request } = await createRequesterService(store(), catalogs, ana).create(drink);
@@ -152,6 +153,41 @@ describe("Catalog approval", () => {
     const { request } = await createRequesterService(store(), catalogs, ana).create({ ...input, fields: [{ label: "Especialidad", value: "Soldador", options: [] }] });
     expect(request!.proposal).toBeNull();
     expect((await createAdminService(store(), catalogs).decideItems([{ code: request!.code, key: "type" }], "aprobada")).error).toMatch(/no propone/);
+  });
+});
+
+describe("Element types (master catalogs)", () => {
+  const welder = (element: string): RequestInput => ({ ...input, element });
+
+  it("does not propose an element that is already in the category's master catalog, regardless of case or accents", async () => {
+    const elements = memoryElementStore();
+    const { request } = await createRequesterService(store(), catalogs, ana, elements).create(welder("operador de GRUA"));
+    expect(request!.element).toBe("operador de GRUA");
+    expect(request!.proposal).toBeNull();
+  });
+  it("keeps a new element pending on the request and out of the master catalog", async () => {
+    const elements = memoryElementStore();
+    const { request } = await createRequesterService(store(), catalogs, ana, elements).create(welder("Soldador TIG"));
+    expect(request!.review!.items).toMatchObject([{ kind: "element", name: "Soldador TIG", category: "Personas", status: "pendiente" }]);
+    expect(await elements.search("Personas", "Soldador TIG")).not.toContain("Soldador TIG");
+  });
+  it("adds the element to the master catalog only when the administrator approves it, keeping the typed name as an alias", async () => {
+    const elements = memoryElementStore();
+    const { request } = await createRequesterService(store(), catalogs, ana, elements).create(welder("Soldador tig"));
+    const admin = createAdminService(store(), catalogs, elements);
+    expect((await admin.decideItems([{ code: request!.code, key: "element" }], "aprobada", { as: "Soldador TIG" })).decided).toBe(1);
+    expect(await elements.search("Personas", "tig")).toContain("Soldador TIG");
+    const again = await createRequesterService(store(), catalogs, otro, elements).create(welder("soldador tig"));
+    expect(again.request!.proposal).toBeNull();
+  });
+  it("asks to approve a new category before filing its elements", async () => {
+    const elements = memoryElementStore();
+    const { request } = await createRequesterService(store(), catalogs, ana, elements).create({ ...input, category: "Bebestible", element: "Jugo natural", fields: [] });
+    const admin = createAdminService(store(), catalogs, elements);
+    expect((await admin.decideItems([{ code: request!.code, key: "element" }], "aprobada")).error).toMatch(/Primero aprueba la categoría/);
+    await admin.decideItems([{ code: request!.code, key: "type" }], "aprobada");
+    expect((await admin.decideItems([{ code: request!.code, key: "element" }], "aprobada")).decided).toBe(1);
+    expect(await elements.search("Bebestible", "jugo")).toEqual(["Jugo natural"]);
   });
 });
 

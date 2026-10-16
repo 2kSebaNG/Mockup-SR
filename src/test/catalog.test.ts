@@ -16,7 +16,7 @@ describe("Catalog novelties", () => {
       ["option", "Soprole", "pendiente"],
     ]);
     expect(review.items.find(item => item.kind === "field")?.options).toEqual(["Jugo", "Agua", "Gaseosa"]);
-    expect(pendingSummary(review)).toBe("Tipo nuevo · 1 select nuevo · 1 opción nueva");
+    expect(pendingSummary(review)).toBe("Categoría nueva · 1 select nuevo · 1 opción nueva");
   });
   it("proposes nothing when a request only uses approved types, selects and options", () => {
     expect(proposalFor(defaultCatalog, "personas", [{ label: "especialidad", value: "Soldador", options: ["Operador", "Soldador"] }])).toBeNull();

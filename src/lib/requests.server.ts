@@ -1,5 +1,6 @@
 import { canCancel, canDecide, canEdit, requestFromInput, statusPhrase, type MyRequest, type RequestInput, type ReviewedRequest } from "./my-requests";
-import { applyItem, groupPendingItems, proposalFor, recordDecision, reviewOf, type ItemEdit } from "./catalog";
+import { applyItem, elementLookup, findCategory, groupPendingItems, proposalFor, recordDecision, reviewOf, type Catalog, type ItemEdit, type StoredProposal } from "./catalog";
+import { elementKey, getElementStore, memoryElementStore, type ElementStore } from "./element-store.server";
 import { DEMO_USER, findMember, type Person } from "./organization";
 import { getCatalogStore, type CatalogStore } from "./catalog-store.server";
 import { getRequestStore, type RequestStore } from "./requests-store.server";
@@ -11,16 +12,25 @@ const notFound = () => failure("No encontramos esa solicitud.");
 
 // The same rules the tables use for their buttons, enforced again here so they hold for any caller.
 
-/** Attaches to each request how its proposal compares with the catalog as it is now. */
-function reviewer(catalogs: CatalogStore) {
+/** Which proposals' elements are already in their category's master catalog. */
+async function knownElements(catalog: Catalog, elements: ElementStore, proposals: (StoredProposal | null)[]) {
+  const pairs = proposals.map(proposal => elementLookup(catalog, proposal)).filter(pair => pair !== null);
+  const found = await elements.resolve(pairs);
+  return (category: string, name: string) => found.has(elementKey(category, name));
+}
+
+/** Attaches to each request how its proposal compares with the catalog and master catalogs as they are now. */
+function reviewer(catalogs: CatalogStore, elements: ElementStore) {
+  const many = async (requests: MyRequest[]): Promise<ReviewedRequest[]> => {
+    const catalog = await catalogs.get();
+    const known = await knownElements(catalog, elements, requests.map(request => request.proposal));
+    return requests.map(request => ({ ...request, review: reviewOf(catalog, request.proposal, known) }));
+  };
   return {
     async one(request: MyRequest | null): Promise<RequestResult> {
-      return request ? { request: { ...request, review: reviewOf(await catalogs.get(), request.proposal) }, error: null } : notFound();
+      return request ? { request: (await many([request]))[0]!, error: null } : notFound();
     },
-    async many(requests: MyRequest[]): Promise<ReviewedRequest[]> {
-      const catalog = await catalogs.get();
-      return requests.map(request => ({ ...request, review: reviewOf(catalog, request.proposal) }));
-    },
+    many,
   };
 }
 
@@ -28,10 +38,15 @@ function reviewer(catalogs: CatalogStore) {
  * What a requester can do with their own requests. Anything new they used (type, attributes, options) is only kept
  * as a pending proposal on the request; the catalog itself is never changed here.
  */
-export function createRequesterService(store: RequestStore, catalogs: CatalogStore, user: Person) {
-  const view = reviewer(catalogs);
+export function createRequesterService(store: RequestStore, catalogs: CatalogStore, user: Person, elements: ElementStore = memoryElementStore()) {
+  const view = reviewer(catalogs, elements);
   const own = async (code: string) => { const request = await store.get(code); return request?.requester.email === user.email ? request : null; };
-  const withProposal = async (input: RequestInput) => ({ ...requestFromInput(input), proposal: proposalFor(await catalogs.get(), input.category, input.fields) });
+  const withProposal = async (input: RequestInput) => {
+    const catalog = await catalogs.get();
+    const draft: StoredProposal = { category: input.category, fields: input.fields, element: input.element, decisions: {} };
+    const known = await knownElements(catalog, elements, [draft]);
+    return { ...requestFromInput(input), proposal: proposalFor(catalog, input.category, input.fields, input.element, known) };
+  };
   return {
     list: async () => view.many(await store.list({ requesterEmail: user.email })),
     async create(input: RequestInput): Promise<RequestResult> {
@@ -53,8 +68,8 @@ export function createRequesterService(store: RequestStore, catalogs: CatalogSto
 }
 
 /** What the contract administrator can do: see every request, decide or delegate the ones still waiting, and approve proposed catalog novelties. */
-export function createAdminService(store: RequestStore, catalogs: CatalogStore) {
-  const view = reviewer(catalogs);
+export function createAdminService(store: RequestStore, catalogs: CatalogStore, elements: ElementStore = memoryElementStore()) {
+  const view = reviewer(catalogs, elements);
   const pending = async (code: string) => {
     const current = await store.get(code);
     if (!current) return notFound();
@@ -82,9 +97,17 @@ export function createAdminService(store: RequestStore, catalogs: CatalogStore) 
     async decideItem(code: string, itemKeyValue: string, status: "aprobada" | "rechazada", edit: ItemEdit = {}): Promise<RequestResult> {
       const current = await store.get(code);
       if (!current?.proposal) return current ? failure("Esta solicitud no propone tipos, selects ni opciones nuevas.") : notFound();
-      const item = reviewOf(await catalogs.get(), current.proposal)?.items.find(candidate => candidate.key === itemKeyValue);
+      const catalog = await catalogs.get();
+      const item = reviewOf(catalog, current.proposal, await knownElements(catalog, elements, [current.proposal]))?.items.find(candidate => candidate.key === itemKeyValue);
       if (!item || item.status !== "pendiente") return failure("Eso ya fue decidido o ya está en el catálogo.");
-      if (status === "aprobada") await catalogs.update(catalog => applyItem(catalog, current.proposal!, item, edit));
+      if (status === "aprobada" && item.kind === "element") {
+        // An element is filed in its category's master catalog, so the category has to exist first.
+        const category = findCategory(catalog, item.category);
+        if (!category) return failure(`Primero aprueba la categoría «${item.category}»; el elemento se guarda en su catálogo maestro.`);
+        await elements.add(category.name, edit.as?.trim() || item.name, item.name);
+      } else if (status === "aprobada") {
+        await catalogs.update(next => applyItem(next, current.proposal!, item, edit));
+      }
       return view.one(await store.update(code, { proposal: recordDecision(current.proposal, item, status, edit) }));
     },
     /**
@@ -100,14 +123,14 @@ export function createAdminService(store: RequestStore, catalogs: CatalogStore) 
     /** Everything still waiting for a decision across all requests, grouped so each novelty is decided once. */
     async catalogReview() {
       const catalog = await catalogs.get();
-      return { catalog, groups: groupPendingItems(await view.many(await store.list())) };
+      return { catalog, masters: await elements.all(), groups: groupPendingItems(await view.many(await store.list())) };
     },
   };
 }
 
 /** What a department reviewer can do: see the requests delegated to them and decide the ones still in review. */
-export function createReviewerService(store: RequestStore, catalogs: CatalogStore, reviewerPerson: Person) {
-  const view = reviewer(catalogs);
+export function createReviewerService(store: RequestStore, catalogs: CatalogStore, reviewerPerson: Person, elements: ElementStore = memoryElementStore()) {
+  const view = reviewer(catalogs, elements);
   const assigned = (request: MyRequest | null) => request?.assignee?.email === reviewerPerson.email ? request : null;
   return {
     list: async () => view.many((await store.list()).filter(request => assigned(request))),
@@ -124,13 +147,13 @@ export async function reviewerService(department: string, reviewerName: string) 
   // No sign-in yet: the page says which reviewer it acts as, and it must be a real member of that department.
   const person = findMember(department, reviewerName);
   if (!person) throw new Error("Encargado desconocido para ese departamento.");
-  return createReviewerService(await getRequestStore(), await getCatalogStore(), person);
+  return createReviewerService(await getRequestStore(), await getCatalogStore(), person, await getElementStore());
 }
 
 export async function requesterService() {
-  return createRequesterService(await getRequestStore(), await getCatalogStore(), DEMO_USER);
+  return createRequesterService(await getRequestStore(), await getCatalogStore(), DEMO_USER, await getElementStore());
 }
 
 export async function adminService() {
-  return createAdminService(await getRequestStore(), await getCatalogStore());
+  return createAdminService(await getRequestStore(), await getCatalogStore(), await getElementStore());
 }

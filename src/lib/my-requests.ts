@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CONTRACT_ADMIN, DEMO_USER, delegationByRules, findMember, requesters, type Person } from "./organization";
-import { defaultCatalog, proposalFor, type ProposalReview, type StoredProposal } from "./catalog";
+import { defaultCatalog, elementLabelFor, proposalFor, type ProposalReview, type StoredProposal } from "./catalog";
+import { defaultElements, normalizeForSearch } from "./elements";
 
 export const requestStatuses = ["Enviada", "En revisión", "Autorizado", "Rechazado", "Anulado"] as const;
 export type RequestStatus = (typeof requestStatuses)[number];
@@ -13,6 +14,9 @@ export type MyRequest = {
   code: string;
   requester: Person;
   category: string;
+  /** The element type asked for (e.g. "Soldador"), under the category's element label (e.g. "Cargo"). */
+  element: string;
+  elementLabel: string;
   quantity: number;
   unit: string;
   description: string;
@@ -118,7 +122,9 @@ export function paginate<T>(items: T[], page: number, pageSize: number) {
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Indica una fecha válida.").refine(value => !Number.isNaN(Date.parse(value)), "Indica una fecha válida.");
 export const requestInputSchema = z.object({
-  category: z.string().trim().min(1, "Selecciona el tipo de requerimiento.").max(80),
+  category: z.string().trim().min(1, "Selecciona la categoría.").max(80),
+  element: z.string().trim().min(2, "Indica el tipo de elemento que necesitas.").max(120),
+  elementLabel: z.string().trim().min(1).max(80).default("Tipo de elemento"),
   quantity: z.number({ invalid_type_error: "Indica la cantidad." }).positive("La cantidad debe ser mayor a 0.").max(1_000_000),
   dueDate: isoDate,
   description: z.string().trim().max(4000),
@@ -145,19 +151,21 @@ export const requestDelegationSchema = requestCodeSchema.extend({ department: z.
 export function requestFromInput(input: RequestInput) {
   const fields = input.fields.filter(field => field.value).map(({ label, value }) => ({ label, value }));
   const unit = fields.find(field => field.label.toLowerCase() === "unidad")?.value ?? "Unidades";
-  return { category: input.category, quantity: input.quantity, unit, dueDate: input.dueDate, description: input.description, fields, aiAssisted: input.aiAssisted && input.description.length > 0 };
+  return { category: input.category, element: input.element, elementLabel: input.elementLabel, quantity: input.quantity, unit, dueDate: input.dueDate, description: input.description, fields, aiAssisted: input.aiAssisted && input.description.length > 0 };
 }
 
-type Sample = Pick<MyRequest, "category" | "quantity" | "unit" | "description" | "fields" | "aiAssisted">;
+type Sample = Pick<MyRequest, "category" | "element" | "quantity" | "unit" | "description" | "fields" | "aiAssisted">;
 const samples: Sample[] = [
-  { category: "Herramientas", quantity: 4, unit: "Unidades", description: "", aiAssisted: false, fields: [{ label: "Marca", value: "Bosch" }, { label: "Alimentación", value: "Batería" }] },
-  { category: "Maquinarias", quantity: 1, unit: "Días", description: "Necesito una grúa horquilla un día para descargar materiales en bodega.", aiAssisted: true, fields: [{ label: "Unidad", value: "Días" }, { label: "Capacidad", value: "5 toneladas" }, { label: "Alimentación", value: "Diésel" }] },
-  { category: "Personas", quantity: 2, unit: "Unidades", description: "", aiAssisted: false, fields: [{ label: "Especialidad", value: "Soldador" }] },
-  { category: "Materiales", quantity: 120, unit: "Metros", description: "Perfil de acero para refuerzo de plataforma.", aiAssisted: false, fields: [{ label: "Unidad", value: "Metros" }, { label: "Material", value: "Acero" }, { label: "Dimensiones", value: "Grande" }] },
-  { category: "Alimentos", quantity: 60, unit: "Unidades", description: "", aiAssisted: false, fields: [{ label: "Formato", value: "Caja" }] },
-  { category: "Bebestible", quantity: 50, unit: "Litros", description: "Agua purificada para la faena en zona de altura, en botellas.", aiAssisted: true, fields: [{ label: "Unidad", value: "Litros" }, { label: "Tipo de bebestible", value: "Agua" }, { label: "Formato", value: "Botella" }] },
-  { category: "Materiales", quantity: 200, unit: "Pulgadas", description: "Quiero un tornillo de esos con surcos en cruz de un tamaño de 3/4.", aiAssisted: true, fields: [{ label: "Unidad", value: "Pulgadas" }, { label: "Material", value: "Acero" }, { label: "Tipo de tornillo", value: "Cabeza Phillips 3/4\"" }] },
+  { category: "Herramientas", element: "Taladro percutor", quantity: 4, unit: "Unidades", description: "", aiAssisted: false, fields: [{ label: "Marca", value: "Bosch" }, { label: "Alimentación", value: "Batería" }] },
+  { category: "Maquinarias", element: "Grúa horquilla", quantity: 1, unit: "Días", description: "Necesito una grúa horquilla un día para descargar materiales en bodega.", aiAssisted: true, fields: [{ label: "Unidad", value: "Días" }, { label: "Capacidad", value: "5 toneladas" }, { label: "Alimentación", value: "Diésel" }] },
+  { category: "Personas", element: "Soldador", quantity: 2, unit: "Unidades", description: "", aiAssisted: false, fields: [{ label: "Especialidad", value: "Soldador" }] },
+  { category: "Materiales", element: "Perfil de acero", quantity: 120, unit: "Metros", description: "Perfil de acero para refuerzo de plataforma.", aiAssisted: false, fields: [{ label: "Unidad", value: "Metros" }, { label: "Material", value: "Acero" }, { label: "Dimensiones", value: "Grande" }] },
+  { category: "Alimentos", element: "Colación", quantity: 60, unit: "Unidades", description: "", aiAssisted: false, fields: [{ label: "Formato", value: "Caja" }] },
+  { category: "Bebestible", element: "Agua purificada", quantity: 50, unit: "Litros", description: "Agua purificada para la faena en zona de altura, en botellas.", aiAssisted: true, fields: [{ label: "Unidad", value: "Litros" }, { label: "Tipo de bebestible", value: "Agua" }, { label: "Formato", value: "Botella" }] },
+  { category: "Materiales", element: "Tornillo autoperforante", quantity: 200, unit: "Pulgadas", description: "Quiero un tornillo de esos con surcos en cruz de un tamaño de 3/4.", aiAssisted: true, fields: [{ label: "Unidad", value: "Pulgadas" }, { label: "Material", value: "Acero" }, { label: "Tipo de tornillo", value: "Cabeza Phillips 3/4\"" }] },
 ];
+
+const seededElement = (category: string, element: string) => (defaultElements[category] ?? []).some(name => normalizeForSearch(name) === normalizeForSearch(element));
 
 /** Delegated requests carry their department; decided ones alternate between department and direct ADC decisions. */
 function sampleAssignment(sample: Sample, status: RequestStatus, index: number): Pick<MyRequest, "department" | "assignee"> {
@@ -190,7 +198,8 @@ function buildSample(today: string, requester: Person, status: RequestStatus, in
     dueDate,
     status,
     // The seed proposes the same things a requester would: e.g. the new "Bebestible" type or the "Tipo de tornillo" attribute.
-    proposal: proposalFor(defaultCatalog, sample.category, sample.fields.map(field => ({ ...field, options: [] }))),
+    elementLabel: elementLabelFor(defaultCatalog, sample.category),
+    proposal: proposalFor(defaultCatalog, sample.category, sample.fields.map(field => ({ ...field, options: [] })), sample.element, seededElement),
   };
 }
 

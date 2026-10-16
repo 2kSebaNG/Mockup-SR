@@ -78,7 +78,7 @@ function ManageRequestsPage() {
                   {list.pageData.items.map(request => (
                     <TableRow key={request.code}>
                       <TableCell className="request-code">{request.code}</TableCell>
-                      <TableCell><span className="category-cell">{request.category}{pendingSummary(request.review) && <span className="catalog-flag" title="Novedades para el catálogo por aprobar">{pendingSummary(request.review)}</span>}</span></TableCell>
+                      <TableCell><span className="category-cell">{request.category}{request.element && <span className="element-cell">{request.element}</span>}{pendingSummary(request.review) && <span className="catalog-flag" title="Novedades para el catálogo por aprobar">{pendingSummary(request.review)}</span>}</span></TableCell>
                       <TableCell>{request.department ?? <Unassigned />}</TableCell>
                       <TableCell>{request.assignee ? <PersonLink person={request.assignee} onOpen={() => setChat({ person: request.assignee!, requestCode: request.code, relation: `Revisa ${request.code}` })} /> : <Unassigned />}</TableCell>
                       <TableCell className="request-date">{formatDate(request.dueDate)}</TableCell>

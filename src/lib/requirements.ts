@@ -29,6 +29,8 @@ export const aiInputSchema = z.object({
 });
 export const aiOutputSchema = z.object({
   category: z.string(),
+  /** The specific element asked for (a "Cargo", "Tipo de máquina", product…), in singular. */
+  element: z.string().nullable().optional(),
   quantity: z.number().nullable(),
   requiredDate: z.string().nullable(),
   fields: z.array(z.object({ label: z.string(), options: z.array(z.string()), value: z.string() })),
@@ -37,6 +39,7 @@ export type AiRequirement = z.infer<typeof aiOutputSchema>;
 export function normalizeAiRequirement(input: AiRequirement): AiRequirement {
   return {
     category: input.category.trim().slice(0, 80),
+    element: input.element?.trim().slice(0, 120) || null,
     quantity: input.quantity !== null && input.quantity > 0 && input.quantity <= 1000000 ? input.quantity : null,
     requiredDate: input.requiredDate && /^\d{4}-\d{2}-\d{2}$/.test(input.requiredDate) && !Number.isNaN(Date.parse(input.requiredDate)) ? input.requiredDate : null,
     fields: input.fields.slice(0, 12).map(f => ({ label: f.label.trim().slice(0, 80), options: [...new Set([...f.options, f.value].map(v => v.trim().slice(0, 100)).filter(Boolean))].slice(0, 30), value: f.value.trim().slice(0, 100) })).filter(f => f.label),

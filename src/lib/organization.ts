@@ -35,6 +35,10 @@ const departmentByCategory: Record<string, string> = {
   Materiales: "Abastecimiento",
   Personas: "Recursos Humanos",
   Alimentos: "Abastecimiento",
+  EPP: "Bodega",
+  Servicios: "Abastecimiento",
+  Vehículos: "Logística",
+  "Combustibles y lubricantes": "Logística",
 };
 
 /** Rule-based delegation used when the AI is unavailable: category owner, or procurement for anything new. */

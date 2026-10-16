@@ -17,7 +17,7 @@ export const Route = createFileRoute("/catalogo")({
   ] }),
 });
 
-const kindTitle = { type: "Tipos nuevos", field: "Selects nuevos", link: "Selects por asociar a un tipo", option: "Opciones nuevas en selects existentes" } as const;
+const kindTitle = { type: "Categorías nuevas", element: "Elementos nuevos en catálogos maestros", field: "Selects nuevos", link: "Selects por asociar a una categoría", option: "Opciones nuevas en selects existentes" } as const;
 
 function GroupCard({ group, onDecide, catalog }: { group: CatalogGroup; catalog: Parameters<typeof NoveltyEditor>[0]["catalog"]; onDecide: (group: CatalogGroup) => (status: "aprobada" | "rechazada", edit: ItemEdit) => Promise<string | null> }) {
   return (
@@ -33,7 +33,7 @@ function GroupCard({ group, onDecide, catalog }: { group: CatalogGroup; catalog:
 }
 
 function CatalogPage() {
-  const { catalog, groups } = Route.useLoaderData();
+  const { catalog, masters, groups } = Route.useLoaderData();
   const router = useRouter();
   const decide = useServerFn(decideCatalogItems);
   const onDecide = (group: CatalogGroup) => async (status: "aprobada" | "rechazada", edit: ItemEdit) => {
@@ -42,14 +42,14 @@ function CatalogPage() {
     await router.invalidate();
     return null;
   };
-  const kinds = (["type", "field", "link", "option"] as const).filter(kind => groups.some(group => group.kind === kind));
+  const kinds = (["type", "element", "field", "link", "option"] as const).filter(kind => groups.some(group => group.kind === kind));
 
   return (
     <AppShell trail={["Solicitudes", "Catálogo"]}>
       <div className="my-requests">
         <p className="eyebrow">ADMINISTRADOR DE CONTRATO</p>
         <h1 className="page-heading">Catálogo de requerimientos</h1>
-        <p className="page-description">Lo que los solicitantes crean (tipos, selects y opciones) queda pendiente hasta que lo apruebes aquí o en el detalle de cada solicitud. Solo lo aprobado aparece en Nueva solicitud.</p>
+        <p className="page-description">Lo que los solicitantes crean (categorías, elementos, selects y opciones) queda pendiente hasta que lo apruebes aquí o en el detalle de cada solicitud. Solo lo aprobado aparece en Nueva solicitud.</p>
 
         <section className="catalog-section" aria-labelledby="pending-heading">
           <h2 id="pending-heading" className="catalog-section-title"><Inbox aria-hidden="true" />Novedades por revisar <span className="novelty-count">{groups.length}</span></h2>
@@ -66,10 +66,17 @@ function CatalogPage() {
           <h2 id="current-heading" className="catalog-section-title"><BookOpenCheck aria-hidden="true" />Catálogo vigente</h2>
           <div className="catalog-grid">
             <div className="catalog-card">
-              <h3>Tipos y sus selects</h3>
+              <h3>Categorías y sus selects</h3>
               <ul className="catalog-items">{catalog.categories.map(category => (
                 <li key={category.name}><strong>{category.name}</strong><span className="catalog-options">{category.fieldIds.map(id => catalog.fields.find(field => field.id === id)?.label).filter(Boolean).join(", ") || "Sin selects"}</span></li>
               ))}</ul>
+            </div>
+            <div className="catalog-card catalog-card-wide">
+              <h3>Catálogos maestros por categoría</h3>
+              <ul className="catalog-items">{catalog.categories.map(category => {
+                const elements = Object.entries(masters).find(([name]) => name.toLocaleLowerCase("es") === category.name.toLocaleLowerCase("es"))?.[1] ?? [];
+                return <li key={category.name}><strong>{category.name}</strong><span className="novelty-context">{category.elementLabel ?? "Tipo de elemento"} · {elements.length === 1 ? "1 elemento" : `${elements.length} elementos`}</span><span className="catalog-options">{elements.map(element => element.name).join(", ") || "Sin elementos aprobados"}</span></li>;
+              })}</ul>
             </div>
             <div className="catalog-card">
               <h3>Selects y sus opciones</h3>
