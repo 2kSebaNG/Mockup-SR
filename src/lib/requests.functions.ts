@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requestCodeSchema, requestDecisionSchema, requestDelegationSchema, requestInputSchema, requestUpdateSchema, reviewerDecisionSchema, reviewerSchema } from "./my-requests";
+import { catalogItemDecisionSchema, requestCodeSchema, requestDecisionSchema, requestDelegationSchema, requestInputSchema, requestUpdateSchema, reviewerDecisionSchema, reviewerSchema } from "./my-requests";
 
 const requester = async () => (await import("./requests.server")).requesterService();
 const admin = async () => (await import("./requests.server")).adminService();
@@ -45,6 +45,19 @@ export const listReviewerRequests = createServerFn({ method: "GET" })
 export const decideAsReviewer = createServerFn({ method: "POST" })
   .inputValidator(input => reviewerDecisionSchema.parse(input))
   .handler(async ({ data }) => (await reviewer(data.reviewer.department, data.reviewer.assigneeName)).decide(data.code, data.decision));
+
+/** Approves or rejects one novelty in one or several requests (the latter from the Catálogo page). */
+export const decideCatalogItems = createServerFn({ method: "POST" })
+  .inputValidator(input => catalogItemDecisionSchema.parse(input))
+  .handler(async ({ data }) => (await admin()).decideItems(data.targets, data.status, data.edit));
+
+export const getCatalogReview = createServerFn({ method: "GET" })
+  .handler(async () => (await admin()).catalogReview());
+
+// Catalog ("Nueva solicitud" shows only approved types, attributes and options)
+
+export const getCatalog = createServerFn({ method: "GET" })
+  .handler(async () => (await (await import("./catalog-store.server")).getCatalogStore()).get());
 
 export const suggestRequestDelegation = createServerFn({ method: "POST" })
   .inputValidator(input => requestCodeSchema.parse(input))

@@ -32,4 +32,10 @@ describe("App routing", () => {
 
     expect(router.matchRoutes("/revision-departamento").at(-1)?.routeId).toBe("/revision-departamento");
   });
+
+  it("matches the catalog page", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+
+    expect(router.matchRoutes("/catalogo").at(-1)?.routeId).toBe("/catalogo");
+  });
 });

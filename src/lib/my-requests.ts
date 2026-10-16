@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CONTRACT_ADMIN, DEMO_USER, delegationByRules, findMember, requesters, type Person } from "./organization";
+import { defaultCatalog, proposalFor, type ProposalReview, type StoredProposal } from "./catalog";
 
 export const requestStatuses = ["Enviada", "En revisión", "Autorizado", "Rechazado", "Anulado"] as const;
 export type RequestStatus = (typeof requestStatuses)[number];
@@ -24,7 +25,12 @@ export type MyRequest = {
   department: string | null;
   assignee: Person | null;
   fields: { label: string; value: string }[];
+  /** New types, attributes or options this request proposes for the catalog, pending the administrator's decision. */
+  proposal: StoredProposal | null;
 };
+
+/** A request as the server returns it: with its proposal compared against the current catalog. */
+export type ReviewedRequest = MyRequest & { review: ProposalReview | null };
 
 export type RequestFilters = { query: string; statuses: RequestStatus[]; categories: string[]; from: string; to: string };
 export type SortDirection = "asc" | "desc";
@@ -88,7 +94,7 @@ export function countByStatus(requests: MyRequest[]) {
   return counts;
 }
 
-export function filterRequests(requests: MyRequest[], filters: RequestFilters) {
+export function filterRequests<T extends MyRequest>(requests: T[], filters: RequestFilters): T[] {
   const query = filters.query.trim().toLowerCase();
   return requests.filter(request =>
     (!query || request.code.toLowerCase().includes(query)) &&
@@ -98,7 +104,7 @@ export function filterRequests(requests: MyRequest[], filters: RequestFilters) {
     (!filters.to || request.dueDate <= filters.to));
 }
 
-export function sortByDueDate(requests: MyRequest[], direction: SortDirection) {
+export function sortByDueDate<T extends MyRequest>(requests: T[], direction: SortDirection): T[] {
   const sign = direction === "asc" ? 1 : -1;
   return [...requests].sort((a, b) => sign * a.dueDate.localeCompare(b.dueDate) || a.code.localeCompare(b.code));
 }
@@ -116,12 +122,18 @@ export const requestInputSchema = z.object({
   quantity: z.number({ invalid_type_error: "Indica la cantidad." }).positive("La cantidad debe ser mayor a 0.").max(1_000_000),
   dueDate: isoDate,
   description: z.string().trim().max(4000),
-  fields: z.array(z.object({ label: z.string().trim().min(1).max(80), value: z.string().trim().max(100) })).max(16),
+  fields: z.array(z.object({ label: z.string().trim().min(1).max(80), value: z.string().trim().max(100), options: z.array(z.string().trim().max(100)).max(30).default([]) })).max(16),
   aiAssisted: z.boolean().default(false),
 });
 export type RequestInput = z.infer<typeof requestInputSchema>;
 export const requestCodeSchema = z.object({ code: z.string().regex(/^REQ-\d{4,}$/) });
 export const requestUpdateSchema = requestCodeSchema.extend({ input: requestInputSchema });
+const itemEditSchema = z.object({
+  as: z.string().trim().max(80).optional(),
+  options: z.array(z.string().trim().min(1).max(100)).max(30).optional(),
+});
+const itemTargetSchema = z.object({ code: requestCodeSchema.shape.code, key: z.string().max(300) });
+export const catalogItemDecisionSchema = z.object({ targets: z.array(itemTargetSchema).min(1).max(200), status: z.enum(["aprobada", "rechazada"]), edit: itemEditSchema.default({}) });
 export const requestDecisionSchema = requestCodeSchema.extend({ decision: z.enum(["Autorizado", "Rechazado"]) });
 export const reviewerSchema = z.object({ department: z.string().max(80), assigneeName: z.string().max(120) })
   .refine(value => findMember(value.department, value.assigneeName), "Elige un encargado del departamento seleccionado.");
@@ -131,7 +143,7 @@ export const requestDelegationSchema = requestCodeSchema.extend({ department: z.
 
 /** Turns validated form input into the stored request fields; unit comes from the "Unidad" field when present. */
 export function requestFromInput(input: RequestInput) {
-  const fields = input.fields.filter(field => field.value);
+  const fields = input.fields.filter(field => field.value).map(({ label, value }) => ({ label, value }));
   const unit = fields.find(field => field.label.toLowerCase() === "unidad")?.value ?? "Unidades";
   return { category: input.category, quantity: input.quantity, unit, dueDate: input.dueDate, description: input.description, fields, aiAssisted: input.aiAssisted && input.description.length > 0 };
 }
@@ -177,6 +189,8 @@ function buildSample(today: string, requester: Person, status: RequestStatus, in
     createdAt: created < today ? created : addDays(today, -1),
     dueDate,
     status,
+    // The seed proposes the same things a requester would: e.g. the new "Bebestible" type or the "Tipo de tornillo" attribute.
+    proposal: proposalFor(defaultCatalog, sample.category, sample.fields.map(field => ({ ...field, options: [] }))),
   };
 }
 

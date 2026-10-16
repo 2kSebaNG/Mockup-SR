@@ -5,5 +5,6 @@ export const describeRequirement = createServerFn({ method: "POST" })
   .inputValidator(input => aiInputSchema.parse(input))
   .handler(async ({ data }) => {
     const { analyzeRequirement } = await import("./requirements-ai.server");
-    return analyzeRequirement(data);
+    const { getCatalogStore } = await import("./catalog-store.server");
+    return analyzeRequirement(data, await (await getCatalogStore()).get());
   });

@@ -27,3 +27,11 @@
 - [x] Vista con las solicitudes delegadas al encargado elegido (departamento y encargado en la URL).
 - [x] Autorizar o rechazar solo lo que está En revisión y fue delegado a ese encargado; reglas validadas en el servidor.
 - [ ] Reemplazar el selector "Actuar como" por el usuario con sesión iniciada.
+
+# Catálogo de requerimientos
+- [x] Tipos, selects y opciones nuevas quedan pendientes en la solicitud; no entran solos al catálogo.
+- [x] Marcar lo nuevo en el detalle de la solicitud y en la tabla del ADC.
+- [x] El ADC aprueba o rechaza cada novedad, pudiendo corregir el nombre o unirla a una existente.
+- [x] Página Catálogo: novedades pendientes agrupadas entre solicitudes y catálogo vigente.
+- [x] Los nombres corregidos quedan como alias, así no se vuelven a pedir.
+- [ ] Aplicar la migración `supabase/migrations/20261016090000_requirement_catalog.sql` en Lovable Cloud.

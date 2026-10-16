@@ -8,7 +8,7 @@ import { ActionButton, DueDateHead, DueWarning, FiltersAside, PaginationFooter, 
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { countByStatus, todayIso, type MyRequest } from "@/lib/my-requests";
+import { countByStatus, todayIso, type ReviewedRequest } from "@/lib/my-requests";
 import { departments, findDepartment, findMember } from "@/lib/organization";
 import { listReviewerRequests } from "@/lib/requests.functions";
 
@@ -52,7 +52,7 @@ function DepartmentReviewPage() {
   const router = useRouter();
   const list = useRequestList(requests);
   const counts = useMemo(() => countByStatus(requests), [requests]);
-  const [reviewing, setReviewing] = useState<MyRequest | null>(null);
+  const [reviewing, setReviewing] = useState<ReviewedRequest | null>(null);
   const [chat, setChat] = useState<ChatTarget | null>(null);
   const members = findDepartment(reviewer.department)?.members ?? [];
   const actAs = (department: string, assigneeName?: string) => navigate({ search: { departamento: department, encargado: assigneeName ?? findDepartment(department)!.members[0]!.name } });

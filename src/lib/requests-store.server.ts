@@ -16,7 +16,7 @@ type RequestRow = {
   code: string; requester: string; requester_name: string; requester_role: string; category: string; quantity: number | string;
   unit: string; description: string; ai_assisted: boolean; fields: { label: string; value: string }[]; due_date: string;
   status: MyRequest["status"]; department: string | null; assignee_name: string | null; assignee_role: string | null;
-  assignee_email: string | null; created_at: string;
+  assignee_email: string | null; catalog_proposal: MyRequest["proposal"]; created_at: string;
 };
 
 const fromRow = (row: RequestRow): MyRequest => ({
@@ -24,6 +24,7 @@ const fromRow = (row: RequestRow): MyRequest => ({
   category: row.category, quantity: Number(row.quantity), unit: row.unit, description: row.description, aiAssisted: row.ai_assisted,
   fields: row.fields ?? [], dueDate: row.due_date, status: row.status, createdAt: row.created_at.slice(0, 10), department: row.department,
   assignee: row.assignee_name ? { name: row.assignee_name, role: row.assignee_role ?? "", email: row.assignee_email ?? "" } : null,
+  proposal: row.catalog_proposal ?? null,
 });
 
 function toRow(patch: RequestPatch & Partial<Pick<MyRequest, "requester">>) {
@@ -38,6 +39,7 @@ function toRow(patch: RequestPatch & Partial<Pick<MyRequest, "requester">>) {
   if (patch.dueDate !== undefined) row.due_date = patch.dueDate;
   if (patch.status !== undefined) row.status = patch.status;
   if (patch.department !== undefined) row.department = patch.department;
+  if (patch.proposal !== undefined) row.catalog_proposal = patch.proposal;
   if (patch.assignee !== undefined) { row.assignee_name = patch.assignee?.name ?? null; row.assignee_role = patch.assignee?.role ?? null; row.assignee_email = patch.assignee?.email ?? null; }
   return row;
 }
@@ -79,7 +81,7 @@ export function fileStore(path: string, seed: () => MyRequest[] = () => seedRequ
   const serial = <T>(task: () => Promise<T>) => { const next = queue.then(task, task); queue = next.catch(() => undefined); return next; };
   const read = async (): Promise<MyRequest[]> => {
     const fs = await import("node:fs/promises");
-    try { return JSON.parse(await fs.readFile(path, "utf8")) as MyRequest[]; } catch (error) {
+    try { return (JSON.parse(await fs.readFile(path, "utf8")) as MyRequest[]).map(request => ({ ...request, proposal: request.proposal ?? null })); } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       const seeded = seed();
       await write(seeded);

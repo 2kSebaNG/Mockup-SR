@@ -81,7 +81,7 @@ export function SummaryCards({ cards, counts }: { cards: SummaryCard[]; counts: 
 const pageSizes = [10, 25, 50];
 
 /** Search, filters, due-date sorting and pagination shared by the requester and administrator tables. */
-export function useRequestList(requests: MyRequest[]) {
+export function useRequestList<T extends MyRequest>(requests: T[]) {
   const [filters, setFilters] = useState<RequestFilters>(emptyFilters);
   const [direction, setDirection] = useState<SortDirection>("asc");
   const [page, setPage] = useState(1);
@@ -99,7 +99,7 @@ export function useRequestList(requests: MyRequest[]) {
   };
   return { filters, updateFilters, toggleFilter, direction, setDirection, page, setPage, pageSize, setPageSize, categories, visible, pageData };
 }
-export type RequestList = ReturnType<typeof useRequestList>;
+export type RequestList<T extends MyRequest = MyRequest> = ReturnType<typeof useRequestList<T>>;
 
 export function DueDateHead({ list }: { list: RequestList }) {
   const { direction, setDirection } = list;

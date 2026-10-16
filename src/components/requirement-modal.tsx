@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Trash2, Wand2, Loader2, Check, FilePlus2, Save, Send } from "lucide-react";
+import { Plus, Trash2, Wand2, Loader2, Check, FilePlus2, Save, Send, Hourglass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { categories, fieldPool, fieldsForCategory, aiInputSchema, type RequirementField } from "@/lib/requirements";
+import { aiInputSchema, type RequirementField } from "@/lib/requirements";
+import { defaultCatalog, diffAgainstCatalog, fieldsForCategory, findCategory, findField, hasClassificationChanges, hasOptionChanges, uniqueValues, type Catalog } from "@/lib/catalog";
 import { describeRequirement } from "@/lib/requirements-ai.functions";
 import { requestInputSchema, responsibleFor, type MyRequest } from "@/lib/my-requests";
-import { createMyRequest, updateMyRequest } from "@/lib/requests.functions";
+import { createMyRequest, getCatalog, updateMyRequest } from "@/lib/requests.functions";
 
 function FieldSelect({ field, disabled, onChange, onRemove }: { field: RequirementField; disabled: boolean; onChange: (field: RequirementField) => void; onRemove: () => void }) {
   const [editing, setEditing] = useState(false);
@@ -27,11 +28,28 @@ function FieldSelect({ field, disabled, onChange, onRemove }: { field: Requireme
   </div>;
 }
 
-function fieldsFromRequest(request: MyRequest): RequirementField[] {
-  return request.fields.map((field, index) => {
-    const pooled = fieldPool.find(f => f.label.toLowerCase() === field.label.toLowerCase());
-    return { id: pooled?.id ?? `edit-${index}`, label: field.label, value: field.value, options: [...new Set([...(pooled?.options ?? []), field.value])] };
+/** The request's selects, with the catalog's options plus any the requester had proposed for that select. */
+function fieldsFromRequest(request: MyRequest, catalog: Catalog): RequirementField[] {
+  const proposed = request.proposal?.fields ?? request.fields.map(field => ({ ...field, options: [] }));
+  return proposed.map((field, index) => {
+    const pooled = findField(catalog, field.label);
+    return { id: pooled?.id ?? `edit-${index}`, label: field.label, value: field.value, options: uniqueValues([...(pooled?.options ?? []), ...field.options, field.value]) };
   });
+}
+
+/** Tells the requester what will wait for the contract administrator's approval before entering the catalog. */
+function PendingCatalogNotice({ catalog, category, fields }: { catalog: Catalog; category: string; fields: RequirementField[] }) {
+  if (!category.trim()) return null;
+  const diff = diffAgainstCatalog(catalog, category, fields);
+  if (!hasClassificationChanges(diff) && !hasOptionChanges(diff)) return null;
+  const linkedExisting = diff.newCategory ? [] : diff.links.filter(label => !diff.newFields.some(field => field.label === label));
+  const items = [
+    diff.newCategory && `tipo nuevo «${diff.category}»`,
+    diff.newFields.length > 0 && `${diff.newFields.length === 1 ? "atributo nuevo" : "atributos nuevos"}: ${diff.newFields.map(field => field.label).join(", ")}`,
+    linkedExisting.length > 0 && `atributos agregados a ${diff.category}: ${linkedExisting.join(", ")}`,
+    ...diff.newOptions.map(change => `${change.options.length === 1 ? "opción nueva" : "opciones nuevas"} en ${change.field}: ${change.options.join(", ")}`),
+  ].filter(Boolean);
+  return <p role="status" className="catalog-pending-notice"><Hourglass size={16} /><span><strong>Pendiente de aprobación:</strong> {items.join("; ")}. Tu solicitud se envía igual; el Administrador de Contrato decidirá si esta clasificación se agrega al catálogo.</span></p>;
 }
 
 export function RequirementModal({ open, onOpenChange, request = null, onSaved }: { open: boolean; onOpenChange: (open: boolean) => void; request?: MyRequest | null; onSaved?: (request: MyRequest) => void }) {
@@ -42,13 +60,15 @@ export function RequirementModal({ open, onOpenChange, request = null, onSaved }
   const [date, setDate] = useState("");
   const [description, setDescription] = useState("");
   const [aiAssisted, setAiAssisted] = useState(false);
+  const [catalog, setCatalog] = useState<Catalog>(defaultCatalog);
+  const loadCatalog = useServerFn(getCatalog);
   const loaded = useRef<string | null>(null);
-  const load = (source: MyRequest | null) => {
+  const load = (source: MyRequest | null, from: Catalog = catalog) => {
     loaded.current = source?.code ?? null;
-    const known = source ? categories.includes(source.category) : true;
-    setType(source ? (known ? source.category : "Personalizada") : "");
+    const known = source ? findCategory(from, source.category) : undefined;
+    setType(source ? (known ? known.name : "Personalizada") : "");
     setCustomType(source && !known ? source.category : "");
-    setFields(source ? fieldsFromRequest(source) : []);
+    setFields(source ? fieldsFromRequest(source, from) : []);
     setQuantity(source ? String(source.quantity) : "");
     setDate(source?.dueDate ?? "");
     setDescription(source?.description ?? "");
@@ -59,6 +79,21 @@ export function RequirementModal({ open, onOpenChange, request = null, onSaved }
     // Load the request being edited; going back to a new request starts from a blank form.
     if (open && (request?.code ?? null) !== loaded.current) load(request);
   }, [open, request]);
+  const customTypeRef = useRef(customType);
+  customTypeRef.current = customType;
+  useEffect(() => {
+    // Only approved types, attributes and options are offered; refresh them every time the form opens.
+    if (!open) return;
+    let active = true;
+    loadCatalog().then(next => {
+      if (!active) return;
+      setCatalog(next);
+      // A custom type approved since this request was written is now a regular type.
+      const approved = findCategory(next, customTypeRef.current);
+      if (approved) setType(current => current === "Personalizada" ? approved.name : current);
+    }).catch(() => { /* Keep the built-in catalog if it cannot be loaded. */ });
+    return () => { active = false; };
+  }, [open]);
   const [fieldName, setFieldName] = useState("");
   const [fieldOptions, setFieldOptions] = useState("");
   const [addingField, setAddingField] = useState(false);
@@ -69,9 +104,10 @@ export function RequirementModal({ open, onOpenChange, request = null, onSaved }
   const analyze = useServerFn(describeRequirement);
   const createRequest = useServerFn(createMyRequest);
   const updateRequest = useServerFn(updateMyRequest);
-  const changeType = (value: string) => { setType(value); setFields(fieldsForCategory(value)); setNotice(""); setError(""); };
+  const categoryNames = catalog.categories.map(category => category.name);
+  const changeType = (value: string) => { setType(value); setFields(fieldsForCategory(catalog, value)); setNotice(""); setError(""); };
   const addPoolField = (id: string) => {
-    const field = fieldPool.find(f => f.id === id);
+    const field = catalog.fields.find(f => f.id === id);
     if (field && !fields.some(f => f.label.toLowerCase() === field.label.toLowerCase()) && fields.length < 16) setFields([...fields, { ...field, options: [...field.options], value: "" }]);
   };
   const addCustomField = () => {
@@ -91,10 +127,11 @@ export function RequirementModal({ open, onOpenChange, request = null, onSaved }
       const response = await analyze({ data: parsed.data });
       if (response.error || !response.result) { setError(response.error ?? "No se recibió una propuesta."); return; }
       const result = response.result;
-      if (categories.includes(result.category)) { setType(result.category); } else { setType("Personalizada"); setCustomType(result.category); }
+      const knownCategory = findCategory(catalog, result.category);
+      if (knownCategory) { setType(knownCategory.name); } else { setType("Personalizada"); setCustomType(result.category); }
       const generatedFields = result.fields.map((f, index) => {
         const existing = fields.find(old => old.label.toLowerCase() === f.label.toLowerCase());
-        const pooled = fieldPool.find(old => old.label.toLowerCase() === f.label.toLowerCase());
+        const pooled = findField(catalog, f.label);
         return { ...f, id: existing?.id ?? pooled?.id ?? `ai-${index}-${crypto.randomUUID()}`, options: [...new Set([...(existing?.options ?? []), ...f.options])].slice(0, 30), value: f.value || existing?.value || "" };
       });
       setFields([...generatedFields, ...fields.filter(f => !generatedFields.some(g => g.label.toLowerCase() === f.label.toLowerCase()))].slice(0,16));
@@ -106,7 +143,7 @@ export function RequirementModal({ open, onOpenChange, request = null, onSaved }
   };
   const save = async () => {
     setError(""); setNotice("");
-    const parsed = requestInputSchema.safeParse({ category: type === "Personalizada" ? customType : type, quantity: quantity === "" ? undefined : Number(quantity), dueDate: date, description, fields: fields.map(f => ({ label: f.label, value: f.value })), aiAssisted });
+    const parsed = requestInputSchema.safeParse({ category: type === "Personalizada" ? customType : type, quantity: quantity === "" ? undefined : Number(quantity), dueDate: date, description, fields: fields.map(f => ({ label: f.label, value: f.value, options: f.options })), aiAssisted });
     if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Revisa los datos de la solicitud."); return; }
     setBusy(true); setSaving(true);
     try {
@@ -121,16 +158,17 @@ export function RequirementModal({ open, onOpenChange, request = null, onSaved }
     <DialogHeader className="requirement-modal-header"><div className="modal-eyebrow"><FilePlus2 size={15} />SOLICITUD DE REQUERIMIENTOS</div><DialogTitle className="requirement-modal-title">{request ? `Editar solicitud ${request.code}` : "Nueva solicitud"}</DialogTitle><DialogDescription>Detalle del requerimiento</DialogDescription></DialogHeader>
     <div className="requirement-modal-body">
       <div className="requirement-grid">
-        <div className="requirement-field"><label id="requirement-type-label">Tipo de requerimiento</label><Select value={type} onValueChange={changeType} disabled={busy}><SelectTrigger aria-labelledby="requirement-type-label" className="requirement-control"><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger><SelectContent>{[...categories,"Personalizada"].map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent></Select></div>
+        <div className="requirement-field"><label id="requirement-type-label">Tipo de requerimiento</label><Select value={type} onValueChange={changeType} disabled={busy}><SelectTrigger aria-labelledby="requirement-type-label" className="requirement-control"><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger><SelectContent>{[...categoryNames,"Personalizada"].map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent></Select></div>
         <div className="requirement-field"><label htmlFor="request-quantity">Cantidad</label><Input id="request-quantity" type="number" min="0.01" max="1000000" step="any" placeholder="Ej. 10" value={quantity} disabled={busy} onChange={e => setQuantity(e.target.value)} className="requirement-control" /></div>
         <div className="requirement-field"><label htmlFor="request-date">Fecha requerida</label><Input id="request-date" type="date" value={date} disabled={busy} onChange={e => setDate(e.target.value)} className="requirement-control" /></div>
         {type === "Personalizada" && <div className="requirement-field custom-type-field"><label htmlFor="custom-type">Nombre del tipo</label><Input id="custom-type" maxLength={80} placeholder="Ej. Bebestible" value={customType} disabled={busy} onChange={e => setCustomType(e.target.value)} className="requirement-control" /></div>}
         {fields.map(field => <FieldSelect key={field.id} field={field} disabled={busy} onChange={updated => setFields(fields.map(f => f.id === field.id ? updated : f))} onRemove={() => setFields(fields.filter(f => f.id !== field.id))} />)}
       </div>
-      {type && <section className="field-pool"><div className="pool-heading"><h3>Campos del requerimiento</h3><span>{fields.length} / 16</span></div><div className="pool-options">{fieldPool.map(field => <Button type="button" key={field.id} variant={fields.some(f => f.id === field.id) ? "secondary" : "outline"} size="sm" disabled={busy || fields.some(f => f.id === field.id) || fields.length >= 16} onClick={() => addPoolField(field.id)}>{fields.some(f => f.id === field.id) ? <Check /> : <Plus />}{field.label}</Button>)}<Button type="button" variant="outline" size="sm" disabled={busy || fields.length >= 16} onClick={() => setAddingField(!addingField)}><Plus />Campo personalizado</Button></div>
+      {type && <section className="field-pool"><div className="pool-heading"><h3>Campos del requerimiento</h3><span>{fields.length} / 16</span></div><div className="pool-options">{catalog.fields.map(field => <Button type="button" key={field.id} variant={fields.some(f => f.id === field.id) ? "secondary" : "outline"} size="sm" disabled={busy || fields.some(f => f.id === field.id) || fields.length >= 16} onClick={() => addPoolField(field.id)}>{fields.some(f => f.id === field.id) ? <Check /> : <Plus />}{field.label}</Button>)}<Button type="button" variant="outline" size="sm" disabled={busy || fields.length >= 16} onClick={() => setAddingField(!addingField)}><Plus />Campo personalizado</Button></div>
       {addingField && <div className="custom-field-editor"><div className="requirement-field"><label htmlFor="field-name">Nombre del campo</label><Input id="field-name" placeholder="Ej. Tipo de bebestible" maxLength={80} value={fieldName} onChange={e => setFieldName(e.target.value)} /></div><div className="requirement-field"><label htmlFor="field-options">Opciones, separadas por coma</label><Input id="field-options" placeholder="Jugo, Agua, Gaseosa" maxLength={3000} value={fieldOptions} onChange={e => setFieldOptions(e.target.value)} /></div><Button type="button" onClick={addCustomField} disabled={!fieldName.trim() || !fieldOptions.trim()}><Plus />Añadir campo</Button></div>}
       </section>}
       <section className="description-section"><div className="description-heading"><label htmlFor="request-description">¿No es lo que buscabas? Escríbelo</label><span className="ai-indicator"><Wand2 size={14} />Asistencia IA</span></div><Textarea id="request-description" maxLength={4000} value={description} disabled={busy} onChange={e => { setDescription(e.target.value); setNotice(""); }} placeholder="Ej. Necesito 50 litros de jugo de naranja marca Soprole para el 30 de octubre." className="requirement-description" /><div className="description-actions"><span>{description.length} / 4000</span><Button type="button" variant="outline" onClick={fillWithAi} disabled={busy || !description.trim()}>{busy ? <Loader2 className="animate-spin" /> : <Wand2 />}{busy ? "Analizando…" : "Completar con IA"}</Button></div></section>
+      {type && <PendingCatalogNotice catalog={catalog} category={type === "Personalizada" ? customType : type} fields={fields} />}
       {error && <p role="alert" className="requirement-error">{error}</p>}{notice && <p role="status" className="requirement-notice"><Check size={16} />{notice}</p>}
     </div>
     <footer className="requirement-modal-footer"><span>{request ? `Responsable: ${responsibleFor(request).name}` : "Se enviará al Administrador de Contrato para su revisión"}</span><div className="requirement-footer-actions"><Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cerrar</Button><Button type="button" disabled={busy} onClick={save}>{saving ? <Loader2 className="animate-spin" /> : request ? <Save /> : <Send />}{saving ? "Guardando…" : request ? "Guardar cambios" : "Enviar solicitud"}</Button></div></footer>

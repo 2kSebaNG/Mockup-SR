@@ -7,7 +7,8 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { RequestContent } from "@/components/requests/request-content";
 import { DueWarning, PersonLink, StatusBadge, formatNumericDate } from "@/components/requests/request-list";
-import { canDecide, statusPhrase, type MyRequest } from "@/lib/my-requests";
+import { canDecide, statusPhrase, type MyRequest, type ReviewedRequest } from "@/lib/my-requests";
+import { ClassificationReview } from "@/components/requests/classification-review";
 import { CONTRACT_ADMIN, departments, findDepartment, type Person } from "@/lib/organization";
 import { decideAsReviewer, decideRequest, delegateRequest, suggestRequestDelegation } from "@/lib/requests.functions";
 
@@ -96,7 +97,7 @@ function DelegateDialog({ request, onClose, onDelegated }: { request: MyRequest 
  * Request detail with the decisions. Without `reviewer` it acts as the contract administrator (delegate / authorize /
  * reject pending requests); with `reviewer` it acts as that department reviewer (authorize / reject what is in review).
  */
-export function AdminRequestDetail({ request, today, onClose, onChanged, onChat, reviewer }: { request: MyRequest | null; today: string; onClose: () => void; onChanged: () => Promise<void>; onChat: (person: Person, relation: string) => void; reviewer?: { department: string; assigneeName: string } }) {
+export function AdminRequestDetail({ request, today, onClose, onChanged, onChat, reviewer }: { request: ReviewedRequest | null; today: string; onClose: () => void; onChanged: () => Promise<void>; onChat: (person: Person, relation: string) => void; reviewer?: { department: string; assigneeName: string } }) {
   const decideAsAdmin = useServerFn(decideRequest);
   const decideAsDepartment = useServerFn(decideAsReviewer);
   const [busy, setBusy] = useState<"Autorizado" | "Rechazado" | null>(null);
@@ -126,7 +127,9 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat,
             <div className="admin-detail-heading"><DialogTitle className="request-detail-title">Solicitud {request.code}</DialogTitle><span className="status-line"><StatusBadge status={request.status} /><DueWarning request={request} today={today} /></span></div>
             <DialogDescription>Solicitado por: <PersonLink person={request.requester} onOpen={() => onChat(request.requester, `Solicitante de ${request.code}`)} /> el {formatNumericDate(request.createdAt)}</DialogDescription>
           </DialogHeader>
-          <RequestContent request={request} />
+          {/* Only the contract administrator sees and decides catalog novelties. */}
+          <RequestContent request={request} {...(!reviewer && { review: request.review })} />
+          {!reviewer && <ClassificationReview request={request} onReviewed={onChanged} />}
           {request.department && request.assignee && (reviewer
             ? <p className="admin-assignment"><Building2 aria-hidden="true" />Delegada a <strong>{request.department}</strong> por <PersonLink person={CONTRACT_ADMIN} onOpen={() => onChat(CONTRACT_ADMIN, `Delegó ${request.code}`)} /><span className="detail-role">{CONTRACT_ADMIN.role}</span></p>
             : <p className="admin-assignment"><Building2 aria-hidden="true" />Delegada a <strong>{request.department}</strong> · revisa <PersonLink person={request.assignee} onOpen={() => onChat(request.assignee!, `Revisa ${request.code}`)} /></p>)}

@@ -7,7 +7,8 @@ import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs"
 import { ActionButton, DueDateHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { countByStatus, todayIso, type MyRequest } from "@/lib/my-requests";
+import { countByStatus, todayIso } from "@/lib/my-requests";
+import { pendingSummary } from "@/lib/catalog";
 import { CONTRACT_ADMIN } from "@/lib/organization";
 import { listAllRequests } from "@/lib/requests.functions";
 
@@ -40,7 +41,9 @@ function ManageRequestsPage() {
   const router = useRouter();
   const list = useRequestList(requests);
   const counts = useMemo(() => countByStatus(requests), [requests]);
-  const [reviewing, setReviewing] = useState<MyRequest | null>(null);
+  // Keep the code, not a copy, so the open detail shows fresh data after every decision.
+  const [reviewingCode, setReviewingCode] = useState<string | null>(null);
+  const reviewing = requests.find(request => request.code === reviewingCode) ?? null;
   const [chat, setChat] = useState<ChatTarget | null>(null);
 
   return (
@@ -75,7 +78,7 @@ function ManageRequestsPage() {
                   {list.pageData.items.map(request => (
                     <TableRow key={request.code}>
                       <TableCell className="request-code">{request.code}</TableCell>
-                      <TableCell>{request.category}</TableCell>
+                      <TableCell><span className="category-cell">{request.category}{pendingSummary(request.review) && <span className="catalog-flag" title="Novedades para el catálogo por aprobar">{pendingSummary(request.review)}</span>}</span></TableCell>
                       <TableCell>{request.department ?? <Unassigned />}</TableCell>
                       <TableCell>{request.assignee ? <PersonLink person={request.assignee} onOpen={() => setChat({ person: request.assignee!, requestCode: request.code, relation: `Revisa ${request.code}` })} /> : <Unassigned />}</TableCell>
                       <TableCell className="request-date">{formatDate(request.dueDate)}</TableCell>
@@ -83,7 +86,7 @@ function ManageRequestsPage() {
                       <TableCell className="authorizer">Por <PersonLink person={request.requester} onOpen={() => setChat({ person: request.requester, requestCode: request.code, relation: `Solicitante de ${request.code}` })} /></TableCell>
                       <TableCell>
                         <div className="row-actions">
-                          <ActionButton label={`Revisar ${request.code}`} onClick={() => setReviewing(request)}><SquareArrowOutUpRight /></ActionButton>
+                          <ActionButton label={`Revisar ${request.code}`} onClick={() => setReviewingCode(request.code)}><SquareArrowOutUpRight /></ActionButton>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -96,8 +99,8 @@ function ManageRequestsPage() {
           </div>
         </div>
 
-        <AdminRequestDetail request={reviewing} today={today} onClose={() => setReviewing(null)} onChanged={() => router.invalidate()}
-          onChat={(person, relation) => { setChat({ person, requestCode: reviewing?.code ?? "", relation }); setReviewing(null); }} />
+        <AdminRequestDetail request={reviewing} today={today} onClose={() => setReviewingCode(null)} onChanged={() => router.invalidate()}
+          onChat={(person, relation) => { setChat({ person, requestCode: reviewing?.code ?? "", relation }); setReviewingCode(null); }} />
         <InternalChat target={chat} onOpenChange={open => { if (!open) setChat(null); }} />
       </TooltipProvider>
     </AppShell>
