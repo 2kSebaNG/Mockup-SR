@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { RequestContent, RequestOutcome } from "@/components/requests/request-content";
+import { ParentLink } from "@/components/requests/request-package";
 import { DueWarning, PersonLink, StatusBadge, formatNumericDate } from "@/components/requests/request-list";
 import { canDecide, canEstimate, REJECTION_REASON_MIN, statusPhrase, todayIso, type MyRequest, type ReviewedRequest } from "@/lib/my-requests";
 import { ClassificationReview } from "@/components/requests/classification-review";
@@ -132,7 +133,7 @@ function EstimateEditor({ request, reviewer, onChanged }: { request: MyRequest; 
  * Request detail with the decisions. Without `reviewer` it acts as the contract administrator (delegate / authorize /
  * reject pending requests); with `reviewer` it acts as that department reviewer (authorize / reject what is in review).
  */
-export function AdminRequestDetail({ request, today, onClose, onChanged, onChat, reviewer }: { request: ReviewedRequest | null; today: string; onClose: () => void; onChanged: () => Promise<void>; onChat: (person: Person, relation: string) => void; reviewer?: { department: string; assigneeName: string } }) {
+export function AdminRequestDetail({ request, today, onClose, onChanged, onChat, onOpenPackage, reviewer }: { request: ReviewedRequest | null; today: string; onClose: () => void; onChanged: () => Promise<void>; onChat: (person: Person, relation: string) => void; onOpenPackage?: (parentCode: string) => void; reviewer?: { department: string; assigneeName: string } }) {
   const decideAsAdmin = useServerFn(decideRequest);
   const decideAsDepartment = useServerFn(decideAsReviewer);
   const [busy, setBusy] = useState<"Autorizado" | "Rechazado" | null>(null);
@@ -167,7 +168,7 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat,
         {request && <>
           <DialogHeader>
             <div className="admin-detail-heading"><DialogTitle className="request-detail-title">Solicitud {request.code}</DialogTitle><span className="status-line"><StatusBadge status={request.status} /><DueWarning request={request} today={today} /></span></div>
-            <DialogDescription>Solicitado por: <PersonLink person={request.requester} onOpen={() => onChat(request.requester, `Solicitante de ${request.code}`)} /> el {formatNumericDate(request.createdAt)}</DialogDescription>
+            <DialogDescription>Solicitado por: <PersonLink person={request.requester} onOpen={() => onChat(request.requester, `Solicitante de ${request.code}`)} /> el {formatNumericDate(request.createdAt)}{request.parentCode && onOpenPackage && <> · parte de <ParentLink request={request} onOpen={onOpenPackage} /></>}</DialogDescription>
           </DialogHeader>
           {/* Only the contract administrator sees and decides catalog novelties. */}
           <RequestContent request={request} {...(!reviewer && { review: request.review })} />

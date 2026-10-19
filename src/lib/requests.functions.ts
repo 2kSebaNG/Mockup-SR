@@ -4,7 +4,7 @@ import { normalizeForSearch } from "./elements";
 import { catalogActionSchema } from "./catalog-admin";
 
 const elementSearchSchema = z.object({ category: z.string().trim().min(1).max(80), query: z.string().max(120) });
-import { catalogItemDecisionSchema, estimateSchema, requestCodeSchema, requestDecisionSchema, requestDelegationSchema, requestInputSchema, requestUpdateSchema, reviewerDecisionSchema, reviewerSchema } from "./my-requests";
+import { catalogItemDecisionSchema, estimateSchema, requestPackageSchema, reviewerPackageSchema, requestCodeSchema, requestDecisionSchema, requestDelegationSchema, requestUpdateSchema, reviewerDecisionSchema, reviewerSchema } from "./my-requests";
 
 const requester = async () => (await import("./requests.server")).requesterService();
 const admin = async () => (await import("./requests.server")).adminService();
@@ -14,9 +14,10 @@ const admin = async () => (await import("./requests.server")).adminService();
 export const listMyRequests = createServerFn({ method: "GET" })
   .handler(async () => (await requester()).list());
 
-export const createMyRequest = createServerFn({ method: "POST" })
-  .inputValidator(input => requestInputSchema.parse(input))
-  .handler(async ({ data }) => (await requester()).create(data));
+/** One item creates one request; several create a package of individual requests. */
+export const createMyRequests = createServerFn({ method: "POST" })
+  .inputValidator(input => requestPackageSchema.parse(input))
+  .handler(async ({ data }) => (await requester()).createMany(data));
 
 export const updateMyRequest = createServerFn({ method: "POST" })
   .inputValidator(input => requestUpdateSchema.parse(input))
@@ -50,6 +51,11 @@ export const listReviewerRequests = createServerFn({ method: "GET" })
 export const decideAsReviewer = createServerFn({ method: "POST" })
   .inputValidator(input => reviewerDecisionSchema.parse(input))
   .handler(async ({ data }) => (await reviewer(data.reviewer.department, data.reviewer.assigneeName)).decide(data.code, data.decision, data.reason));
+
+/** The rest of a package for a reviewer assigned to one of its requests. */
+export const getReviewerPackage = createServerFn({ method: "GET" })
+  .inputValidator(input => reviewerPackageSchema.parse(input))
+  .handler(async ({ data }) => (await reviewer(data.reviewer.department, data.reviewer.assigneeName)).package(data.parentCode));
 
 /** Estimated resolution date, set by the contract administrator or, with `reviewer`, by the assigned department reviewer. */
 export const setEstimatedResolution = createServerFn({ method: "POST" })

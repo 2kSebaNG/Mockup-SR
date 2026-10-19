@@ -4,10 +4,11 @@ import { CheckCircle2, Hourglass, SquareArrowOutUpRight, Users, XCircle } from "
 import { AppShell } from "@/components/app-shell";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs";
+import { PackageDialog, ParentLink } from "@/components/requests/request-package";
 import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { countByStatus, todayIso } from "@/lib/my-requests";
+import { countByStatus, packageChildren, todayIso } from "@/lib/my-requests";
 import { pendingSummary } from "@/lib/catalog";
 import { CONTRACT_ADMIN } from "@/lib/organization";
 import { listAllRequests } from "@/lib/requests.functions";
@@ -45,6 +46,7 @@ function ManageRequestsPage() {
   const [reviewingCode, setReviewingCode] = useState<string | null>(null);
   const reviewing = requests.find(request => request.code === reviewingCode) ?? null;
   const [chat, setChat] = useState<ChatTarget | null>(null);
+  const [packageCode, setPackageCode] = useState<string | null>(null);
 
   return (
     <AppShell trail={["Solicitudes", "Gestionar solicitudes"]}>
@@ -78,7 +80,7 @@ function ManageRequestsPage() {
                   )}
                   {list.pageData.items.map(request => (
                     <TableRow key={request.code}>
-                      <TableCell className="request-code">{request.code}</TableCell>
+                      <TableCell><span className="code-cell"><span className="request-code">{request.code}</span><ParentLink request={request} onOpen={setPackageCode} /></span></TableCell>
                       <TableCell><span className="category-cell">{request.category}{request.element && <span className="element-cell">{request.element}</span>}{pendingSummary(request.review) && <span className="catalog-flag" title="Novedades para el catálogo por aprobar">{pendingSummary(request.review)}</span>}</span></TableCell>
                       <TableCell>{request.department ?? <Unassigned />}</TableCell>
                       <TableCell>{request.assignee ? <PersonLink person={request.assignee} onOpen={() => setChat({ person: request.assignee!, requestCode: request.code, relation: `Revisa ${request.code}` })} /> : <Unassigned />}</TableCell>
@@ -101,7 +103,10 @@ function ManageRequestsPage() {
           </div>
         </div>
 
+        <PackageDialog parentCode={packageCode} children={packageChildren(requests, packageCode ?? "")} today={today} onClose={() => setPackageCode(null)}
+          onOpenChild={child => { setPackageCode(null); setReviewingCode(child.code); }} />
         <AdminRequestDetail request={reviewing} today={today} onClose={() => setReviewingCode(null)} onChanged={() => router.invalidate()}
+          onOpenPackage={code => { setReviewingCode(null); setPackageCode(code); }}
           onChat={(person, relation) => { setChat({ person, requestCode: reviewing?.code ?? "", relation }); setReviewingCode(null); }} />
         <InternalChat target={chat} onOpenChange={open => { if (!open) setChat(null); }} />
       </TooltipProvider>

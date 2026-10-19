@@ -1,16 +1,18 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Ban, CheckCircle2, ClipboardCheck, SquareArrowOutUpRight, XCircle } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs";
+import { PackageDialog, ParentLink } from "@/components/requests/request-package";
 import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { countByStatus, todayIso } from "@/lib/my-requests";
+import { countByStatus, todayIso, type MyRequest } from "@/lib/my-requests";
 import { departments, findDepartment, findMember } from "@/lib/organization";
-import { listReviewerRequests } from "@/lib/requests.functions";
+import { getReviewerPackage, listReviewerRequests } from "@/lib/requests.functions";
 
 type ReviewerSearch = { departamento?: string; encargado?: string };
 
@@ -56,6 +58,19 @@ function DepartmentReviewPage() {
   const [reviewingCode, setReviewingCode] = useState<string | null>(null);
   const reviewing = requests.find(request => request.code === reviewingCode) ?? null;
   const [chat, setChat] = useState<ChatTarget | null>(null);
+  // A reviewer only lists their own requests, so the rest of a package comes from the server.
+  const loadPackage = useServerFn(getReviewerPackage);
+  const [packageCode, setPackageCode] = useState<string | null>(null);
+  const [packageState, setPackageState] = useState<{ children: MyRequest[]; loading: boolean; error: string }>({ children: [], loading: false, error: "" });
+  useEffect(() => {
+    if (!packageCode) return;
+    let active = true;
+    setPackageState({ children: [], loading: true, error: "" });
+    loadPackage({ data: { reviewer, parentCode: packageCode } })
+      .then(response => { if (active) setPackageState({ children: response.requests ?? [], loading: false, error: response.error ?? "" }); })
+      .catch(() => { if (active) setPackageState({ children: [], loading: false, error: "No se pudo cargar el paquete." }); });
+    return () => { active = false; };
+  }, [packageCode, requests]);
   const members = findDepartment(reviewer.department)?.members ?? [];
   const actAs = (department: string, assigneeName?: string) => navigate({ search: { departamento: department, encargado: assigneeName ?? findDepartment(department)!.members[0]!.name } });
 
@@ -107,7 +122,7 @@ function DepartmentReviewPage() {
                   )}
                   {list.pageData.items.map(request => (
                     <TableRow key={request.code}>
-                      <TableCell className="request-code">{request.code}</TableCell>
+                      <TableCell><span className="code-cell"><span className="request-code">{request.code}</span><ParentLink request={request} onOpen={setPackageCode} /></span></TableCell>
                       <TableCell><span className="category-cell">{request.category}{request.element && <span className="element-cell">{request.element}</span>}</span></TableCell>
                       <TableCell className="request-date">{formatDate(request.createdAt)}</TableCell>
                       <TableCell className="request-date"><DueDateCell request={request} /></TableCell>
@@ -128,7 +143,10 @@ function DepartmentReviewPage() {
           </div>
         </div>
 
+        <PackageDialog parentCode={packageCode} children={packageState.children} loading={packageState.loading} error={packageState.error} today={today} onClose={() => setPackageCode(null)}
+          canOpenChild={child => requests.some(own => own.code === child.code)} onOpenChild={child => { setPackageCode(null); setReviewingCode(child.code); }} />
         <AdminRequestDetail request={reviewing} today={today} reviewer={reviewer} onClose={() => setReviewingCode(null)} onChanged={() => router.invalidate()}
+          onOpenPackage={code => { setReviewingCode(null); setPackageCode(code); }}
           onChat={(person, relation) => { setChat({ person, requestCode: reviewing?.code ?? "", relation }); setReviewingCode(null); }} />
         <InternalChat target={chat} onOpenChange={open => { if (!open) setChat(null); }} />
       </TooltipProvider>

@@ -35,6 +35,8 @@ export type MyRequest = {
   rejectionReason: string | null;
   /** When the administrator or the reviewing department expects to resolve it. */
   estimatedResolution: string | null;
+  /** Set when the request was sent together with others as one package (e.g. REQ-1501 for REQ-1501-2). */
+  parentCode: string | null;
 };
 
 /** A request as the server returns it: with its proposal compared against the current catalog. */
@@ -134,19 +136,43 @@ export function paginate<T>(items: T[], page: number, pageSize: number) {
   return { items: items.slice(start, start + pageSize), page: current, pageCount, start, end: Math.min(start + pageSize, items.length) };
 }
 
+/** A package's progress: its children are decided one by one. */
+export type PackageProgress = { label: "En curso" | "Finalizada" | "Anulada"; resolved: number; total: number; counts: Record<RequestStatus, number> };
+
+/** The children of a package, in order. */
+export function packageChildren<T extends MyRequest>(requests: T[], parentCode: string): T[] {
+  return requests.filter(request => request.parentCode === parentCode).sort((a, b) => a.code.localeCompare(b.code, "es", { numeric: true }));
+}
+
+export function packageProgress(children: MyRequest[]): PackageProgress {
+  const counts = countByStatus(children);
+  const resolved = children.filter(child => !pending.includes(child.status)).length;
+  const label = counts["Anulado"] === children.length ? "Anulada" : resolved === children.length ? "Finalizada" : "En curso";
+  return { label, resolved, total: children.length, counts };
+}
+
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Indica una fecha válida.").refine(value => !Number.isNaN(Date.parse(value)), "Indica una fecha válida.");
-export const requestInputSchema = z.object({
+const itemShape = {
   category: z.string().trim().min(1, "Selecciona la categoría.").max(80),
   element: z.string().trim().min(2, "Indica el tipo de elemento que necesitas.").max(120),
   elementLabel: z.string().trim().min(1).max(80).default("Tipo de elemento"),
   quantity: z.number({ invalid_type_error: "Indica la cantidad." }).positive("La cantidad debe ser mayor a 0.").max(1_000_000),
+  fields: z.array(z.object({ label: z.string().trim().min(1).max(80), value: z.string().trim().max(100), options: z.array(z.string().trim().max(100)).max(30).default([]) })).max(16),
+};
+const sharedShape = {
   dueDate: z.string().min(1, "La fecha de vencimiento es obligatoria.").pipe(isoDate),
   description: z.string().trim().max(4000),
-  fields: z.array(z.object({ label: z.string().trim().min(1).max(80), value: z.string().trim().max(100), options: z.array(z.string().trim().max(100)).max(30).default([]) })).max(16),
   aiAssisted: z.boolean().default(false),
-});
+};
+export const requestInputSchema = z.object({ ...itemShape, ...sharedShape });
 export type RequestInput = z.infer<typeof requestInputSchema>;
-export const requestCodeSchema = z.object({ code: z.string().regex(/^REQ-\d{4,}$/) });
+/** "Nueva solicitud": one or more items sharing the due date and description; two or more become a package. */
+export const requestPackageSchema = z.object({ ...sharedShape, items: z.array(z.object(itemShape)).min(1, "Agrega al menos un requerimiento.").max(10, "Una solicitud puede tener hasta 10 requerimientos.") });
+export type RequestPackageInput = z.infer<typeof requestPackageSchema>;
+/** Each item of a package as the input of its own request. */
+export const itemsOf = ({ items, dueDate, description, aiAssisted }: RequestPackageInput): RequestInput[] => items.map(item => ({ ...item, dueDate, description, aiAssisted }));
+const requestCode = z.string().regex(/^REQ-\d{4,}(-\d{1,2})?$/);
+export const requestCodeSchema = z.object({ code: requestCode });
 export const requestUpdateSchema = requestCodeSchema.extend({ input: requestInputSchema });
 const itemEditSchema = z.object({
   as: z.string().trim().max(80).optional(),
@@ -164,6 +190,7 @@ export const reviewerSchema = z.object({ department: z.string().max(80), assigne
 export const reviewerDecisionSchema = z.object({ reviewer: reviewerSchema, code: requestCodeSchema.shape.code, ...decisionFields }).refine(reasonRequired, reasonMessage);
 /** Sets (or clears, with null) the estimated resolution date; with `reviewer`, as that department reviewer. */
 export const estimateSchema = requestCodeSchema.extend({ date: isoDate.nullable(), reviewer: reviewerSchema.optional() });
+export const reviewerPackageSchema = z.object({ reviewer: reviewerSchema, parentCode: requestCode });
 export const requestDelegationSchema = requestCodeSchema.extend({ department: z.string().max(80), assigneeName: z.string().max(120) })
   .refine(value => findMember(value.department, value.assigneeName), "Elige un encargado del departamento seleccionado.");
 
@@ -221,6 +248,7 @@ function buildSample(today: string, requester: Person, status: RequestStatus, in
     dueDate,
     status,
     rejectionReason: status === "Rechazado" ? sampleRejection : null,
+    parentCode: null,
     estimatedResolution: status === "En revisión" || (status === "Enviada" && index % 3 === 0) ? addDays(dueDate, -2) : null,
     // The seed proposes the same things a requester would: e.g. the new "Bebestible" type or the "Tipo de tornillo" attribute.
     elementLabel: elementLabelFor(defaultCatalog, sample.category),
@@ -236,8 +264,24 @@ export function sampleRequests(today: string): MyRequest[] {
 // Other requesters' work, so the contract administrator's queue has more than the demo user's requests.
 const teamPlan: RequestStatus[] = ["Enviada", "Enviada", "Enviada", "Enviada", "Enviada", "Enviada", "Enviada", "Enviada", "En revisión", "En revisión", "En revisión", "Autorizado", "Autorizado", "Rechazado"];
 
+/** A package: several items asked for together, each its own request with its own status. */
+function samplePackage(today: string, requester: Person, parent: number, items: { sample: number; status: RequestStatus }[], description: string): MyRequest[] {
+  const parentCode = `REQ-${parent}`;
+  return items.map(({ sample, status }, index) => {
+    const child = buildSample(today, requester, status, sample, parent);
+    return {
+      ...child, code: `${parentCode}-${index + 1}`, parentCode, description, aiAssisted: true,
+      createdAt: addDays(today, -2), dueDate: addDays(today, 12), estimatedResolution: child.estimatedResolution && addDays(today, 9),
+    };
+  });
+}
+
 /** Seed for development storage: the demo user's requests plus those of the rest of the team. */
 export function seedRequests(today: string): MyRequest[] {
   const team = teamPlan.map((status, index) => buildSample(today, requesters[1 + (index % 2)]!, status, index + 3, 1440 + index * 3));
-  return [...sampleRequests(today), ...team];
+  const mine = samplePackage(today, DEMO_USER, 1490, [{ sample: 2, status: "Autorizado" }, { sample: 1, status: "En revisión" }, { sample: 0, status: "Enviada" }],
+    "Para el montaje de la plataforma necesito 2 soldadores, una grúa horquilla por un día y 4 taladros percutores Bosch a batería.");
+  const theirs = samplePackage(today, requesters[1]!, 1495, [{ sample: 4, status: "Enviada" }, { sample: 5, status: "Enviada" }],
+    "Colaciones en caja y agua purificada en botella para la cuadrilla de la faena de altura.");
+  return [...sampleRequests(today), ...team, ...mine, ...theirs];
 }

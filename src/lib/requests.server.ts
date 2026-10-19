@@ -1,4 +1,4 @@
-import { canCancel, canDecide, canEdit, canEstimate, REJECTION_REASON_MIN, requestFromInput, statusPhrase, todayIso, type MyRequest, type RequestInput, type ReviewedRequest } from "./my-requests";
+import { canCancel, canDecide, canEdit, canEstimate, itemsOf, packageChildren, REJECTION_REASON_MIN, requestFromInput, statusPhrase, todayIso, type RequestPackageInput, type MyRequest, type RequestInput, type ReviewedRequest } from "./my-requests";
 import { applyItem, elementLookup, findCategory, groupPendingItems, proposalFor, recordDecision, reviewOf, type Catalog, type ItemEdit, type StoredProposal } from "./catalog";
 import { ElementEditError, elementKey, getElementStore, memoryElementStore, type ElementStore } from "./element-store.server";
 import { applyCatalogAction, CatalogEditError, type CatalogAction } from "./catalog-admin";
@@ -7,6 +7,7 @@ import { getCatalogStore, type CatalogStore } from "./catalog-store.server";
 import { getRequestStore, type RequestStore } from "./requests-store.server";
 
 export type RequestResult = { request: ReviewedRequest; error: null } | { request: null; error: string };
+export type RequestsResult = { requests: ReviewedRequest[]; error: null } | { requests: null; error: string };
 
 const failure = (error: string): RequestResult => ({ request: null, error });
 const notFound = () => failure("No encontramos esa solicitud.");
@@ -67,6 +68,21 @@ export function createRequesterService(store: RequestStore, catalogs: CatalogSto
     async create(input: RequestInput): Promise<RequestResult> {
       if (input.dueDate < todayIso()) return failure("La fecha de vencimiento no puede ser anterior a hoy.");
       return view.one(await store.create({ ...(await withProposal(input)), requester: user }));
+    },
+    /**
+     * "Nueva solicitud": a single item is an ordinary request; several become one package whose children are
+     * individual requests (each decided, delegated or cancelled on its own).
+     */
+    async createMany(input: RequestPackageInput): Promise<RequestsResult> {
+      if (input.dueDate < todayIso()) return { requests: null, error: "La fecha de vencimiento no puede ser anterior a hoy." };
+      const inputs = itemsOf(input);
+      if (inputs.length === 1) {
+        const single = await this.create(inputs[0]!);
+        return single.request ? { requests: [single.request], error: null } : { requests: null, error: single.error };
+      }
+      const drafts = [];
+      for (const item of inputs) drafts.push({ ...(await withProposal(item)), requester: user });
+      return { requests: await view.many(await store.createPackage(drafts)), error: null };
     },
     async update(code: string, input: RequestInput): Promise<RequestResult> {
       const current = await own(code);
@@ -192,6 +208,12 @@ export function createReviewerService(store: RequestStore, catalogs: CatalogStor
       if (current.status !== "En revisión") return failure(`La solicitud ya está ${statusPhrase(current.status)}; solo se deciden solicitudes en revisión.`);
       const patch = decisionPatch(decision, reason);
       return typeof patch === "string" ? failure(patch) : view.one(await store.update(code, patch));
+    },
+    /** A package one of whose requests is assigned to this reviewer, to follow the rest of it. */
+    async package(parentCode: string): Promise<RequestsResult> {
+      const children = packageChildren(await store.list(), parentCode);
+      if (!children.some(child => assigned(child))) return { requests: null, error: "No encontramos ese paquete entre tus solicitudes." };
+      return { requests: await view.many(children), error: null };
     },
     async estimate(code: string, date: string | null): Promise<RequestResult> {
       const current = assigned(await store.get(code));

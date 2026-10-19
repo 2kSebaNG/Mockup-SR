@@ -59,3 +59,11 @@
 - [x] Razón del rechazo obligatoria (mínimo 10 caracteres), visible para el solicitante.
 - [x] Fecha estimada de resolución asignable por el ADC (antes o después de delegar) o por el encargado del departamento.
 - [ ] Aplicar la migración `supabase/migrations/20261018090000_request_resolution.sql` en Lovable Cloud.
+
+# Solicitudes en paquete
+- [x] Nueva solicitud empieza por la descripción con IA; los requerimientos se completan abajo.
+- [x] Varios requerimientos en una sola solicitud (hasta 10); la IA puede detectar varios en una descripción.
+- [x] Con 2 o más se crea un paquete REQ-xxxx con solicitudes hijas REQ-xxxx-1, -2…, cada una con su propio estado y decisión.
+- [x] Modal de seguimiento del paquete: avance, estado y seguimiento de cada hija, responsable y razón de rechazo.
+- [x] Enlace "Paquete REQ-xxxx" desde cada hija (tablas y detalle) en Mis solicitudes, Gestionar solicitudes y Revisión del departamento.
+- [ ] Aplicar la migración `supabase/migrations/20261019090000_request_packages.sql` (parent_code y next_request_code) en Lovable Cloud.

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { seedRequests, todayIso, type MyRequest } from "./my-requests";
 
-export type NewRequest = Omit<MyRequest, "code" | "createdAt" | "status" | "department" | "assignee" | "rejectionReason" | "estimatedResolution">;
+export type NewRequest = Omit<MyRequest, "code" | "createdAt" | "status" | "department" | "assignee" | "rejectionReason" | "estimatedResolution" | "parentCode">;
 export type RequestPatch = Partial<Omit<MyRequest, "code" | "createdAt" | "requester">>;
 
 /** Plain persistence; who may see or change a request is decided in requests.server.ts. */
@@ -9,6 +9,8 @@ export interface RequestStore {
   list(filter?: { requesterEmail?: string }): Promise<MyRequest[]>;
   get(code: string): Promise<MyRequest | null>;
   create(request: NewRequest): Promise<MyRequest>;
+  /** Creates the requests of a package under one new parent code, as REQ-1501-1, REQ-1501-2… */
+  createPackage(requests: NewRequest[]): Promise<MyRequest[]>;
   update(code: string, patch: RequestPatch): Promise<MyRequest | null>;
 }
 
@@ -17,7 +19,7 @@ type RequestRow = {
   unit: string; description: string; ai_assisted: boolean; fields: { label: string; value: string }[]; due_date: string;
   status: MyRequest["status"]; department: string | null; assignee_name: string | null; assignee_role: string | null;
   assignee_email: string | null; catalog_proposal: MyRequest["proposal"]; created_at: string;
-  rejection_reason: string | null; estimated_resolution: string | null;
+  rejection_reason: string | null; estimated_resolution: string | null; parent_code: string | null;
 };
 
 const fromRow = (row: RequestRow): MyRequest => ({
@@ -26,7 +28,7 @@ const fromRow = (row: RequestRow): MyRequest => ({
   fields: row.fields ?? [], dueDate: row.due_date, status: row.status, createdAt: row.created_at.slice(0, 10), department: row.department,
   assignee: row.assignee_name ? { name: row.assignee_name, role: row.assignee_role ?? "", email: row.assignee_email ?? "" } : null,
   proposal: row.catalog_proposal ?? null,
-  rejectionReason: row.rejection_reason ?? null, estimatedResolution: row.estimated_resolution ?? null,
+  rejectionReason: row.rejection_reason ?? null, estimatedResolution: row.estimated_resolution ?? null, parentCode: row.parent_code ?? null,
 });
 
 function toRow(patch: RequestPatch & Partial<Pick<MyRequest, "requester">>) {
@@ -73,6 +75,15 @@ async function supabaseStore(): Promise<RequestStore> {
       if (error) fail(error);
       return fromRow(data as RequestRow);
     },
+    async createPackage(requests) {
+      // The parent takes a number from the same sequence, so REQ-1501 never collides with a single request.
+      const { data: parent, error: codeError } = await (supabaseAdmin as unknown as SupabaseClient).rpc("next_request_code");
+      if (codeError) fail(codeError);
+      const rows = requests.map((request, index) => ({ ...toRow(request), code: `${parent as string}-${index + 1}`, parent_code: parent as string }));
+      const { data, error } = await table().insert(rows).select("*").order("code");
+      if (error) fail(error);
+      return (data as RequestRow[]).map(fromRow);
+    },
     async update(code, patch) {
       const { data, error } = await table().update({ ...toRow(patch), updated_at: new Date().toISOString() }).eq("code", code).select("*").maybeSingle();
       if (error) fail(error);
@@ -81,13 +92,17 @@ async function supabaseStore(): Promise<RequestStore> {
   };
 }
 
+const fresh = () => ({ createdAt: todayIso(), status: "Enviada" as const, department: null, assignee: null, rejectionReason: null, estimatedResolution: null });
+/** Next number after every single request and package (children share their parent's number). */
+const nextCode = (requests: MyRequest[]) => `REQ-${String(Math.max(1200, ...requests.map(r => Number.parseInt(r.code.slice(4), 10) || 0)) + 1).padStart(4, "0")}`;
+
 /** Development-only store in .data/requests.json, seeded with sample requests so every status and role can be tried. */
 export function fileStore(path: string, seed: () => MyRequest[] = () => seedRequests(todayIso())): RequestStore {
   let queue: Promise<unknown> = Promise.resolve();
   const serial = <T>(task: () => Promise<T>) => { const next = queue.then(task, task); queue = next.catch(() => undefined); return next; };
   const read = async (): Promise<MyRequest[]> => {
     const fs = await import("node:fs/promises");
-    try { return (JSON.parse(await fs.readFile(path, "utf8")) as MyRequest[]).map(request => ({ ...request, element: request.element ?? "", elementLabel: request.elementLabel ?? "Tipo de elemento", proposal: request.proposal ?? null, rejectionReason: request.rejectionReason ?? null, estimatedResolution: request.estimatedResolution ?? null })); } catch (error) {
+    try { return (JSON.parse(await fs.readFile(path, "utf8")) as MyRequest[]).map(request => ({ ...request, element: request.element ?? "", elementLabel: request.elementLabel ?? "Tipo de elemento", proposal: request.proposal ?? null, rejectionReason: request.rejectionReason ?? null, estimatedResolution: request.estimatedResolution ?? null, parentCode: request.parentCode ?? null })); } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       const seeded = seed();
       await write(seeded);
@@ -106,9 +121,15 @@ export function fileStore(path: string, seed: () => MyRequest[] = () => seedRequ
     get: code => serial(async () => (await read()).find(r => r.code === code) ?? null),
     create: request => serial(async () => {
       const requests = await read();
-      const next = Math.max(1200, ...requests.map(r => Number(r.code.slice(4)) || 0)) + 1;
-      const created: MyRequest = { ...request, code: `REQ-${String(next).padStart(4, "0")}`, createdAt: todayIso(), status: "Enviada", department: null, assignee: null, rejectionReason: null, estimatedResolution: null };
+      const created: MyRequest = { ...request, ...fresh(), code: nextCode(requests), parentCode: null };
       await write([...requests, created]);
+      return created;
+    }),
+    createPackage: items => serial(async () => {
+      const requests = await read();
+      const parentCode = nextCode(requests);
+      const created = items.map((request, index): MyRequest => ({ ...request, ...fresh(), code: `${parentCode}-${index + 1}`, parentCode }));
+      await write([...requests, ...created]);
       return created;
     }),
     update: (code, patch) => serial(async () => {

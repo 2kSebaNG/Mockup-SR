@@ -6,12 +6,13 @@ import { AppShell } from "@/components/app-shell";
 import { RequirementModal } from "@/components/requirement-modal";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { RequestContent, RequestOutcome } from "@/components/requests/request-content";
+import { PackageDialog, ParentLink } from "@/components/requests/request-package";
 import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, formatNumericDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
-import { canEdit, canCancel, countByStatus, responsibleFor, todayIso, type MyRequest } from "@/lib/my-requests";
+import { canEdit, canCancel, countByStatus, packageChildren, responsibleFor, todayIso, type MyRequest } from "@/lib/my-requests";
 import { cancelMyRequest, listMyRequests } from "@/lib/requests.functions";
 
 export const Route = createFileRoute("/mis-solicitudes")({
@@ -47,6 +48,7 @@ function MyRequestsPage() {
   const [editing, setEditing] = useState<MyRequest | null>(null);
   const [cancelling, setCancelling] = useState<MyRequest | null>(null);
   const [chat, setChat] = useState<ChatTarget | null>(null);
+  const [packageCode, setPackageCode] = useState<string | null>(null);
   const openChat = (request: MyRequest) => setChat({ person: responsibleFor(request), requestCode: request.code, relation: relationFor(request) });
 
   const confirmCancel = async () => {
@@ -89,7 +91,7 @@ function MyRequestsPage() {
                   )}
                   {list.pageData.items.map(request => (
                     <TableRow key={request.code}>
-                      <TableCell className="request-code">{request.code}</TableCell>
+                      <TableCell><span className="code-cell"><span className="request-code">{request.code}</span><ParentLink request={request} onOpen={setPackageCode} /></span></TableCell>
                       <TableCell><span className="category-cell">{request.category}{request.element && <span className="element-cell">{request.element}</span>}</span></TableCell>
                       <TableCell className="request-date">{formatDate(request.createdAt)}</TableCell>
                       <TableCell className="request-date"><DueDateCell request={request} /></TableCell>
@@ -122,7 +124,7 @@ function MyRequestsPage() {
               <DialogHeader>
                 <div className="modal-eyebrow"><ClipboardList size={15} />DETALLE DE SOLICITUD</div>
                 <div className="admin-detail-heading"><DialogTitle className="request-detail-title">Solicitud {viewing.code}</DialogTitle><span className="status-line"><StatusBadge status={viewing.status} /><DueWarning request={viewing} today={today} /></span></div>
-                <DialogDescription>Creada el {formatNumericDate(viewing.createdAt)}</DialogDescription>
+                <DialogDescription>Creada el {formatNumericDate(viewing.createdAt)}{viewing.parentCode && <> · parte de <ParentLink request={viewing} onOpen={code => { setViewing(null); setPackageCode(code); }} /></>}</DialogDescription>
               </DialogHeader>
               <RequestContent request={viewing} />
               <RequestOutcome request={viewing} />
@@ -146,6 +148,8 @@ function MyRequestsPage() {
           </AlertDialogContent>
         </AlertDialog>
 
+        <PackageDialog parentCode={packageCode} children={packageChildren(requests, packageCode ?? "")} today={today} onClose={() => setPackageCode(null)}
+          onOpenChild={child => { setPackageCode(null); setViewing(child); }} />
         <RequirementModal open={editing !== null} onOpenChange={open => { if (!open) setEditing(null); }} request={editing} onSaved={() => router.invalidate()} />
         <InternalChat target={chat} onOpenChange={open => { if (!open) setChat(null); }} />
       </TooltipProvider>

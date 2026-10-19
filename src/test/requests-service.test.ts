@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { requestDecisionSchema, requestFromInput, requestInputSchema, responsibleFor, reviewerSchema, type RequestInput } from "@/lib/my-requests";
+import { packageChildren, packageProgress, requestCodeSchema, requestDecisionSchema, requestFromInput, requestInputSchema, requestPackageSchema, responsibleFor, reviewerSchema, type RequestInput } from "@/lib/my-requests";
 import { CONTRACT_ADMIN, delegationByRules, findMember, requesters, type Person } from "@/lib/organization";
 import { fileStore } from "@/lib/requests-store.server";
 import { memoryCatalogStore, type CatalogStore } from "@/lib/catalog-store.server";
@@ -264,5 +264,51 @@ describe("Delegation rules", () => {
     expect(delegationByRules("Herramientas").department).toBe("Bodega");
     expect(delegationByRules("Bebestible").department).toBe("Abastecimiento");
     expect(requesters.length).toBeGreaterThan(1);
+  });
+});
+
+describe("Request packages", () => {
+  const paula = findMember("Recursos Humanos", "Paula Araya")!;
+  const { category, element, elementLabel, quantity, fields, dueDate, description, aiAssisted } = input;
+  const item = { category, element, elementLabel, quantity, fields };
+  const grua = { category: "Maquinarias", element: "Grúa horquilla", elementLabel: "Tipo de máquina", quantity: 1, fields: [] };
+  const pkg = (items: (typeof item)[]) => ({ dueDate, description, aiAssisted, items });
+
+  it("keeps a single item as an ordinary request", async () => {
+    const { requests } = await createRequesterService(store(), catalogs, ana).createMany(pkg([item]));
+    expect(requests).toHaveLength(1);
+    expect(requests![0]).toMatchObject({ code: "REQ-1201", parentCode: null });
+  });
+  it("splits several items into individual requests under one parent code that is not reused", async () => {
+    const requester = createRequesterService(store(), catalogs, ana);
+    await requester.create(input);
+    const { requests } = await requester.createMany(pkg([item, grua, item]));
+    expect(requests!.map(r => [r.code, r.parentCode, r.category])).toEqual([
+      ["REQ-1202-1", "REQ-1202", "Personas"], ["REQ-1202-2", "REQ-1202", "Maquinarias"], ["REQ-1202-3", "REQ-1202", "Personas"],
+    ]);
+    expect(requests!.every(r => r.status === "Enviada" && r.dueDate === dueDate && r.description === description)).toBe(true);
+    expect((await requester.create(input)).request?.code).toBe("REQ-1203");
+    expect(requestPackageSchema.safeParse(pkg([])).success).toBe(false);
+  });
+  it("decides each child on its own and reports the package progress", async () => {
+    const { requests } = await createRequesterService(store(), catalogs, ana).createMany(pkg([item, grua]));
+    const admin = createAdminService(store(), catalogs);
+    await admin.decide(requests![0]!.code, "Autorizado");
+    let children = packageChildren(await admin.list(), "REQ-1201");
+    expect(children.map(c => c.status)).toEqual(["Autorizado", "Enviada"]);
+    expect(packageProgress(children)).toMatchObject({ label: "En curso", resolved: 1, total: 2 });
+    await createRequesterService(store(), catalogs, ana).cancel(requests![1]!.code);
+    children = packageChildren(await admin.list(), "REQ-1201");
+    expect(packageProgress(children)).toMatchObject({ label: "Finalizada", resolved: 2 });
+  });
+  it("shows a package to a reviewer only when one of its requests is assigned to them", async () => {
+    const { requests } = await createRequesterService(store(), catalogs, ana).createMany(pkg([item, grua]));
+    await createAdminService(store(), catalogs).delegate(requests![0]!.code, "Recursos Humanos", "Paula Araya");
+    expect((await createReviewerService(store(), catalogs, paula).package("REQ-1201")).requests?.map(r => r.code)).toEqual(["REQ-1201-1", "REQ-1201-2"]);
+    expect((await createReviewerService(store(), catalogs, findMember("Recursos Humanos", "Maridel Rojas")!).package("REQ-1201")).error).toMatch(/No encontramos/);
+  });
+  it("accepts child codes", () => {
+    expect(requestCodeSchema.safeParse({ code: "REQ-1201-3" }).success).toBe(true);
+    expect(requestCodeSchema.safeParse({ code: "REQ-1201-" }).success).toBe(false);
   });
 });
