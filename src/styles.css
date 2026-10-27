@@ -405,6 +405,14 @@
 .header-divider { height: 20px !important; background: var(--surface-border); }
 .header-breadcrumb { color: var(--surface-muted); flex-wrap: nowrap; }
 .header-crumb-current { color: var(--surface-foreground); font-weight: 600; white-space: nowrap; }
+.header-actions { display: flex; align-items: center; gap: 12px; }
+.theme-toggle { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--surface-border); border-radius: var(--radius-md); background: var(--surface-raised); }
+.theme-option { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--surface-muted); font: 500 14px var(--font-sans); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+.theme-option svg { width: 16px; height: 16px; }
+.theme-option:hover { color: var(--surface-foreground); }
+.theme-option[aria-pressed=true] { background: var(--surface-hover); color: var(--surface-foreground); }
+.theme-option:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring-surface); }
+@media (max-width: 640px) { .theme-option-label { display: none; } .theme-option { padding: 0 8px; } }
 .sidebar-brand-mark { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--radius-sm); background: var(--primary); color: var(--primary-foreground); font: 800 21px var(--font-display); }
 .sidebar-brand-name { font: 700 17px/1.1 var(--font-display); letter-spacing: 0.01em; }
 .sidebar-brand-caption { color: var(--muted-foreground); font-size: 10px; letter-spacing: 0.06em; }

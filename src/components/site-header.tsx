@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { Grid2X2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -25,7 +26,10 @@ export function SiteHeader({ trail }: { trail: string[] }) {
             </BreadcrumbList>
           </Breadcrumb>
         </div>
-        <Button variant="on-surface"><Grid2X2 />Módulos</Button>
+        <div className="header-actions">
+          <ThemeToggle />
+          <Button variant="on-surface"><Grid2X2 />Módulos</Button>
+        </div>
       </div>
     </header>
   );
