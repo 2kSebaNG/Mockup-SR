@@ -1,7 +1,8 @@
 import { useRef } from "react";
-import { CalendarClock, Check, Eye, Loader2, Package, X } from "lucide-react";
+import { CalendarClock, Check, Eye, Package, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { PackageSkeleton } from "@/components/requests/request-skeletons";
 import { DueWarning, StatusBadge, formatDate, statusClass } from "@/components/requests/request-list";
 import { packageProgress, responsibleFor, type MyRequest, type RequestStatus } from "@/lib/my-requests";
 
@@ -67,7 +68,7 @@ export function PackageDialog({ parentCode: openCode, children: openChildren, to
           <div className="admin-detail-heading"><DialogTitle className="request-detail-title">Solicitud {parentCode}</DialogTitle>{first && <span className={`package-state ${progress.label === "En curso" ? "open" : progress.label === "Anulada" ? "cancelled" : "closed"}`}>{progress.label}</span>}</div>
           <DialogDescription>{first ? <>Solicitado por {first.requester.name} el {formatDate(first.createdAt)} · vence el {formatDate(first.dueDate)} · {children.length} requerimientos</> : "Cargando el paquete…"}</DialogDescription>
         </DialogHeader>
-        {loading && <p className="package-loading"><Loader2 className="animate-spin" />Cargando el paquete…</p>}
+        {loading && <PackageSkeleton />}
         {error && <p role="alert" className="requirement-error">{error}</p>}
         {first && <>
           <section className="package-progress" aria-label="Avance del paquete">

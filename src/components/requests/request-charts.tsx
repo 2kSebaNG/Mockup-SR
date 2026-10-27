@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Info } from "lucide-react";
 import { Bar, BarChart, Cell, LabelList, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
 import { DUE_SOON_DAYS, dueState, type MyRequest, type RequestStatus } from "@/lib/my-requests";
 import type { RequestList } from "@/components/requests/request-list";
+import { ChartSkeleton } from "@/components/requests/request-skeletons";
 
 /** A status the page summarizes, with the short name its chart row shows. */
 export type SummaryStatus = { status: RequestStatus; label: string };
@@ -44,6 +45,10 @@ function RowTooltip({ active, payload, total }: { active?: boolean; payload?: { 
  */
 function HorizontalBars({ rows, title, onSelect }: { rows: Row[]; title: string; onSelect?: (row: Row) => void }) {
   const total = rows.reduce((sum, row) => sum + row.count, 0);
+  // The chart measures its container before drawing (and cannot on the server): hold its place until then.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <ChartSkeleton rows={rows.length} />;
   return (
     <>
       <ChartContainer config={config} className="request-chart" style={{ height: rows.length * ROW_HEIGHT }} aria-hidden="true">

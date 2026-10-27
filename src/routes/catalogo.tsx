@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { CatalogPageSkeleton } from "@/components/requests/request-skeletons";
 import { useState, type ReactNode } from "react";
 import { FolderPlus, Inbox, Layers, ListChecks, ListPlus, Loader2, Plus, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
@@ -16,6 +17,7 @@ type CatalogSearch = { ver?: string };
 export const Route = createFileRoute("/catalogo")({
   validateSearch: (search: Record<string, unknown>): CatalogSearch => (typeof search["ver"] === "string" ? { ver: search["ver"] } : {}),
   loader: () => getCatalogReview(),
+  pendingComponent: CatalogPageSkeleton,
   component: CatalogPage,
   head: () => ({ meta: [
     { title: "Catálogo | Ecosistema X" },

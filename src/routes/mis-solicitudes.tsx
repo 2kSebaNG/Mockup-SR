@@ -8,6 +8,7 @@ import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { RequestContent, RequestOutcome } from "@/components/requests/request-content";
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
 import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, PaginationFooter, PersonLink, StatusBadge, formatDate, formatNumericDate, useRequestList } from "@/components/requests/request-list";
+import { RequestsPageSkeleton } from "@/components/requests/request-skeletons";
 import { RequestsSummary, type SummaryStatus } from "@/components/requests/request-charts";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,6 +19,7 @@ import { cancelMyRequest, listMyRequests } from "@/lib/requests.functions";
 
 export const Route = createFileRoute("/mis-solicitudes")({
   loader: () => listMyRequests(),
+  pendingComponent: () => <RequestsPageSkeleton trail={["Solicitudes", "Mis solicitudes"]} title="Mis solicitudes" columns={6} />,
   component: MyRequestsPage,
   head: () => ({ meta: [
     { title: "Mis solicitudes | Ecosistema X" },

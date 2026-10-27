@@ -8,6 +8,7 @@ import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs"
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
 import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, PaginationFooter, PersonLink, StatusBadge, formatDate, useRequestList } from "@/components/requests/request-list";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { RequestsPageSkeleton } from "@/components/requests/request-skeletons";
 import { RequestsSummary, type SummaryStatus } from "@/components/requests/request-charts";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/revision-departamento")({
   },
   loaderDeps: ({ search }) => resolveReviewer(search),
   loader: ({ deps }) => listReviewerRequests({ data: deps }),
+  pendingComponent: () => <RequestsPageSkeleton trail={["Solicitudes", "Revisión del departamento"]} title="Revisión del departamento" columns={7} />,
   component: DepartmentReviewPage,
   head: () => ({ meta: [
     { title: "Revisión del departamento | Ecosistema X" },

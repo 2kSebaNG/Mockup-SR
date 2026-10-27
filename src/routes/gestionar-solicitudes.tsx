@@ -6,6 +6,7 @@ import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs";
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
 import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, PaginationFooter, PersonLink, StatusBadge, formatDate, useRequestList } from "@/components/requests/request-list";
+import { RequestsPageSkeleton } from "@/components/requests/request-skeletons";
 import { RequestsSummary, type SummaryStatus } from "@/components/requests/request-charts";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +17,7 @@ import { listAllRequests } from "@/lib/requests.functions";
 
 export const Route = createFileRoute("/gestionar-solicitudes")({
   loader: () => listAllRequests(),
+  pendingComponent: () => <RequestsPageSkeleton trail={["Solicitudes", "Gestionar solicitudes"]} title="Gestionar solicitudes" columns={9} />,
   component: ManageRequestsPage,
   head: () => ({ meta: [
     { title: "Gestionar solicitudes | Ecosistema X" },
