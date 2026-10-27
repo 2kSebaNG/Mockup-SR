@@ -112,13 +112,14 @@
   --sidebar-ring: oklch(0.56 0.225 25);
   /* Request status colors, shared by the table badges and the summary charts. */
   --status-sent: oklch(0.55 0.13 250);
-  --status-review: oklch(0.66 0.15 65);
+  --status-review: oklch(0.48 0.15 275);
   --status-authorized: oklch(0.56 0.13 155);
   --status-rejected: oklch(0.56 0.21 25);
   --status-cancelled: oklch(0.55 0.01 260);
-  /* Text on a solid status fill: white reads on all but the amber, which takes dark text. */
+  /* Text on a solid status fill: white reads on every status color. */
   --status-on-color: oklch(0.99 0 0);
-  --status-on-review: oklch(0.2 0.006 260);
+  /* A due date coming up soon: a warning, not a status. */
+  --due-soon: oklch(0.66 0.15 65);
 }
 
 .dark {
@@ -255,7 +256,7 @@
 @media (max-width: 480px) { .requirement-modal { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); } .requirement-grid { grid-template-columns: 1fr; } .requirement-modal-title { font-size: 32px; } .requirement-modal-header { padding: 20px; } .requirement-modal-body { padding: 20px; } .requirement-modal-footer { padding: 14px 20px; } .description-heading label { font-size: 16px; } }
 .my-requests { max-width: 1280px; margin: auto; padding: 43px 32px 120px; }
 .status-sent { --status: var(--status-sent); }
-.status-review { --status: var(--status-review); --status-text: var(--status-on-review); }
+.status-review { --status: var(--status-review); }
 .status-authorized { --status: var(--status-authorized); }
 .status-rejected { --status: var(--status-rejected); }
 .status-cancelled { --status: var(--status-cancelled); }
@@ -289,10 +290,10 @@
 .status-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .status-line { display: flex; align-items: center; gap: 8px; }
 /* Solid fill in the status color, the same one the summary charts draw. */
-.status-badge { display: inline-flex; align-items: center; padding: 3px 10px; border: 1px solid var(--status); border-radius: 999px; color: var(--status-text, var(--status-on-color)); background: var(--status); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.status-badge { display: inline-flex; align-items: center; padding: 3px 10px; border: 1px solid var(--status); border-radius: 999px; color: var(--status-on-color); background: var(--status); font-size: 12px; font-weight: 600; white-space: nowrap; }
 .due-warning { display: inline-grid; place-items: center; border-radius: 4px; }
 .due-warning svg { width: 17px; height: 17px; }
-.due-warning.soon { color: var(--status-review); }
+.due-warning.soon { color: var(--due-soon); }
 .due-warning.overdue { color: var(--destructive); }
 .authorizer { color: var(--muted-foreground); font-size: 13px; white-space: nowrap; }
 .authorizer-link { color: oklch(0.5 0.15 250); font: inherit; font-weight: 600; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }

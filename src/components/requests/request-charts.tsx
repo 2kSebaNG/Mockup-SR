@@ -106,7 +106,7 @@ function DeadlineChart({ requests, today }: { requests: MyRequest[]; today: stri
     return [
       // Red, amber and green, as the due warnings in the table.
       { key: "overdue", label: "Vencidas", count: overdue, color: "var(--status-rejected)" },
-      { key: "soon", label: "Por vencer", count: soon, color: "var(--status-review)" },
+      { key: "soon", label: "Por vencer", count: soon, color: "var(--due-soon)" },
       { key: "onTime", label: "A tiempo", count: pending.length - overdue - soon, color: "var(--status-authorized)" },
     ] satisfies Row[];
   }, [requests, today]);
