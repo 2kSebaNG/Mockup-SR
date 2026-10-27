@@ -8,10 +8,18 @@ import type { RequestList } from "@/components/requests/request-list";
 /** A status the page summarizes, with the short name its chart row shows. */
 export type SummaryStatus = { status: RequestStatus; label: string };
 
-type Row = { key: string; label: string; count: number; emphasis: "none" | "accent" | "alert" };
+/** `dimmed` fades a bar while other bars are the ones filtering the table. */
+type Row = { key: string; label: string; count: number; color: string; dimmed?: boolean };
 
 const ROW_HEIGHT = 40;
-const fills: Record<Row["emphasis"], string> = { none: "var(--chart-neutral)", accent: "var(--chart-accent)", alert: "var(--chart-alert)" };
+// Same colors as the status badges in the table, so a state reads the same everywhere.
+const statusColors: Record<RequestStatus, string> = {
+  "Enviada": "var(--status-sent)",
+  "En revisión": "var(--status-review)",
+  "Autorizado": "var(--status-authorized)",
+  "Rechazado": "var(--status-rejected)",
+  "Anulado": "var(--status-cancelled)",
+};
 const config = { count: { label: "Solicitudes" } } satisfies ChartConfig;
 
 function plural(count: number, one: string, many: string) {
@@ -32,7 +40,7 @@ function RowTooltip({ active, payload, total }: { active?: boolean; payload?: { 
 
 /**
  * One horizontal bar per row with its value written at the end: readable at a glance on a phone
- * without a legend. Emphasis colors only what needs attention; everything else stays neutral.
+ * without a legend. Each bar wears the color of what it counts; the label beside it names it.
  */
 function HorizontalBars({ rows, title, onSelect }: { rows: Row[]; title: string; onSelect?: (row: Row) => void }) {
   const total = rows.reduce((sum, row) => sum + row.count, 0);
@@ -52,7 +60,7 @@ function HorizontalBars({ rows, title, onSelect }: { rows: Row[]; title: string;
             background={{ fill: "var(--muted)", radius: 4 }}
             {...(onSelect && { className: "chart-bar-selectable", onClick: (data: { payload?: Row }) => data.payload && onSelect(data.payload) })}
           >
-            {rows.map(row => <Cell key={row.key} fill={fills[row.emphasis]} />)}
+            {rows.map(row => <Cell key={row.key} fill={row.color} fillOpacity={row.dimmed ? 0.3 : 1} />)}
             <LabelList dataKey="count" position="right" className="chart-value" />
           </Bar>
         </BarChart>
@@ -72,7 +80,8 @@ function StatusChart({ list, statuses }: { list: RequestList; statuses: SummaryS
     key: status,
     label,
     count: list.statusScope.filter(request => request.status === status).length,
-    emphasis: selected.includes(status) ? "accent" : "none",
+    color: statusColors[status],
+    dimmed: selected.length > 0 && !selected.includes(status),
   }));
   const total = rows.reduce((sum, row) => sum + row.count, 0);
   return (
@@ -82,7 +91,7 @@ function StatusChart({ list, statuses }: { list: RequestList; statuses: SummaryS
         <p><strong>{total}</strong> {total === 1 ? "solicitud" : "solicitudes"}</p>
       </figcaption>
       <HorizontalBars rows={rows} title="Solicitudes por estado" onSelect={row => list.toggleFilter("statuses", row.key, !selected.includes(row.key as RequestStatus))} />
-      <p className="chart-hint">{selected.length ? "Las barras destacadas filtran la tabla. Tócalas de nuevo para quitarlas." : "Toca una barra para filtrar la tabla por ese estado."}</p>
+      <p className="chart-hint">{selected.length ? "Las barras con color pleno filtran la tabla. Tócalas de nuevo para quitarlas." : "Toca una barra para filtrar la tabla por ese estado."}</p>
     </figure>
   );
 }
@@ -95,9 +104,10 @@ function DeadlineChart({ requests, today }: { requests: MyRequest[]; today: stri
     const overdue = states.filter(state => state === "overdue").length;
     const soon = states.filter(state => state === "soon").length;
     return [
-      { key: "overdue", label: "Vencidas", count: overdue, emphasis: overdue ? "alert" : "none" },
-      { key: "soon", label: "Por vencer", count: soon, emphasis: "none" },
-      { key: "onTime", label: "A tiempo", count: pending.length - overdue - soon, emphasis: "none" },
+      // Red, amber and green, as the due warnings in the table.
+      { key: "overdue", label: "Vencidas", count: overdue, color: "var(--status-rejected)" },
+      { key: "soon", label: "Por vencer", count: soon, color: "var(--status-review)" },
+      { key: "onTime", label: "A tiempo", count: pending.length - overdue - soon, color: "var(--status-authorized)" },
     ] satisfies Row[];
   }, [requests, today]);
   const pending = rows.reduce((sum, row) => sum + row.count, 0);

@@ -110,10 +110,12 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.32 0.006 260);
   --sidebar-ring: oklch(0.56 0.225 25);
-  /* Chart roles: neutral by default, accent for what is selected, alert for what is overdue. */
-  --chart-neutral: var(--muted-foreground);
-  --chart-accent: var(--primary);
-  --chart-alert: var(--destructive);
+  /* Request status colors, shared by the table badges and the summary charts. */
+  --status-sent: oklch(0.55 0.13 250);
+  --status-review: oklch(0.66 0.15 65);
+  --status-authorized: oklch(0.56 0.13 155);
+  --status-rejected: oklch(0.56 0.21 25);
+  --status-cancelled: oklch(0.55 0.01 260);
 }
 
 .dark {
@@ -249,11 +251,11 @@
 @media (max-width: 700px) { .requirement-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; } .requirement-modal-header { padding: 22px; } .requirement-modal-body { padding: 22px; } .requirement-modal-footer { padding: 16px 22px; } .custom-field-editor { grid-template-columns: 1fr; } }
 @media (max-width: 480px) { .requirement-modal { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); } .requirement-grid { grid-template-columns: 1fr; } .requirement-modal-title { font-size: 32px; } .requirement-modal-header { padding: 20px; } .requirement-modal-body { padding: 20px; } .requirement-modal-footer { padding: 14px 20px; } .description-heading label { font-size: 16px; } }
 .my-requests { max-width: 1280px; margin: auto; padding: 43px 32px 120px; }
-.status-sent { --status: oklch(0.55 0.13 250); }
-.status-review { --status: oklch(0.66 0.15 65); }
-.status-authorized { --status: oklch(0.56 0.13 155); }
-.status-rejected { --status: oklch(0.56 0.21 25); }
-.status-cancelled { --status: oklch(0.55 0.01 260); }
+.status-sent { --status: var(--status-sent); }
+.status-review { --status: var(--status-review); }
+.status-authorized { --status: var(--status-authorized); }
+.status-rejected { --status: var(--status-rejected); }
+.status-cancelled { --status: var(--status-cancelled); }
 .requests-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
 .requests-table-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .requests-table th { height: 52px; padding: 0 18px; color: var(--foreground); font: 600 15px var(--font-display); text-transform: uppercase; background: var(--secondary); }
@@ -286,7 +288,7 @@
 .status-badge { display: inline-flex; align-items: center; padding: 3px 10px; border: 1px solid color-mix(in oklab, var(--status) 55%, transparent); border-radius: 999px; color: var(--status); background: color-mix(in oklab, var(--status) 10%, transparent); font-size: 12px; font-weight: 600; white-space: nowrap; }
 .due-warning { display: inline-grid; place-items: center; border-radius: 4px; }
 .due-warning svg { width: 17px; height: 17px; }
-.due-warning.soon { color: oklch(0.66 0.15 65); }
+.due-warning.soon { color: var(--status-review); }
 .due-warning.overdue { color: var(--destructive); }
 .authorizer { color: var(--muted-foreground); font-size: 13px; white-space: nowrap; }
 .authorizer-link { color: oklch(0.5 0.15 250); font: inherit; font-weight: 600; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
@@ -560,7 +562,7 @@
 .chart-heading strong { color: var(--foreground); font: 700 24px var(--font-display); }
 .request-chart { width: 100%; aspect-ratio: auto; }
 .request-chart .recharts-cartesian-axis-tick text { fill: var(--foreground); }
-.chart-value { fill: var(--foreground); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.chart-value { fill: var(--foreground); fill-opacity: 1; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .chart-bar-selectable { cursor: pointer; }
 .chart-hint, .chart-empty { margin: 0; color: var(--muted-foreground); font-size: 12px; line-height: 1.4; }
 .chart-empty { font-size: 14px; }
