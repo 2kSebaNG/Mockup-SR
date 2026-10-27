@@ -83,7 +83,7 @@ export function NoveltyEditor({ item, catalog, onDecide }: { item: { kind: Catal
       </div>}
       <div className="catalog-actions">
         <Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => decide("rechazada")}>{busy === "rechazada" ? <Loader2 className="animate-spin" /> : <X />}Rechazar</Button>
-        <Button type="button" size="sm" className="decision-authorize" disabled={busy !== null || (item.kind === "field" && optionList.length === 0)} onClick={() => decide("aprobada")}>{busy === "aprobada" ? <Loader2 className="animate-spin" /> : <Check />}Aprobar</Button>
+        <Button type="button" size="sm" variant="secondary" disabled={busy !== null || (item.kind === "field" && optionList.length === 0)} onClick={() => decide("aprobada")}>{busy === "aprobada" ? <Loader2 className="animate-spin" /> : <Check />}Aprobar</Button>
       </div>
       {error && <p role="alert" className="requirement-error">{error}</p>}
     </div>

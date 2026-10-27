@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Bot, Building2, CalendarClock, CheckSquare, Loader2, Save, Trash2, Wand2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -88,8 +88,8 @@ function DelegateDialog({ request, onClose, onDelegated }: { request: MyRequest 
           {error && <p role="alert" className="requirement-error">{error}</p>}
         </div>
         <DialogFooter className="delegate-footer">
-          <Button type="button" className="decision-reject" disabled={saving} onClick={onClose}>Cancelar</Button>
-          <Button type="button" className="decision-authorize" disabled={loading || saving || !department || !assignee} onClick={confirm}>{saving && <Loader2 className="animate-spin" />}{saving ? "Delegando…" : "Confirmar"}</Button>
+          <Button type="button" variant="outline" disabled={saving} onClick={onClose}>Cancelar</Button>
+          <Button type="button" disabled={loading || saving || !department || !assignee} onClick={confirm}>{saving && <Loader2 className="animate-spin" />}{saving ? "Delegando…" : "Confirmar"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -180,9 +180,10 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat,
           {error && <p role="alert" className="requirement-error">{error}</p>}
           <DialogFooter className="admin-detail-footer">
             {pending ? <>
-              {!reviewer && <Button type="button" className="decision-delegate" disabled={busy !== null} onClick={() => setDelegating(request)}><Building2 />Delegar a un departamento</Button>}
-              <Button type="button" className="decision-authorize" disabled={busy !== null} onClick={() => apply("Autorizado")}>{busy === "Autorizado" ? <Loader2 className="animate-spin" /> : <CheckSquare />}Autorizar</Button>
-              <Button type="button" className="decision-reject" disabled={busy !== null} onClick={() => setConfirmReject(true)}><Trash2 />Rechazar</Button>
+              {/* Primary action last; rejecting is an outline that opens its own confirmation. */}
+              <Button type="button" variant="destructive" disabled={busy !== null} onClick={() => setConfirmReject(true)}><Trash2 />Rechazar</Button>
+              {!reviewer && <Button type="button" variant="outline" disabled={busy !== null} onClick={() => setDelegating(request)}><Building2 />Delegar a un departamento</Button>}
+              <Button type="button" disabled={busy !== null} onClick={() => apply("Autorizado")}>{busy === "Autorizado" ? <Loader2 className="animate-spin" /> : <CheckSquare />}Autorizar</Button>
             </> : <p className="admin-decided">{request.status === "En revisión" && !reviewer ? "En revisión por el departamento; su encargado decidirá si se autoriza o rechaza." : `Esta solicitud ya está ${statusPhrase(request.status)}.`}</p>}
           </DialogFooter>
         </>}
@@ -205,7 +206,7 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat,
         {(reasonError || error) && <p role="alert" className="requirement-error">{reasonError || error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy !== null}>Volver</AlertDialogCancel>
-          <AlertDialogAction className="cancel-confirm" disabled={busy !== null || reason.trim().length < REJECTION_REASON_MIN} onClick={event => { event.preventDefault(); void apply("Rechazado"); }}>{busy === "Rechazado" ? <Loader2 className="animate-spin" /> : <Trash2 />}{busy === "Rechazado" ? "Rechazando…" : "Rechazar solicitud"}</AlertDialogAction>
+          <AlertDialogAction className={buttonVariants({ variant: "destructive-solid" })} disabled={busy !== null || reason.trim().length < REJECTION_REASON_MIN} onClick={event => { event.preventDefault(); void apply("Rechazado"); }}>{busy === "Rechazado" ? <Loader2 className="animate-spin" /> : <Trash2 />}{busy === "Rechazado" ? "Rechazando…" : "Rechazar solicitud"}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

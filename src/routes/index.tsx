@@ -37,7 +37,7 @@ function Index() {
           </div>
           <div className="presentation-controls">
             <Button size="icon" aria-label={playing ? "Pausar presentación" : "Reproducir presentación"} onClick={() => setPlaying(!playing)}>{playing ? <Pause /> : <Play />}</Button>
-            <Button variant="charcoal" size="icon" aria-label="Siguiente diapositiva" onClick={() => setSlide(slide === 6 ? 1 : slide + 1)}><SkipForward /></Button>
+            <Button variant="on-surface" size="icon" aria-label="Siguiente diapositiva" onClick={() => setSlide(slide === 6 ? 1 : slide + 1)}><SkipForward /></Button>
             <div className="progress-tracks">{Array.from({ length: 6 }, (_, i) => <div key={i} className={`progress-track ${i < slide - 1 ? "complete" : i === slide - 1 ? "current" : ""}`} />)}</div>
             <span className="slide-count">{slide} / 6</span>
           </div>

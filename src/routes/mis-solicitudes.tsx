@@ -9,6 +9,7 @@ import { RequestContent, RequestOutcome } from "@/components/requests/request-co
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
 import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, formatNumericDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { buttonVariants } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
@@ -143,7 +144,7 @@ function MyRequestsPage() {
             <AlertDialogFooter>
               <AlertDialogCancel disabled={cancelBusy}>Volver</AlertDialogCancel>
               {/* Keep the dialog open until the server confirms the cancellation. */}
-              <AlertDialogAction className="cancel-confirm" disabled={cancelBusy} onClick={event => { event.preventDefault(); void confirmCancel(); }}>{cancelBusy ? <Loader2 className="animate-spin" /> : <Ban />}{cancelBusy ? "Anulando…" : "Anular solicitud"}</AlertDialogAction>
+              <AlertDialogAction className={buttonVariants({ variant: "destructive-solid" })} disabled={cancelBusy} onClick={event => { event.preventDefault(); void confirmCancel(); }}>{cancelBusy ? <Loader2 className="animate-spin" /> : <Ban />}{cancelBusy ? "Anulando…" : "Anular solicitud"}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
