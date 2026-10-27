@@ -9,15 +9,21 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        default: "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover",
+        // Outline, not fill: the accent is already red, so a filled destructive next to a primary would read as the same action.
+        destructive:
+          "border border-destructive bg-transparent text-destructive hover:bg-destructive hover:text-destructive-foreground",
+        // Only the final confirmation inside a delete dialog, where no primary action competes.
+        "destructive-solid": "bg-destructive text-destructive-foreground",
         outline:
-          "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
+          "border border-input bg-card text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground shadow-xs hover:bg-muted",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        floating: "rounded-full bg-primary text-primary-foreground shadow-floating hover:bg-primary/90",
-        charcoal: "bg-surface-raised text-surface-foreground hover:bg-surface-hover border border-surface-border",
+        floating: "rounded-full bg-primary text-primary-foreground shadow-brand hover:bg-primary-hover",
+        // The only button allowed on the graphite surface; the red ring would not show there.
+        "on-surface":
+          "border border-surface-border bg-surface-raised text-surface-foreground hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ring-surface",
       },
       size: {
         default: "h-9 px-4 py-2",

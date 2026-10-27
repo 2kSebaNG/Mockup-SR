@@ -32,7 +32,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <span className="sidebar-brand-mark">X</span>
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="sidebar-brand-name">ECOSISTEMA X</span>
-                  <span className="truncate text-xs text-sidebar-foreground/60">Gestión conectada</span>
+                  <span className="sidebar-brand-caption truncate">Gestión conectada</span>
                 </div>
               </Link>
             </SidebarMenuButton>

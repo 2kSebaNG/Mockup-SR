@@ -25,7 +25,7 @@ export function SiteHeader({ trail }: { trail: string[] }) {
             </BreadcrumbList>
           </Breadcrumb>
         </div>
-        <Button variant="charcoal"><Grid2X2 />Módulos</Button>
+        <Button variant="on-surface"><Grid2X2 />Módulos</Button>
       </div>
     </header>
   );

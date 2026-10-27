@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -82,7 +82,7 @@ export function ConfirmDelete({ label, title, description, onConfirm, compact = 
         {error && <p role="alert" className="requirement-error">{error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy}>Volver</AlertDialogCancel>
-          <AlertDialogAction className="cancel-confirm" disabled={busy} onClick={event => { event.preventDefault(); void confirm(); }}>{busy ? <Loader2 className="animate-spin" /> : <Trash2 />}Eliminar</AlertDialogAction>
+          <AlertDialogAction className={buttonVariants({ variant: "destructive-solid" })} disabled={busy} onClick={event => { event.preventDefault(); void confirm(); }}>{busy ? <Loader2 className="animate-spin" /> : <Trash2 />}Eliminar</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
