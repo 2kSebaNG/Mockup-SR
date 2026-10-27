@@ -1,14 +1,15 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { CheckCircle2, Hourglass, SquareArrowOutUpRight, Users, XCircle } from "lucide-react";
+import { SquareArrowOutUpRight } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs";
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
-import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
+import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, PaginationFooter, PersonLink, StatusBadge, formatDate, useRequestList } from "@/components/requests/request-list";
+import { RequestsSummary, type SummaryStatus } from "@/components/requests/request-charts";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { countByStatus, packageChildren, todayIso } from "@/lib/my-requests";
+import { packageChildren, todayIso } from "@/lib/my-requests";
 import { pendingSummary } from "@/lib/catalog";
 import { CONTRACT_ADMIN } from "@/lib/organization";
 import { listAllRequests } from "@/lib/requests.functions";
@@ -25,11 +26,11 @@ export const Route = createFileRoute("/gestionar-solicitudes")({
 });
 
 // Same statuses as "Mis solicitudes", named from the administrator's point of view.
-const cards: SummaryCard[] = [
-  { status: "Autorizado", label: "Solicitudes autorizadas", icon: <CheckCircle2 /> },
-  { status: "En revisión", label: "Solicitudes delegadas", icon: <Users /> },
-  { status: "Rechazado", label: "Solicitudes rechazadas", icon: <XCircle /> },
-  { status: "Enviada", label: "Solicitudes pendientes", icon: <Hourglass /> },
+const summary: SummaryStatus[] = [
+  { status: "Enviada", label: "Pendientes" },
+  { status: "En revisión", label: "Delegadas" },
+  { status: "Autorizado", label: "Autorizadas" },
+  { status: "Rechazado", label: "Rechazadas" },
 ];
 
 function Unassigned() {
@@ -41,7 +42,6 @@ function ManageRequestsPage() {
   const requests = Route.useLoaderData();
   const router = useRouter();
   const list = useRequestList(requests);
-  const counts = useMemo(() => countByStatus(requests), [requests]);
   // Keep the code, not a copy, so the open detail shows fresh data after every decision.
   const [reviewingCode, setReviewingCode] = useState<string | null>(null);
   const reviewing = requests.find(request => request.code === reviewingCode) ?? null;
@@ -56,7 +56,7 @@ function ManageRequestsPage() {
           <h1 className="page-heading">Gestionar solicitudes</h1>
           <p className="page-description">Autoriza o rechaza las solicitudes pendientes, o delégalas al departamento que debe revisarlas.</p>
 
-          <SummaryCards cards={cards} counts={counts} />
+          <FiltersBar list={list} />
 
           <div className="requests-layout">
             <section className="requests-table-card" aria-label="Solicitudes por gestionar">
@@ -99,7 +99,7 @@ function ManageRequestsPage() {
               </Table>
               <PaginationFooter list={list} />
             </section>
-            <FiltersAside list={list} note="Solo las solicitudes pendientes se pueden autorizar, rechazar o delegar. Las delegadas las decide el encargado del departamento." />
+            <RequestsSummary list={list} statuses={summary} today={today} note="Solo las solicitudes pendientes se pueden autorizar, rechazar o delegar. Las delegadas las decide el encargado del departamento." />
           </div>
         </div>
 

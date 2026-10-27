@@ -1,16 +1,17 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Ban, CheckCircle2, ClipboardCheck, SquareArrowOutUpRight, XCircle } from "lucide-react";
+import { SquareArrowOutUpRight } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs";
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
-import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
+import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, PaginationFooter, PersonLink, StatusBadge, formatDate, useRequestList } from "@/components/requests/request-list";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { RequestsSummary, type SummaryStatus } from "@/components/requests/request-charts";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { countByStatus, todayIso, type MyRequest } from "@/lib/my-requests";
+import { todayIso, type MyRequest } from "@/lib/my-requests";
 import { departments, findDepartment, findMember } from "@/lib/organization";
 import { getReviewerPackage, listReviewerRequests } from "@/lib/requests.functions";
 
@@ -39,11 +40,11 @@ export const Route = createFileRoute("/revision-departamento")({
   ] }),
 });
 
-const cards: SummaryCard[] = [
-  { status: "En revisión", label: "Solicitudes por revisar", icon: <ClipboardCheck /> },
-  { status: "Autorizado", label: "Solicitudes autorizadas", icon: <CheckCircle2 /> },
-  { status: "Rechazado", label: "Solicitudes rechazadas", icon: <XCircle /> },
-  { status: "Anulado", label: "Anuladas por el solicitante", icon: <Ban /> },
+const summary: SummaryStatus[] = [
+  { status: "En revisión", label: "Por revisar" },
+  { status: "Autorizado", label: "Autorizadas" },
+  { status: "Rechazado", label: "Rechazadas" },
+  { status: "Anulado", label: "Anuladas" },
 ];
 
 function DepartmentReviewPage() {
@@ -53,7 +54,6 @@ function DepartmentReviewPage() {
   const navigate = useNavigate({ from: Route.fullPath });
   const router = useRouter();
   const list = useRequestList(requests);
-  const counts = useMemo(() => countByStatus(requests), [requests]);
   // Keep the code, not a copy, so the open detail shows fresh data after every change.
   const [reviewingCode, setReviewingCode] = useState<string | null>(null);
   const reviewing = requests.find(request => request.code === reviewingCode) ?? null;
@@ -100,7 +100,7 @@ function DepartmentReviewPage() {
             <p className="reviewer-picker-note">Vista previa sin inicio de sesión: elige qué encargado está revisando.</p>
           </section>
 
-          <SummaryCards cards={cards} counts={counts} />
+          <FiltersBar list={list} />
 
           <div className="requests-layout">
             <section className="requests-table-card" aria-label="Solicitudes delegadas">
@@ -139,7 +139,7 @@ function DepartmentReviewPage() {
               </Table>
               <PaginationFooter list={list} />
             </section>
-            <FiltersAside list={list} note="Solo puedes decidir las solicitudes en revisión que te delegaron. Si una no corresponde a tu departamento, habla con el Administrador de Contrato." />
+            <RequestsSummary list={list} statuses={summary} today={today} note="Solo puedes decidir las solicitudes en revisión que te delegaron. Si una no corresponde a tu departamento, habla con el Administrador de Contrato." />
           </div>
         </div>
 

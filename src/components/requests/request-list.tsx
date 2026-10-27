@@ -1,8 +1,9 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Info, Search, TriangleAlert } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Search, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { TableHead } from "@/components/ui/table";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -63,21 +64,6 @@ export function ActionButton({ label, onClick, disabled, children, reason }: { l
   );
 }
 
-export type SummaryCard = { status: RequestStatus; label: string; icon: ReactNode };
-
-export function SummaryCards({ cards, counts }: { cards: SummaryCard[]; counts: Record<RequestStatus, number> }) {
-  return (
-    <section className="summary-cards" aria-label="Resumen de solicitudes">
-      {cards.map(card => (
-        <article key={card.status} className={`summary-card ${statusClass[card.status]}`}>
-          <span className="summary-icon" aria-hidden="true">{card.icon}</span>
-          <div><strong>{counts[card.status]}</strong><span>{card.label}</span></div>
-        </article>
-      ))}
-    </section>
-  );
-}
-
 const pageSizes = [10, 25, 50];
 
 /** Search, filters, sorting by creation or due date (newest first by default) and pagination shared by every request table. */
@@ -88,6 +74,8 @@ export function useRequestList<T extends MyRequest>(requests: T[]) {
   const [pageSize, setPageSize] = useState(10);
   const categories = useMemo(() => [...new Set(requests.map(request => request.category))].sort((a, b) => a.localeCompare(b, "es")), [requests]);
   const visible = useMemo(() => sortRequests(filterRequests(requests, filters), sort), [requests, filters, sort]);
+  // Everything but the status filter: the status chart keeps every bar while it is the one filtering.
+  const statusScope = useMemo(() => filterRequests(requests, { ...filters, statuses: [] }), [requests, filters]);
   const pageData = paginate(visible, page, pageSize);
   const updateFilters = (patch: Partial<RequestFilters>) => { setFilters(current => ({ ...current, ...patch })); setPage(1); };
   const toggleFilter = (key: "statuses" | "categories", option: string, checked: boolean) => {
@@ -99,7 +87,7 @@ export function useRequestList<T extends MyRequest>(requests: T[]) {
   };
   // A column clicked for the first time starts where it is most useful: newest created, or soonest due.
   const sortBy = (key: SortKey) => { setSort(current => current.key === key ? { key, direction: current.direction === "asc" ? "desc" : "asc" } : { key, direction: key === "createdAt" ? "desc" : "asc" }); setPage(1); };
-  return { filters, updateFilters, toggleFilter, sort, sortBy, page, setPage, pageSize, setPageSize, categories, visible, pageData };
+  return { filters, updateFilters, toggleFilter, sort, sortBy, page, setPage, pageSize, setPageSize, categories, visible, statusScope, pageData };
 }
 export type RequestList<T extends MyRequest = MyRequest> = ReturnType<typeof useRequestList<T>>;
 
@@ -147,45 +135,59 @@ export function PaginationFooter({ list }: { list: RequestList }) {
   );
 }
 
-function FilterGroup({ title, options, selected, onToggle }: { title: string; options: readonly string[]; selected: string[]; onToggle: (option: string, checked: boolean) => void }) {
+/** A filter with several options in a popover, so the bar stays one row; the trigger says what is selected. */
+function MultiSelectFilter({ label, options, selected, onToggle }: { label: string; options: readonly string[]; selected: string[]; onToggle: (option: string, checked: boolean) => void }) {
+  const id = `filter-${label}`.replace(/\s+/g, "-").toLowerCase();
+  const summary = selected.length === 0 ? "Todos" : selected.length === 1 ? selected[0] : `${selected.length} seleccionados`;
   return (
-    <fieldset className="filter-group">
-      <legend>{title}</legend>
-      {options.map(option => {
-        const id = `${title}-${option}`.replace(/\s+/g, "-").toLowerCase();
-        return (
-          <label key={option} htmlFor={id} className="filter-option">
-            <Checkbox id={id} checked={selected.includes(option)} onCheckedChange={checked => onToggle(option, checked === true)} />
-            {option}
-          </label>
-        );
-      })}
-    </fieldset>
+    <div className="filter-field">
+      <span id={`${id}-label`} className="filter-label">{label}</span>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className={`filter-trigger${selected.length ? " active" : ""}`} aria-labelledby={`${id}-label ${id}-value`}>
+            <span id={`${id}-value`} className="filter-trigger-value">{summary}</span><ChevronDown aria-hidden="true" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="filter-popover">
+          <fieldset className="filter-options">
+            <legend className="sr-only">{label}</legend>
+            {options.map(option => {
+              const optionId = `${id}-${option}`.replace(/\s+/g, "-").toLowerCase();
+              return (
+                <label key={option} htmlFor={optionId} className="filter-option">
+                  <Checkbox id={optionId} checked={selected.includes(option)} onCheckedChange={checked => onToggle(option, checked === true)} />
+                  {option}
+                </label>
+              );
+            })}
+          </fieldset>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
 
-export function FiltersAside({ list, note }: { list: RequestList; note: string }) {
+/** Search and filters in one bar above the table and charts, which both follow it. */
+export function FiltersBar({ list }: { list: RequestList }) {
   const { filters, updateFilters, toggleFilter, categories } = list;
   const activeFilters = filters.statuses.length + filters.categories.length + (filters.from ? 1 : 0) + (filters.to ? 1 : 0);
   return (
-    <aside className="requests-sidebar" aria-label="Búsqueda y filtros">
-      <div className="search-box">
-        <label htmlFor="request-search">Buscar</label>
+    <section className="filters-bar" aria-label="Búsqueda y filtros">
+      <div className="filter-field filter-search">
+        <label htmlFor="request-search" className="filter-label">Buscar</label>
         <div className="search-input"><Search aria-hidden="true" /><Input id="request-search" type="search" placeholder="Código, ej. REQ-1234" value={filters.query} onChange={event => updateFilters({ query: event.target.value })} /></div>
       </div>
-      <section className="filter-panel">
-        <div className="filter-heading"><h2>Filtrar</h2>{activeFilters > 0 && <Button variant="link" size="sm" onClick={() => updateFilters({ statuses: [], categories: [], from: "", to: "" })}>Limpiar ({activeFilters})</Button>}</div>
-        <FilterGroup title="Estado" options={requestStatuses} selected={filters.statuses} onToggle={(option, checked) => toggleFilter("statuses", option, checked)} />
-        <FilterGroup title="Categoría" options={categories} selected={filters.categories} onToggle={(option, checked) => toggleFilter("categories", option, checked)} />
-        <fieldset className="filter-group">
-          <legend>Rango de fecha límite</legend>
-          <div className="date-range">
-            <label>Desde<Input type="date" value={filters.from} max={filters.to || undefined} onChange={event => updateFilters({ from: event.target.value })} /></label>
-            <label>Hasta<Input type="date" value={filters.to} min={filters.from || undefined} onChange={event => updateFilters({ to: event.target.value })} /></label>
-          </div>
-        </fieldset>
-      </section>
-      <p className="requests-note"><Info aria-hidden="true" />{note}</p>
-    </aside>
+      <MultiSelectFilter label="Estado" options={requestStatuses} selected={filters.statuses} onToggle={(option, checked) => toggleFilter("statuses", option, checked)} />
+      <MultiSelectFilter label="Categoría" options={categories} selected={filters.categories} onToggle={(option, checked) => toggleFilter("categories", option, checked)} />
+      <div className="filter-field filter-dates" role="group" aria-labelledby="filter-due-label">
+        <span id="filter-due-label" className="filter-label">Fecha límite</span>
+        <div className="date-range">
+          <Input type="date" aria-label="Fecha límite desde" value={filters.from} max={filters.to || undefined} onChange={event => updateFilters({ from: event.target.value })} />
+          <span aria-hidden="true">–</span>
+          <Input type="date" aria-label="Fecha límite hasta" value={filters.to} min={filters.from || undefined} onChange={event => updateFilters({ to: event.target.value })} />
+        </div>
+      </div>
+      {activeFilters > 0 && <Button variant="ghost" className="filter-clear" onClick={() => updateFilters({ statuses: [], categories: [], from: "", to: "" })}><X />Limpiar filtros ({activeFilters})</Button>}
+    </section>
   );
 }

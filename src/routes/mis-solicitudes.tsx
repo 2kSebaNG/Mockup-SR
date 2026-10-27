@@ -1,18 +1,19 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Ban, Building2, CheckCircle2, ClipboardList, Clock3, Eye, Loader2, Pencil, Send, Trash2, XCircle } from "lucide-react";
+import { Ban, Building2, ClipboardList, Eye, Loader2, Pencil, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { RequirementModal } from "@/components/requirement-modal";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { RequestContent, RequestOutcome } from "@/components/requests/request-content";
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
-import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersAside, PaginationFooter, PersonLink, StatusBadge, SummaryCards, formatDate, formatNumericDate, useRequestList, type SummaryCard } from "@/components/requests/request-list";
+import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, PaginationFooter, PersonLink, StatusBadge, formatDate, formatNumericDate, useRequestList } from "@/components/requests/request-list";
+import { RequestsSummary, type SummaryStatus } from "@/components/requests/request-charts";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
-import { canEdit, canCancel, countByStatus, packageChildren, responsibleFor, todayIso, type MyRequest } from "@/lib/my-requests";
+import { canEdit, canCancel, packageChildren, responsibleFor, todayIso, type MyRequest } from "@/lib/my-requests";
 import { cancelMyRequest, listMyRequests } from "@/lib/requests.functions";
 
 export const Route = createFileRoute("/mis-solicitudes")({
@@ -26,11 +27,11 @@ export const Route = createFileRoute("/mis-solicitudes")({
   ] }),
 });
 
-const cards: SummaryCard[] = [
-  { status: "Autorizado", label: "Solicitudes autorizadas", icon: <CheckCircle2 /> },
-  { status: "En revisión", label: "Solicitudes en revisión", icon: <Clock3 /> },
-  { status: "Rechazado", label: "Solicitudes rechazadas", icon: <XCircle /> },
-  { status: "Enviada", label: "Solicitudes enviadas", icon: <Send /> },
+const summary: SummaryStatus[] = [
+  { status: "Autorizado", label: "Autorizadas" },
+  { status: "En revisión", label: "En revisión" },
+  { status: "Rechazado", label: "Rechazadas" },
+  { status: "Enviada", label: "Enviadas" },
 ];
 
 const relationFor = (request: MyRequest) => request.assignee ? `Revisa ${request.code} (${request.department})` : `Autoriza ${request.code}`;
@@ -40,7 +41,6 @@ function MyRequestsPage() {
   const requests = Route.useLoaderData();
   const router = useRouter();
   const list = useRequestList(requests);
-  const counts = useMemo(() => countByStatus(requests), [requests]);
   const cancelRequest = useServerFn(cancelMyRequest);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState("");
@@ -70,7 +70,7 @@ function MyRequestsPage() {
           <h1 className="page-heading">Mis solicitudes</h1>
           <p className="page-description">Revisa el avance de tus solicitudes, quién las revisa y cuáles están próximas a vencer.</p>
 
-          <SummaryCards cards={cards} counts={counts} />
+          <FiltersBar list={list} />
 
           <div className="requests-layout">
             <section className="requests-table-card" aria-label="Listado de solicitudes">
@@ -114,7 +114,7 @@ function MyRequestsPage() {
               </Table>
               <PaginationFooter list={list} />
             </section>
-            <FiltersAside list={list} note="Solo puedes editar solicitudes Enviadas o En revisión. Si una solicitud ya fue tramitada y necesita cambios, anúlala y crea una nueva." />
+            <RequestsSummary list={list} statuses={summary} today={today} note="Solo puedes editar solicitudes Enviadas o En revisión. Si una solicitud ya fue tramitada y necesita cambios, anúlala y crea una nueva." />
           </div>
         </div>
 
