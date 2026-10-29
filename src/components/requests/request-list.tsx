@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Search, TriangleAlert, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChartColumnBig, ChevronDown, Table2, ChevronLeft, ChevronRight, Search, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { TableHead } from "@/components/ui/table";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
-  requestStatuses, emptyFilters, defaultSort, dueState, filterRequests, sortRequests, paginate, daysBetween,
+  requestStatuses, pendingStatuses, emptyFilters, defaultSort, dueState, filterRequests, sortRequests, paginate, daysBetween,
   type MyRequest, type RequestStatus, type RequestFilters, type RequestSort, type SortKey,
 } from "@/lib/my-requests";
 import type { Person } from "@/lib/organization";
@@ -16,7 +16,8 @@ import type { Person } from "@/lib/organization";
 export const statusClass: Record<RequestStatus, string> = {
   "Enviada": "status-sent",
   "En revisión": "status-review",
-  "Autorizado": "status-authorized",
+  "En gestión": "status-managing",
+  "Completada": "status-completed",
   "Rechazado": "status-rejected",
   "Anulado": "status-cancelled",
 };
@@ -110,7 +111,7 @@ export function SortableHead({ list, column }: { list: RequestList; column: Sort
 
 /** The due date, with the estimated resolution date under it while the request waits on a decision. */
 export function DueDateCell({ request }: { request: MyRequest }) {
-  const estimate = request.estimatedResolution && (request.status === "Enviada" || request.status === "En revisión") ? request.estimatedResolution : null;
+  const estimate = request.estimatedResolution && pendingStatuses.includes(request.status) ? request.estimatedResolution : null;
   return <span className="date-cell">{formatDate(request.dueDate)}{estimate && <span className="estimate-cell" title="Fecha estimada de resolución">Estimada: {formatDate(estimate)}</span>}</span>;
 }
 
@@ -190,4 +191,35 @@ export function FiltersBar({ list }: { list: RequestList }) {
       {activeFilters > 0 && <Button variant="ghost" className="filter-clear" onClick={() => updateFilters({ statuses: [], categories: [], from: "", to: "" })}><X />Limpiar filtros ({activeFilters})</Button>}
     </section>
   );
+}
+
+/** Each request page shows its table or its dashboard; the choice lives in the URL (?vista=dashboard) so it can be shared. */
+export type ViewMode = "tabla" | "dashboard";
+export const parseView = (value: unknown): ViewMode | undefined => (value === "dashboard" ? "dashboard" : undefined);
+
+const viewOptions: { value: ViewMode; label: string; icon: typeof Table2 }[] = [
+  { value: "tabla", label: "Tabla", icon: Table2 },
+  { value: "dashboard", label: "Dashboard", icon: ChartColumnBig },
+];
+
+/** Table / dashboard switch, both options visible so the current one and the other read at a glance. */
+export function ViewToggle({ view, onChange }: { view: ViewMode; onChange: (view: ViewMode) => void }) {
+  return (
+    <div className="view-toggle" role="group" aria-label="Vista de la página">
+      {viewOptions.map(({ value, label, icon: Icon }) => (
+        <button key={value} type="button" className="view-option" aria-pressed={view === value} onClick={() => onChange(value)}>
+          <Icon aria-hidden="true" />{label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export type ViewSearch = { vista?: "dashboard" };
+/** Keeps only a valid ?vista= value from the URL. */
+export const viewSearch = (search: Record<string, unknown>): ViewSearch => (parseView(search["vista"]) ? { vista: "dashboard" } : {});
+/** The search with the view switched, without leaving an empty `vista` behind. */
+export function withView<T extends ViewSearch>(search: T, view: ViewMode): T {
+  const { vista: _previous, ...rest } = search;
+  return (view === "dashboard" ? { ...rest, vista: "dashboard" } : rest) as T;
 }

@@ -1,13 +1,13 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { SquareArrowOutUpRight } from "lucide-react";
+import { SquareArrowOutUpRight, Info } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs";
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
-import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, PaginationFooter, PersonLink, StatusBadge, formatDate, useRequestList } from "@/components/requests/request-list";
+import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, ViewToggle, viewSearch, withView, PaginationFooter, PersonLink, StatusBadge, formatDate, useRequestList, type ViewMode } from "@/components/requests/request-list";
 import { RequestsPageSkeleton } from "@/components/requests/request-skeletons";
-import { RequestsSummary, type SummaryStatus } from "@/components/requests/request-charts";
+import { ReviewDashboard } from "@/components/dashboard/review-dashboard";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { packageChildren, todayIso } from "@/lib/my-requests";
@@ -16,30 +16,29 @@ import { CONTRACT_ADMIN } from "@/lib/organization";
 import { listAllRequests } from "@/lib/requests.functions";
 
 export const Route = createFileRoute("/gestionar-solicitudes")({
+  validateSearch: viewSearch,
   loader: () => listAllRequests(),
-  pendingComponent: () => <RequestsPageSkeleton trail={["Solicitudes", "Gestionar solicitudes"]} title="Gestionar solicitudes" columns={9} />,
+  pendingComponent: () => <RequestsPageSkeleton trail={["Solicitudes", "Revisar solicitudes"]} title="Revisar solicitudes" columns={9} />,
   component: ManageRequestsPage,
   head: () => ({ meta: [
-    { title: "Gestionar solicitudes | Ecosistema X" },
+    { title: "Revisar solicitudes | Ecosistema X" },
     { name: "description", content: "Bandeja del Administrador de Contrato: autoriza, rechaza o delega solicitudes de requerimientos." },
-    { property: "og:title", content: "Gestionar solicitudes | Ecosistema X" },
+    { property: "og:title", content: "Revisar solicitudes | Ecosistema X" },
     { property: "og:description", content: "Autoriza, rechaza o delega solicitudes de requerimientos." },
   ] }),
 });
 
 // Same statuses as "Mis solicitudes", named from the administrator's point of view.
-const summary: SummaryStatus[] = [
-  { status: "Enviada", label: "Pendientes" },
-  { status: "En revisión", label: "Delegadas" },
-  { status: "Autorizado", label: "Autorizadas" },
-  { status: "Rechazado", label: "Rechazadas" },
-];
 
 function Unassigned() {
   return <span className="unassigned">Sin asignar</span>;
 }
 
 function ManageRequestsPage() {
+  const view: ViewMode = Route.useSearch().vista ?? "tabla";
+  const navigateView = useNavigate({ from: Route.fullPath });
+  // Replace, not push: switching views is not a step back-navigation should undo one by one.
+  const setView = (next: ViewMode) => navigateView({ search: prev => withView(prev, next), replace: true });
   const today = useMemo(todayIso, []);
   const requests = Route.useLoaderData();
   const router = useRouter();
@@ -51,16 +50,18 @@ function ManageRequestsPage() {
   const [packageCode, setPackageCode] = useState<string | null>(null);
 
   return (
-    <AppShell trail={["Solicitudes", "Gestionar solicitudes"]}>
+    <AppShell trail={["Solicitudes", "Revisar solicitudes"]}>
       <TooltipProvider delayDuration={200}>
         <div className="my-requests">
           <p className="eyebrow">ADMINISTRADOR DE CONTRATO · {CONTRACT_ADMIN.name.toUpperCase()}</p>
-          <h1 className="page-heading">Gestionar solicitudes</h1>
+          <h1 className="page-heading">Revisar solicitudes</h1>
           <p className="page-description">Autoriza o rechaza las solicitudes pendientes, o delégalas al departamento que debe revisarlas.</p>
 
+          <div className="page-toolbar"><ViewToggle view={view} onChange={setView} /></div>
           <FiltersBar list={list} />
 
-          <div className="requests-layout">
+          {view === "dashboard" ? <ReviewDashboard list={list} today={today} /> : <>
+            <div className="requests-layout">
             <section className="requests-table-card" aria-label="Solicitudes por gestionar">
               <Table className="requests-table">
                 <TableHeader>
@@ -101,8 +102,9 @@ function ManageRequestsPage() {
               </Table>
               <PaginationFooter list={list} />
             </section>
-            <RequestsSummary list={list} statuses={summary} today={today} note="Solo las solicitudes pendientes se pueden autorizar, rechazar o delegar. Las delegadas las decide el encargado del departamento." />
-          </div>
+            </div>
+            <p className="requests-note"><Info aria-hidden="true" />Al abrir una solicitud enviada pasa a En revisión. Puedes autorizarla, rechazarla o delegarla; las que están en gestión las decide el encargado del departamento.</p>
+          </>}
         </div>
 
         <PackageDialog parentCode={packageCode} children={packageChildren(requests, packageCode ?? "")} today={today} onClose={() => setPackageCode(null)}

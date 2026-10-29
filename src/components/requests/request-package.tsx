@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PackageSkeleton } from "@/components/requests/request-skeletons";
 import { DueWarning, StatusBadge, formatDate, statusClass } from "@/components/requests/request-list";
-import { packageProgress, responsibleFor, type MyRequest, type RequestStatus } from "@/lib/my-requests";
+import { packageProgress, pendingStatuses, responsibleFor, type MyRequest, type RequestStatus } from "@/lib/my-requests";
 
 /** "Paquete REQ-1501": from a child request to the package it belongs to. */
 export function ParentLink({ request, onOpen }: { request: MyRequest; onOpen: (parentCode: string) => void }) {
@@ -18,16 +18,18 @@ export function ParentLink({ request, onOpen }: { request: MyRequest; onOpen: (p
 
 type Step = { label: string; state: "done" | "current" | "skipped" | "pending" | "failed" };
 
-/** Where a child is, as a parcel tracker: sent, reviewed by a department (or decided directly), resolved. */
+/** Where a child is, as a parcel tracker: sent, reviewed by the administrator, handled by a department (or decided directly), resolved. */
 function stepsFor(request: MyRequest): Step[] {
-  const decided = request.status === "Autorizado" || request.status === "Rechazado" || request.status === "Anulado";
-  const review: Step = request.department
-    ? { label: `Revisión ${request.department}`, state: request.status === "En revisión" ? "current" : decided ? "done" : "pending" }
-    : { label: decided ? "Sin delegar" : "Revisión", state: decided ? "skipped" : "pending" };
+  const decided = request.status === "Completada" || request.status === "Rechazado" || request.status === "Anulado";
+  const reviewed = request.reviewStartedAt !== null || (request.status !== "Enviada" && request.status !== "Anulado");
+  const review: Step = { label: "Revisión ADC", state: request.status === "En revisión" ? "current" : reviewed ? "done" : decided ? "skipped" : "pending" };
+  const managing: Step = request.department
+    ? { label: `Gestión ${request.department}`, state: request.status === "En gestión" ? "current" : decided ? "done" : "pending" }
+    : { label: decided ? "Sin delegar" : "Gestión", state: decided ? "skipped" : "pending" };
   const end: Step = decided
-    ? { label: request.status, state: request.status === "Autorizado" ? "done" : "failed" }
+    ? { label: request.status, state: request.status === "Completada" ? "done" : "failed" }
     : { label: "Resolución", state: "pending" };
-  return [{ label: "Enviada", state: request.status === "Enviada" ? "current" : "done" }, review, end];
+  return [{ label: "Enviada", state: request.status === "Enviada" ? "current" : "done" }, review, managing, end];
 }
 
 function Tracker({ request }: { request: MyRequest }) {
@@ -43,7 +45,7 @@ function Tracker({ request }: { request: MyRequest }) {
   );
 }
 
-const progressOrder: RequestStatus[] = ["Autorizado", "Rechazado", "Anulado", "En revisión", "Enviada"];
+const progressOrder: RequestStatus[] = ["Completada", "Rechazado", "Anulado", "En gestión", "En revisión", "Enviada"];
 
 /**
  * A package followed as one shipment: its overall progress and each child request with its own status, tracker
@@ -92,8 +94,8 @@ export function PackageDialog({ parentCode: openCode, children: openChildren, to
                 </div>
                 <Tracker request={child} />
                 <div className="package-child-foot">
-                  <span>{child.status === "Anulado" ? <>Anulada por <strong>{child.requester.name}</strong></> : <>{child.status === "Enviada" || child.status === "En revisión" ? "Responsable" : "Decidió"}: <strong>{responsibleFor(child).name}</strong></>}</span>
-                  {child.estimatedResolution && (child.status === "Enviada" || child.status === "En revisión") && <span className="estimate-cell"><CalendarClock aria-hidden="true" />Estimada: {formatDate(child.estimatedResolution)}</span>}
+                  <span>{child.status === "Anulado" ? <>Anulada por <strong>{child.requester.name}</strong></> : <>{pendingStatuses.includes(child.status) ? "Responsable" : "Decidió"}: <strong>{responsibleFor(child).name}</strong></>}</span>
+                  {child.estimatedResolution && pendingStatuses.includes(child.status) && <span className="estimate-cell"><CalendarClock aria-hidden="true" />Estimada: {formatDate(child.estimatedResolution)}</span>}
                   {canOpenChild(child) && <Button type="button" variant="outline" size="sm" onClick={() => onOpenChild(child)}><Eye />Ver detalle</Button>}
                 </div>
                 {child.status === "Rechazado" && child.rejectionReason && <p className="package-child-reason"><strong>Razón del rechazo:</strong> {child.rejectionReason}</p>}

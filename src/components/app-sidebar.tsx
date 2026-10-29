@@ -14,8 +14,8 @@ const navigation: NavItem[] = [
     icon: ClipboardList,
     items: [
       { title: "Mis solicitudes", to: "/mis-solicitudes" },
-      { title: "Gestionar solicitudes", to: "/gestionar-solicitudes" },
-      { title: "Revisión del departamento", to: "/revision-departamento" },
+      { title: "Revisar solicitudes", to: "/gestionar-solicitudes" },
+      { title: "Gestión de departamento", to: "/revision-departamento" },
       { title: "Catálogo", to: "/catalogo" },
     ],
   },

@@ -1,4 +1,4 @@
-import { canCancel, canDecide, canEdit, canEstimate, itemsOf, packageChildren, REJECTION_REASON_MIN, requestFromInput, statusPhrase, todayIso, type RequestPackageInput, type MyRequest, type RequestInput, type ReviewedRequest } from "./my-requests";
+import { canCancel, canDecide, canDecideAsReviewer, canEdit, canEstimate, startsReview, itemsOf, packageChildren, REJECTION_REASON_MIN, requestFromInput, statusPhrase, todayIso, type RequestPackageInput, type MyRequest, type RequestInput, type ReviewedRequest } from "./my-requests";
 import { applyItem, elementLookup, findCategory, groupPendingItems, proposalFor, recordDecision, reviewOf, type Catalog, type ItemEdit, type StoredProposal } from "./catalog";
 import { ElementEditError, elementKey, getElementStore, memoryElementStore, type ElementStore } from "./element-store.server";
 import { applyCatalogAction, CatalogEditError, type CatalogAction } from "./catalog-admin";
@@ -15,10 +15,11 @@ const notFound = () => failure("No encontramos esa solicitud.");
 // The same rules the tables use for their buttons, enforced again here so they hold for any caller.
 
 /** A rejection always says why, so the requester knows what to change. */
-function decisionPatch(decision: "Autorizado" | "Rechazado", reason?: string): Partial<MyRequest> | string {
-  if (decision === "Autorizado") return { status: decision, rejectionReason: null };
+function decisionPatch(decision: "Completada" | "Rechazado", reason?: string): Partial<MyRequest> | string {
+  const resolvedAt = todayIso();
+  if (decision === "Completada") return { status: decision, rejectionReason: null, resolvedAt };
   const text = reason?.trim() ?? "";
-  return text.length >= REJECTION_REASON_MIN ? { status: decision, rejectionReason: text } : `Escribe la razón del rechazo (al menos ${REJECTION_REASON_MIN} caracteres).`;
+  return text.length >= REJECTION_REASON_MIN ? { status: decision, rejectionReason: text, resolvedAt } : `Escribe la razón del rechazo (al menos ${REJECTION_REASON_MIN} caracteres).`;
 }
 
 /** The estimate cannot be earlier than the day the request was created. */
@@ -95,7 +96,7 @@ export function createRequesterService(store: RequestStore, catalogs: CatalogSto
       const current = await own(code);
       if (!current) return notFound();
       if (!canCancel(current.status)) return failure("La solicitud ya está anulada.");
-      return view.one(await store.update(code, { status: "Anulado" }));
+      return view.one(await store.update(code, { status: "Anulado", resolvedAt: todayIso() }));
     },
   };
 }
@@ -106,13 +107,20 @@ export function createAdminService(store: RequestStore, catalogs: CatalogStore, 
   const pending = async (code: string) => {
     const current = await store.get(code);
     if (!current) return notFound();
-    if (!canDecide(current.status)) return failure(`La solicitud ya está ${statusPhrase(current.status)}; solo se gestionan solicitudes enviadas.`);
+    if (!canDecide(current.status)) return failure(`La solicitud ya está ${statusPhrase(current.status)}; solo se deciden solicitudes enviadas o en revisión.`);
     return view.one(current);
   };
   return {
     list: async () => view.many(await store.list()),
     get: (code: string) => store.get(code),
-    async decide(code: string, decision: "Autorizado" | "Rechazado", reason?: string): Promise<RequestResult> {
+    /** Opening a sent request starts its review; any other request is returned as it is. */
+    async startReview(code: string): Promise<RequestResult> {
+      const current = await store.get(code);
+      if (!current) return notFound();
+      if (!startsReview(current.status)) return view.one(current);
+      return view.one(await store.update(code, { status: "En revisión", reviewStartedAt: todayIso() }));
+    },
+    async decide(code: string, decision: "Completada" | "Rechazado", reason?: string): Promise<RequestResult> {
       const check = await pending(code);
       if (check.error !== null) return check;
       const patch = decisionPatch(decision, reason);
@@ -129,7 +137,9 @@ export function createAdminService(store: RequestStore, catalogs: CatalogStore, 
       const assignee = findMember(department, assigneeName);
       if (!assignee) return failure("Elige un encargado del departamento seleccionado.");
       const check = await pending(code);
-      return check.error !== null ? check : view.one(await store.update(code, { status: "En revisión", department, assignee }));
+      if (check.error !== null) return check;
+      const today = todayIso();
+      return view.one(await store.update(code, { status: "En gestión", department, assignee, delegatedAt: today, reviewStartedAt: check.request.reviewStartedAt ?? today }));
     },
     /**
      * Approves or rejects one novelty of a request (a new type, select, association or option), independently of the
@@ -196,16 +206,16 @@ export function createAdminService(store: RequestStore, catalogs: CatalogStore, 
   };
 }
 
-/** What a department reviewer can do: see the requests delegated to them and decide the ones still in review. */
+/** What a department reviewer can do: see the requests delegated to them and decide the ones still in gestión. */
 export function createReviewerService(store: RequestStore, catalogs: CatalogStore, reviewerPerson: Person, elements: ElementStore = memoryElementStore()) {
   const view = reviewer(catalogs, elements);
   const assigned = (request: MyRequest | null) => request?.assignee?.email === reviewerPerson.email ? request : null;
   return {
     list: async () => view.many((await store.list()).filter(request => assigned(request))),
-    async decide(code: string, decision: "Autorizado" | "Rechazado", reason?: string): Promise<RequestResult> {
+    async decide(code: string, decision: "Completada" | "Rechazado", reason?: string): Promise<RequestResult> {
       const current = assigned(await store.get(code));
       if (!current) return notFound();
-      if (current.status !== "En revisión") return failure(`La solicitud ya está ${statusPhrase(current.status)}; solo se deciden solicitudes en revisión.`);
+      if (!canDecideAsReviewer(current.status)) return failure(`La solicitud ya está ${statusPhrase(current.status)}; solo se deciden solicitudes en gestión.`);
       const patch = decisionPatch(decision, reason);
       return typeof patch === "string" ? failure(patch) : view.one(await store.update(code, patch));
     },

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { seedRequests, todayIso, type MyRequest } from "./my-requests";
+import { normalizeLegacyStatus, seedRequests, todayIso, type MyRequest } from "./my-requests";
 
-export type NewRequest = Omit<MyRequest, "code" | "createdAt" | "status" | "department" | "assignee" | "rejectionReason" | "estimatedResolution" | "parentCode">;
+export type NewRequest = Omit<MyRequest, "code" | "createdAt" | "status" | "department" | "assignee" | "rejectionReason" | "estimatedResolution" | "parentCode" | "reviewStartedAt" | "delegatedAt" | "resolvedAt">;
 export type RequestPatch = Partial<Omit<MyRequest, "code" | "createdAt" | "requester">>;
 
 /** Plain persistence; who may see or change a request is decided in requests.server.ts. */
@@ -20,15 +20,17 @@ type RequestRow = {
   status: MyRequest["status"]; department: string | null; assignee_name: string | null; assignee_role: string | null;
   assignee_email: string | null; catalog_proposal: MyRequest["proposal"]; created_at: string;
   rejection_reason: string | null; estimated_resolution: string | null; parent_code: string | null;
+  review_started_at: string | null; delegated_at: string | null; resolved_at: string | null;
 };
 
 const fromRow = (row: RequestRow): MyRequest => ({
   code: row.code, requester: { email: row.requester, name: row.requester_name, role: row.requester_role },
   category: row.category, element: row.element ?? "", elementLabel: row.element_label ?? "Tipo de elemento", quantity: Number(row.quantity), unit: row.unit, description: row.description, aiAssisted: row.ai_assisted,
-  fields: row.fields ?? [], dueDate: row.due_date, status: row.status, createdAt: row.created_at.slice(0, 10), department: row.department,
+  fields: row.fields ?? [], dueDate: row.due_date, status: normalizeLegacyStatus(row), createdAt: row.created_at.slice(0, 10), department: row.department,
   assignee: row.assignee_name ? { name: row.assignee_name, role: row.assignee_role ?? "", email: row.assignee_email ?? "" } : null,
   proposal: row.catalog_proposal ?? null,
   rejectionReason: row.rejection_reason ?? null, estimatedResolution: row.estimated_resolution ?? null, parentCode: row.parent_code ?? null,
+  reviewStartedAt: row.review_started_at?.slice(0, 10) ?? null, delegatedAt: row.delegated_at?.slice(0, 10) ?? null, resolvedAt: row.resolved_at?.slice(0, 10) ?? null,
 });
 
 function toRow(patch: RequestPatch & Partial<Pick<MyRequest, "requester">>) {
@@ -48,6 +50,9 @@ function toRow(patch: RequestPatch & Partial<Pick<MyRequest, "requester">>) {
   if (patch.proposal !== undefined) row.catalog_proposal = patch.proposal;
   if (patch.rejectionReason !== undefined) row.rejection_reason = patch.rejectionReason;
   if (patch.estimatedResolution !== undefined) row.estimated_resolution = patch.estimatedResolution;
+  if (patch.reviewStartedAt !== undefined) row.review_started_at = patch.reviewStartedAt;
+  if (patch.delegatedAt !== undefined) row.delegated_at = patch.delegatedAt;
+  if (patch.resolvedAt !== undefined) row.resolved_at = patch.resolvedAt;
   if (patch.assignee !== undefined) { row.assignee_name = patch.assignee?.name ?? null; row.assignee_role = patch.assignee?.role ?? null; row.assignee_email = patch.assignee?.email ?? null; }
   return row;
 }
@@ -92,7 +97,7 @@ async function supabaseStore(): Promise<RequestStore> {
   };
 }
 
-const fresh = () => ({ createdAt: todayIso(), status: "Enviada" as const, department: null, assignee: null, rejectionReason: null, estimatedResolution: null });
+const fresh = () => ({ createdAt: todayIso(), status: "Enviada" as const, department: null, assignee: null, rejectionReason: null, estimatedResolution: null, reviewStartedAt: null, delegatedAt: null, resolvedAt: null });
 /** Next number after every single request and package (children share their parent's number). */
 const nextCode = (requests: MyRequest[]) => `REQ-${String(Math.max(1200, ...requests.map(r => Number.parseInt(r.code.slice(4), 10) || 0)) + 1).padStart(4, "0")}`;
 
@@ -102,7 +107,14 @@ export function fileStore(path: string, seed: () => MyRequest[] = () => seedRequ
   const serial = <T>(task: () => Promise<T>) => { const next = queue.then(task, task); queue = next.catch(() => undefined); return next; };
   const read = async (): Promise<MyRequest[]> => {
     const fs = await import("node:fs/promises");
-    try { return (JSON.parse(await fs.readFile(path, "utf8")) as MyRequest[]).map(request => ({ ...request, element: request.element ?? "", elementLabel: request.elementLabel ?? "Tipo de elemento", proposal: request.proposal ?? null, rejectionReason: request.rejectionReason ?? null, estimatedResolution: request.estimatedResolution ?? null, parentCode: request.parentCode ?? null })); } catch (error) {
+    try {
+      // Files written before a field existed get its empty value; statuses from before En gestión are mapped.
+      return (JSON.parse(await fs.readFile(path, "utf8")) as MyRequest[]).map(request => ({
+        ...request, status: normalizeLegacyStatus(request), element: request.element ?? "", elementLabel: request.elementLabel ?? "Tipo de elemento", proposal: request.proposal ?? null,
+        rejectionReason: request.rejectionReason ?? null, estimatedResolution: request.estimatedResolution ?? null, parentCode: request.parentCode ?? null,
+        reviewStartedAt: request.reviewStartedAt ?? null, delegatedAt: request.delegatedAt ?? null, resolvedAt: request.resolvedAt ?? null,
+      }));
+    } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       const seeded = seed();
       await write(seeded);

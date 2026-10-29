@@ -19,15 +19,6 @@ export function ChartSkeleton({ rows }: { rows: number }) {
   );
 }
 
-function ChartCardSkeleton({ rows }: { rows: number }) {
-  return (
-    <div className="chart-card">
-      <div className="chart-heading"><Skeleton className="skeleton-heading" /><Skeleton className="skeleton-number" /></div>
-      <ChartSkeleton rows={rows} />
-    </div>
-  );
-}
-
 function TableSkeleton({ columns, rows = 8 }: { columns: number; rows?: number }) {
   return (
     <div className="requests-table-card table-skeleton">
@@ -56,7 +47,7 @@ function FiltersSkeleton() {
   );
 }
 
-/** Shown while a request page loads its data: the real title, then the filters, table and charts as placeholders. */
+/** Shown while a request page loads its data: the real title, then the view switch, filters and table as placeholders. */
 export function RequestsPageSkeleton({ trail, title, columns, children }: { trail: string[]; title: string; columns: number; children?: ReactNode }) {
   return (
     <AppShell trail={trail}>
@@ -65,14 +56,9 @@ export function RequestsPageSkeleton({ trail, title, columns, children }: { trai
         <h1 className="page-heading">{title}</h1>
         <Skeleton className="skeleton-description" />
         {children}
+        <div className="page-toolbar"><Skeleton className="skeleton-toggle" /></div>
         <FiltersSkeleton />
-        <div className="requests-layout">
-          <TableSkeleton columns={columns} />
-          <div className="requests-sidebar">
-            <ChartCardSkeleton rows={4} />
-            <ChartCardSkeleton rows={3} />
-          </div>
-        </div>
+        <TableSkeleton columns={columns} />
       </div>
     </AppShell>
   );

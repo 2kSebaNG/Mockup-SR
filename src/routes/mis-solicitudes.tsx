@@ -1,15 +1,15 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Ban, Building2, ClipboardList, Eye, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Ban, Building2, ClipboardList, Eye, Loader2, Pencil, Trash2, Info } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { RequirementModal } from "@/components/requirement-modal";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { RequestContent, RequestOutcome } from "@/components/requests/request-content";
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
-import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, PaginationFooter, PersonLink, StatusBadge, formatDate, formatNumericDate, useRequestList } from "@/components/requests/request-list";
+import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, ViewToggle, viewSearch, withView, PaginationFooter, PersonLink, StatusBadge, formatDate, formatNumericDate, useRequestList, type ViewMode } from "@/components/requests/request-list";
 import { RequestsPageSkeleton } from "@/components/requests/request-skeletons";
-import { RequestsSummary, type SummaryStatus } from "@/components/requests/request-charts";
+import { MyRequestsDashboard } from "@/components/dashboard/my-requests-dashboard";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -18,6 +18,7 @@ import { canEdit, canCancel, packageChildren, responsibleFor, todayIso, type MyR
 import { cancelMyRequest, listMyRequests } from "@/lib/requests.functions";
 
 export const Route = createFileRoute("/mis-solicitudes")({
+  validateSearch: viewSearch,
   loader: () => listMyRequests(),
   pendingComponent: () => <RequestsPageSkeleton trail={["Solicitudes", "Mis solicitudes"]} title="Mis solicitudes" columns={6} />,
   component: MyRequestsPage,
@@ -29,16 +30,14 @@ export const Route = createFileRoute("/mis-solicitudes")({
   ] }),
 });
 
-const summary: SummaryStatus[] = [
-  { status: "Autorizado", label: "Autorizadas" },
-  { status: "En revisión", label: "En revisión" },
-  { status: "Rechazado", label: "Rechazadas" },
-  { status: "Enviada", label: "Enviadas" },
-];
 
 const relationFor = (request: MyRequest) => request.assignee ? `Revisa ${request.code} (${request.department})` : `Autoriza ${request.code}`;
 
 function MyRequestsPage() {
+  const view: ViewMode = Route.useSearch().vista ?? "tabla";
+  const navigateView = useNavigate({ from: Route.fullPath });
+  // Replace, not push: switching views is not a step back-navigation should undo one by one.
+  const setView = (next: ViewMode) => navigateView({ search: prev => withView(prev, next), replace: true });
   const today = useMemo(todayIso, []);
   const requests = Route.useLoaderData();
   const router = useRouter();
@@ -72,9 +71,11 @@ function MyRequestsPage() {
           <h1 className="page-heading">Mis solicitudes</h1>
           <p className="page-description">Revisa el avance de tus solicitudes, quién las revisa y cuáles están próximas a vencer.</p>
 
+          <div className="page-toolbar"><ViewToggle view={view} onChange={setView} /></div>
           <FiltersBar list={list} />
 
-          <div className="requests-layout">
+          {view === "dashboard" ? <MyRequestsDashboard list={list} today={today} /> : <>
+            <div className="requests-layout">
             <section className="requests-table-card" aria-label="Listado de solicitudes">
               <Table className="requests-table">
                 <TableHeader>
@@ -106,7 +107,7 @@ function MyRequestsPage() {
                       <TableCell>
                         <div className="row-actions">
                           <ActionButton label={`Ver ${request.code}`} onClick={() => setViewing(request)}><Eye /></ActionButton>
-                          <ActionButton label={`Editar ${request.code}`} onClick={() => setEditing(request)} disabled={!canEdit(request.status)} reason="Solo se editan solicitudes Enviadas o En revisión"><Pencil /></ActionButton>
+                          <ActionButton label={`Editar ${request.code}`} onClick={() => setEditing(request)} disabled={!canEdit(request.status)} reason="Solo se editan solicitudes enviadas, en revisión o en gestión"><Pencil /></ActionButton>
                           <ActionButton label={`Anular ${request.code}`} onClick={() => setCancelling(request)} disabled={!canCancel(request.status)} reason="La solicitud ya está anulada"><Trash2 /></ActionButton>
                         </div>
                       </TableCell>
@@ -116,8 +117,9 @@ function MyRequestsPage() {
               </Table>
               <PaginationFooter list={list} />
             </section>
-            <RequestsSummary list={list} statuses={summary} today={today} note="Solo puedes editar solicitudes Enviadas o En revisión. Si una solicitud ya fue tramitada y necesita cambios, anúlala y crea una nueva." />
-          </div>
+            </div>
+            <p className="requests-note"><Info aria-hidden="true" />Solo puedes editar solicitudes enviadas, en revisión o en gestión. Si una solicitud ya fue completada o rechazada y necesita cambios, anúlala y crea una nueva.</p>
+          </>}
         </div>
 
         <Dialog open={viewing !== null} onOpenChange={open => { if (!open) setViewing(null); }}>

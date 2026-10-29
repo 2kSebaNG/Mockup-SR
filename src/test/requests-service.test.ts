@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { packageChildren, packageProgress, requestCodeSchema, requestDecisionSchema, requestFromInput, requestInputSchema, requestPackageSchema, responsibleFor, reviewerSchema, type RequestInput } from "@/lib/my-requests";
+import { packageChildren, packageProgress, requestCodeSchema, requestDecisionSchema, requestFromInput, requestInputSchema, requestPackageSchema, responsibleFor, reviewerSchema, todayIso, type RequestInput } from "@/lib/my-requests";
 import { CONTRACT_ADMIN, delegationByRules, findMember, requesters, type Person } from "@/lib/organization";
 import { fileStore } from "@/lib/requests-store.server";
 import { memoryCatalogStore, type CatalogStore } from "@/lib/catalog-store.server";
@@ -80,8 +80,8 @@ describe("Contract administrator service", () => {
   it("authorizes or rejects a pending request only once", async () => {
     const { request } = await createRequesterService(store(), catalogs, ana).create(input);
     const admin = createAdminService(store(), catalogs);
-    expect((await admin.decide(request!.code, "Autorizado")).request?.status).toBe("Autorizado");
-    expect((await admin.decide(request!.code, "Rechazado", "Ya no se necesita.")).error).toMatch(/solo se gestionan solicitudes enviadas/);
+    expect((await admin.decide(request!.code, "Completada")).request?.status).toBe("Completada");
+    expect((await admin.decide(request!.code, "Rechazado", "Ya no se necesita.")).error).toMatch(/solo se deciden solicitudes enviadas o en revisión/);
   });
   it("requires a reason to reject, and shows it to the requester", async () => {
     const { request } = await createRequesterService(store(), catalogs, ana).create(input);
@@ -103,15 +103,24 @@ describe("Contract administrator service", () => {
     expect((await admin.estimate(request!.code, "2020-01-01")).error).toMatch(/anterior a la creación/);
     await admin.delegate(request!.code, "Recursos Humanos", "Paula Araya");
     expect((await admin.estimate(request!.code, null)).request?.estimatedResolution).toBeNull();
-    await createReviewerService(store(), catalogs, findMember("Recursos Humanos", "Paula Araya")!).decide(request!.code, "Autorizado");
+    await createReviewerService(store(), catalogs, findMember("Recursos Humanos", "Paula Araya")!).decide(request!.code, "Completada");
     expect((await admin.estimate(request!.code, "2026-11-12")).error).toMatch(/solo se asigna mientras espera/);
   });
-  it("delegates to a department member, which puts the request in review and makes that person responsible", async () => {
+  it("starts the review when the administrator opens a sent request, and keeps deciding possible", async () => {
+    const { request } = await createRequesterService(store(), catalogs, ana).create(input);
+    const admin = createAdminService(store(), catalogs);
+    const reviewing = await admin.startReview(request!.code);
+    expect(reviewing.request).toMatchObject({ status: "En revisión", reviewStartedAt: todayIso() });
+    expect((await admin.startReview(request!.code)).request?.status).toBe("En revisión");
+    expect((await admin.decide(request!.code, "Completada")).request).toMatchObject({ status: "Completada", resolvedAt: todayIso() });
+    expect((await admin.startReview(request!.code)).request?.status).toBe("Completada");
+  });
+  it("delegates to a department member, which puts the request en gestión and makes that person responsible", async () => {
     const { request } = await createRequesterService(store(), catalogs, ana).create(input);
     const delegated = await createAdminService(store(), catalogs).delegate(request!.code, "Recursos Humanos", "Paula Araya");
-    expect(delegated.request).toMatchObject({ status: "En revisión", department: "Recursos Humanos", assignee: { name: "Paula Araya" } });
+    expect(delegated.request).toMatchObject({ status: "En gestión", department: "Recursos Humanos", assignee: { name: "Paula Araya" }, delegatedAt: todayIso(), reviewStartedAt: todayIso() });
     expect(responsibleFor(delegated.request!).name).toBe("Paula Araya");
-    expect((await createAdminService(store(), catalogs).decide(request!.code, "Autorizado")).error).toMatch(/en revisión/);
+    expect((await createAdminService(store(), catalogs).decide(request!.code, "Completada")).error).toMatch(/en gestión/);
   });
   it("refuses a reviewer from another department and leaves the request pending", async () => {
     const { request } = await createRequesterService(store(), catalogs, ana).create(input);
@@ -236,21 +245,21 @@ describe("Department reviewer service", () => {
     expect((await reviewer.estimate(code, "2026-11-05")).request?.estimatedResolution).toBe("2026-11-05");
     expect((await createReviewerService(store(), catalogs, maridel).estimate(code, "2026-11-06")).error).toMatch(/No encontramos/);
     expect((await reviewer.decide(code, "Rechazado", "No corresponde a Recursos Humanos.")).request).toMatchObject({ status: "Rechazado", assignee: { name: "Paula Araya" }, rejectionReason: "No corresponde a Recursos Humanos." });
-    expect((await reviewer.decide(code, "Autorizado")).error).toBe("La solicitud ya está rechazada; solo se deciden solicitudes en revisión.");
+    expect((await reviewer.decide(code, "Completada")).error).toBe("La solicitud ya está rechazada; solo se deciden solicitudes en gestión.");
     const mine = (await createRequesterService(store(), catalogs, ana).list())[0]!;
     expect(mine.status).toBe("Rechazado");
     expect(responsibleFor(mine).name).toBe("Paula Araya");
   });
   it("does not let another reviewer decide, nor decide requests that were not delegated", async () => {
     const code = await delegated();
-    expect((await createReviewerService(store(), catalogs, maridel).decide(code, "Autorizado")).error).toMatch(/No encontramos/);
+    expect((await createReviewerService(store(), catalogs, maridel).decide(code, "Completada")).error).toMatch(/No encontramos/);
     const { request } = await createRequesterService(store(), catalogs, ana).create(input);
-    expect((await createReviewerService(store(), catalogs, paula).decide(request!.code, "Autorizado")).error).toMatch(/No encontramos/);
+    expect((await createReviewerService(store(), catalogs, paula).decide(request!.code, "Completada")).error).toMatch(/No encontramos/);
   });
   it("does not decide a request the requester cancelled while in review", async () => {
     const code = await delegated();
     await createRequesterService(store(), catalogs, ana).cancel(code);
-    expect((await createReviewerService(store(), catalogs, paula).decide(code, "Autorizado")).error).toMatch(/ya está anulada/);
+    expect((await createReviewerService(store(), catalogs, paula).decide(code, "Completada")).error).toMatch(/ya está anulada/);
   });
   it("refuses a reviewer that is not part of the department", () => {
     expect(reviewerSchema.safeParse({ department: "Bodega", assigneeName: "Paula Araya" }).success).toBe(false);
@@ -293,9 +302,9 @@ describe("Request packages", () => {
   it("decides each child on its own and reports the package progress", async () => {
     const { requests } = await createRequesterService(store(), catalogs, ana).createMany(pkg([item, grua]));
     const admin = createAdminService(store(), catalogs);
-    await admin.decide(requests![0]!.code, "Autorizado");
+    await admin.decide(requests![0]!.code, "Completada");
     let children = packageChildren(await admin.list(), "REQ-1201");
-    expect(children.map(c => c.status)).toEqual(["Autorizado", "Enviada"]);
+    expect(children.map(c => c.status)).toEqual(["Completada", "Enviada"]);
     expect(packageProgress(children)).toMatchObject({ label: "En curso", resolved: 1, total: 2 });
     await createRequesterService(store(), catalogs, ana).cancel(requests![1]!.code);
     children = packageChildren(await admin.list(), "REQ-1201");

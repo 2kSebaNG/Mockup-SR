@@ -3,12 +3,13 @@ import { CONTRACT_ADMIN, DEMO_USER, delegationByRules, findMember, requesters, t
 import { defaultCatalog, elementLabelFor, proposalFor, type ProposalReview, type StoredProposal } from "./catalog";
 import { defaultElements, normalizeForSearch } from "./elements";
 
-export const requestStatuses = ["Enviada", "En revisión", "Autorizado", "Rechazado", "Anulado"] as const;
+export const requestStatuses = ["Enviada", "En revisión", "En gestión", "Completada", "Rechazado", "Anulado"] as const;
 export type RequestStatus = (typeof requestStatuses)[number];
 
 /**
- * Lifecycle: a request is sent (Enviada); the contract administrator either decides it directly
- * (Autorizado / Rechazado) or delegates it to a department (En revisión), whose reviewer then decides.
+ * Lifecycle: a request is sent (Enviada) and moves to En revisión when the contract administrator starts reviewing it.
+ * The administrator either decides it directly (Completada / Rechazado) or delegates it to a department (En gestión),
+ * whose reviewer then decides.
  */
 export type MyRequest = {
   code: string;
@@ -37,6 +38,12 @@ export type MyRequest = {
   estimatedResolution: string | null;
   /** Set when the request was sent together with others as one package (e.g. REQ-1501 for REQ-1501-2). */
   parentCode: string | null;
+  /** Day the contract administrator started reviewing it (Enviada → En revisión). */
+  reviewStartedAt: string | null;
+  /** Day it was delegated to a department (→ En gestión). */
+  delegatedAt: string | null;
+  /** Day it was completed, rejected or cancelled. */
+  resolvedAt: string | null;
 };
 
 /** A request as the server returns it: with its proposal compared against the current catalog. */
@@ -53,7 +60,8 @@ export type DueState = "overdue" | "soon" | null;
 export const DUE_SOON_DAYS = 3;
 export const emptyFilters: RequestFilters = { query: "", statuses: [], categories: [], from: "", to: "" };
 
-const pending: RequestStatus[] = ["Enviada", "En revisión"];
+export const pendingStatuses: RequestStatus[] = ["Enviada", "En revisión", "En gestión"];
+const pending = pendingStatuses;
 
 export function canEdit(status: RequestStatus) {
   return pending.includes(status);
@@ -63,7 +71,7 @@ export function canCancel(status: RequestStatus) {
   return status !== "Anulado";
 }
 
-const statusWords: Record<RequestStatus, string> = { "Enviada": "enviada", "En revisión": "en revisión", "Autorizado": "autorizada", "Rechazado": "rechazada", "Anulado": "anulada" };
+const statusWords: Record<RequestStatus, string> = { "Enviada": "enviada", "En revisión": "en revisión", "En gestión": "en gestión", "Completada": "completada", "Rechazado": "rechazada", "Anulado": "anulada" };
 
 /** The status as it reads after "la solicitud está …" (statuses are stored in masculine, as in the reference designs). */
 export function statusPhrase(status: RequestStatus) {
@@ -75,9 +83,27 @@ export function canEstimate(status: RequestStatus) {
   return pending.includes(status);
 }
 
-/** The contract administrator authorizes, rejects or delegates only requests nobody has handled yet. */
+/** The contract administrator authorizes, rejects or delegates only requests no department has yet. */
 export function canDecide(status: RequestStatus) {
+  return status === "Enviada" || status === "En revisión";
+}
+
+/** Opening a sent request is when the contract administrator starts reviewing it. */
+export function startsReview(status: RequestStatus) {
   return status === "Enviada";
+}
+
+/** A department decides what was delegated to it. */
+export function canDecideAsReviewer(status: RequestStatus) {
+  return status === "En gestión";
+}
+
+/** Stored values before the En revisión / En gestión split: "En revisión" with a department is now "En gestión". */
+export function normalizeLegacyStatus(request: Pick<MyRequest, "status" | "department">): RequestStatus {
+  const status = request.status as string;
+  if (status === "Autorizado") return "Completada";
+  if (status === "En revisión" && request.department) return "En gestión";
+  return request.status;
 }
 
 /** Who the requester should talk to: the department reviewer once delegated, otherwise the contract administrator. */
@@ -180,7 +206,7 @@ const itemEditSchema = z.object({
 });
 const itemTargetSchema = z.object({ code: requestCodeSchema.shape.code, key: z.string().max(300) });
 export const catalogItemDecisionSchema = z.object({ targets: z.array(itemTargetSchema).min(1).max(200), status: z.enum(["aprobada", "rechazada"]), edit: itemEditSchema.default({}) });
-const decisionFields = { decision: z.enum(["Autorizado", "Rechazado"]), reason: z.string().trim().max(1000).optional() };
+const decisionFields = { decision: z.enum(["Completada", "Rechazado"]), reason: z.string().trim().max(1000).optional() };
 export const REJECTION_REASON_MIN = 10;
 const reasonRequired = (value: { decision: string; reason?: string | undefined }) => value.decision !== "Rechazado" || (value.reason?.length ?? 0) >= REJECTION_REASON_MIN;
 const reasonMessage = { message: `Escribe la razón del rechazo (al menos ${REJECTION_REASON_MIN} caracteres).`, path: ["reason"] };
@@ -218,38 +244,52 @@ const seededElement = (category: string, element: string) => (defaultElements[ca
 
 /** Delegated requests carry their department; decided ones alternate between department and direct ADC decisions. */
 function sampleAssignment(sample: Sample, status: RequestStatus, index: number): Pick<MyRequest, "department" | "assignee"> {
-  const delegated = status === "En revisión" || ((status === "Autorizado" || status === "Rechazado") && index % 2 === 0);
+  const delegated = status === "En gestión" || ((status === "Completada" || status === "Rechazado") && index % 2 === 0);
   if (!delegated) return { department: null, assignee: null };
   const rule = delegationByRules(sample.category);
   return { department: rule.department, assignee: rule.assignee };
 }
 
-// Status mix matches the reference summary: 15 authorized, 5 in review, 2 rejected, 10 sent.
+// Status mix matches the reference summary: 15 completed, 5 with a department, 2 rejected, 10 sent (3 already in review).
 const statusPlan: RequestStatus[] = [
-  ...Array<RequestStatus>(15).fill("Autorizado"),
-  ...Array<RequestStatus>(5).fill("En revisión"),
+  ...Array<RequestStatus>(15).fill("Completada"),
+  ...Array<RequestStatus>(5).fill("En gestión"),
   ...Array<RequestStatus>(2).fill("Rechazado"),
-  ...Array<RequestStatus>(10).fill("Enviada"),
+  ...Array<RequestStatus>(7).fill("Enviada"),
+  ...Array<RequestStatus>(3).fill("En revisión"),
   ...Array<RequestStatus>(2).fill("Anulado"),
 ];
 const dueOffsets = [-18, 21, 1, 9, 2, -1, 14, 30, 5, 0, 3, 12, -6, 17, 7, 25, 4, -3, 10, 2];
 
+/** When each step happened, a few days apart and never after today, so the dashboards have a history to show. */
+function sampleTimeline(today: string, createdAt: string, status: RequestStatus, delegated: boolean, index: number): Pick<MyRequest, "reviewStartedAt" | "delegatedAt" | "resolvedAt"> {
+  const notAfterToday = (iso: string) => (iso > today ? today : iso);
+  const reviewed = status !== "Enviada" && status !== "Anulado";
+  const reviewStartedAt = reviewed ? notAfterToday(addDays(createdAt, 1)) : null;
+  const delegatedAt = delegated && reviewStartedAt ? notAfterToday(addDays(reviewStartedAt, 1 + (index % 2))) : null;
+  const resolved = status === "Completada" || status === "Rechazado" || status === "Anulado";
+  const resolvedAt = resolved ? notAfterToday(addDays(delegatedAt ?? reviewStartedAt ?? createdAt, 2 + (index % 6))) : null;
+  return { reviewStartedAt, delegatedAt, resolvedAt };
+}
+
 function buildSample(today: string, requester: Person, status: RequestStatus, index: number, code: number): MyRequest {
   const sample = samples[index % samples.length]!;
-  const dueDate = addDays(today, dueOffsets[index % dueOffsets.length]! + (status === "Autorizado" ? -10 : 0));
+  const dueDate = addDays(today, dueOffsets[index % dueOffsets.length]! + (status === "Completada" ? -10 : 0));
   const created = addDays(dueDate, -14);
+  const createdAt = [created, addDays(today, -1 - (index % 9))].sort()[0]!;
   return {
     ...sample,
     ...sampleAssignment(sample, status, index),
     code: `REQ-${String(code).padStart(4, "0")}`,
     requester,
     // Spread creation days so sorting by creation date shows a realistic mix.
-    createdAt: [created, addDays(today, -1 - (index % 9))].sort()[0]!,
+    createdAt,
+    ...sampleTimeline(today, createdAt, status, sampleAssignment(sample, status, index).department !== null, index),
     dueDate,
     status,
     rejectionReason: status === "Rechazado" ? sampleRejection : null,
     parentCode: null,
-    estimatedResolution: status === "En revisión" || (status === "Enviada" && index % 3 === 0) ? addDays(dueDate, -2) : null,
+    estimatedResolution: status === "En gestión" || status === "En revisión" || (status === "Enviada" && index % 3 === 0) ? addDays(dueDate, -2) : null,
     // The seed proposes the same things a requester would: e.g. the new "Bebestible" type or the "Tipo de tornillo" attribute.
     elementLabel: elementLabelFor(defaultCatalog, sample.category),
     proposal: proposalFor(defaultCatalog, sample.category, sample.fields.map(field => ({ ...field, options: [] })), sample.element, seededElement),
@@ -262,7 +302,7 @@ export function sampleRequests(today: string): MyRequest[] {
 }
 
 // Other requesters' work, so the contract administrator's queue has more than the demo user's requests.
-const teamPlan: RequestStatus[] = ["Enviada", "Enviada", "Enviada", "Enviada", "Enviada", "Enviada", "Enviada", "Enviada", "En revisión", "En revisión", "En revisión", "Autorizado", "Autorizado", "Rechazado"];
+const teamPlan: RequestStatus[] = ["Enviada", "Enviada", "Enviada", "Enviada", "Enviada", "Enviada", "En revisión", "En revisión", "En gestión", "En gestión", "En gestión", "Completada", "Completada", "Rechazado"];
 
 /** A package: several items asked for together, each its own request with its own status. */
 function samplePackage(today: string, requester: Person, parent: number, items: { sample: number; status: RequestStatus }[], description: string): MyRequest[] {
@@ -272,6 +312,7 @@ function samplePackage(today: string, requester: Person, parent: number, items: 
     return {
       ...child, code: `${parentCode}-${index + 1}`, parentCode, description, aiAssisted: true,
       createdAt: addDays(today, -2), dueDate: addDays(today, 12), estimatedResolution: child.estimatedResolution && addDays(today, 9),
+      ...sampleTimeline(today, addDays(today, -2), status, child.department !== null, index),
     };
   });
 }
@@ -279,7 +320,7 @@ function samplePackage(today: string, requester: Person, parent: number, items: 
 /** Seed for development storage: the demo user's requests plus those of the rest of the team. */
 export function seedRequests(today: string): MyRequest[] {
   const team = teamPlan.map((status, index) => buildSample(today, requesters[1 + (index % 2)]!, status, index + 3, 1440 + index * 3));
-  const mine = samplePackage(today, DEMO_USER, 1490, [{ sample: 2, status: "Autorizado" }, { sample: 1, status: "En revisión" }, { sample: 0, status: "Enviada" }],
+  const mine = samplePackage(today, DEMO_USER, 1490, [{ sample: 2, status: "Completada" }, { sample: 1, status: "En gestión" }, { sample: 0, status: "Enviada" }],
     "Para el montaje de la plataforma necesito 2 soldadores, una grúa horquilla por un día y 4 taladros percutores Bosch a batería.");
   const theirs = samplePackage(today, requesters[1]!, 1495, [{ sample: 4, status: "Enviada" }, { sample: 5, status: "Enviada" }],
     "Colaciones en caja y agua purificada en botella para la cuadrilla de la faena de altura.");

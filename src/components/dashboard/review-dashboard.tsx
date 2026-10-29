@@ -1,0 +1,52 @@
+import { useMemo } from "react";
+import { AreaCompare, DashboardCard, Donut, GroupedBars, StackedBars, type Series } from "@/components/dashboard/dashboard-ui";
+import { categoryColor } from "@/components/dashboard/my-requests-dashboard";
+import { statusColors } from "@/components/requests/request-charts";
+import type { RequestList } from "@/components/requests/request-list";
+import type { RequestStatus } from "@/lib/my-requests";
+import { byCategory, derivationsByDepartment, receivedVsClassified, weeklyDemandByDepartment } from "@/lib/request-metrics";
+
+const UNCLASSIFIED = "Sin clasificar";
+const stackStatuses: RequestStatus[] = ["Enviada", "En revisión", "En gestión", "Completada", "Rechazado", "Anulado"];
+const stackLabels: Record<RequestStatus, string> = { "Enviada": "Enviadas", "En revisión": "En revisión", "En gestión": "En gestión", "Completada": "Completadas", "Rechazado": "Rechazadas", "Anulado": "Anuladas" };
+const stack: Series[] = stackStatuses.map(status => ({ key: status, label: stackLabels[status], color: statusColors[status] }));
+const flow: Series[] = [
+  { key: "recibidas", label: "Recibidas", color: "var(--series-1)" },
+  { key: "clasificadas", label: "Clasificadas", color: "var(--series-2)" },
+];
+const demand: Series[] = [
+  { key: "derivadas", label: "Derivadas", color: "var(--series-1)" },
+  { key: "rechazadas", label: "Rechazadas", color: "var(--status-rejected)" },
+];
+
+/** The contract administrator's view of every request, following the filters above. */
+export function ReviewDashboard({ list, today }: { list: RequestList; today: string }) {
+  const requests = list.visible;
+  const derivations = useMemo(() => derivationsByDepartment(requests), [requests]);
+  const daily = useMemo(() => receivedVsClassified(requests, today), [requests, today]);
+  const weekly = useMemo(() => weeklyDemandByDepartment(requests, today), [requests, today]);
+  const categories = useMemo(() => byCategory(requests).map((slice, index) => ({ ...slice, color: categoryColor(slice.key, index) })), [requests]);
+  const unclassified = derivations.unclassified.Enviada + derivations.unclassified["En revisión"];
+  // "Sin clasificar" leads the chart: it is the administrator's own queue.
+  const rows = [{ department: UNCLASSIFIED, ...derivations.unclassified }, ...derivations.departments];
+  const totals = daily.reduce((sum, day) => ({ recibidas: sum.recibidas + day.recibidas, clasificadas: sum.clasificadas + day.clasificadas }), { recibidas: 0, clasificadas: 0 });
+
+  return (
+    <div className="dashboard">
+      <div className="dashboard-grid">
+        <DashboardCard title="Derivaciones por departamento" subtitle={`${unclassified} sin clasificar · ${derivations.departments.length} departamentos con solicitudes`} height={rows.length * 40 + 56} wide>
+          <StackedBars data={rows} categoryKey="department" series={stack} labelWidth={128} />
+        </DashboardCard>
+        <DashboardCard title="Recibidas vs. clasificadas" subtitle={`Últimos 14 días: ${totals.recibidas} recibidas, ${totals.clasificadas} clasificadas (delegadas o decididas)`}>
+          <AreaCompare data={daily} xKey="day" series={flow} />
+        </DashboardCard>
+        <DashboardCard title="Demanda semanal por departamento" subtitle="Derivadas y rechazadas en los últimos 7 días" height={Math.max(weekly.length, 1) * 54 + 56}>
+          {weekly.length ? <GroupedBars data={weekly} categoryKey="department" series={demand} labelWidth={128} /> : <p className="chart-empty">Ninguna solicitud se ha derivado a un departamento con los filtros actuales.</p>}
+        </DashboardCard>
+        <DashboardCard title="Por categoría" subtitle="Desglose de las solicitudes recibidas" height={220}>
+          <Donut slices={categories} totalLabel="solicitudes" />
+        </DashboardCard>
+      </div>
+    </div>
+  );
+}

@@ -10,10 +10,10 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { RequestContent, RequestOutcome } from "@/components/requests/request-content";
 import { ParentLink } from "@/components/requests/request-package";
 import { DueWarning, PersonLink, StatusBadge, formatNumericDate } from "@/components/requests/request-list";
-import { canDecide, canEstimate, REJECTION_REASON_MIN, statusPhrase, todayIso, type MyRequest, type ReviewedRequest } from "@/lib/my-requests";
+import { canDecide, canDecideAsReviewer, canEstimate, REJECTION_REASON_MIN, startsReview, statusPhrase, todayIso, type MyRequest, type ReviewedRequest } from "@/lib/my-requests";
 import { ClassificationReview } from "@/components/requests/classification-review";
 import { CONTRACT_ADMIN, departments, findDepartment, type Person } from "@/lib/organization";
-import { decideAsReviewer, decideRequest, delegateRequest, setEstimatedResolution, suggestRequestDelegation } from "@/lib/requests.functions";
+import { decideAsReviewer, decideRequest, delegateRequest, setEstimatedResolution, startRequestReview, suggestRequestDelegation } from "@/lib/requests.functions";
 
 const requestedBy = (request: MyRequest) => `Solicitado por: ${request.requester.name} el ${formatNumericDate(request.createdAt)}`;
 
@@ -136,15 +136,22 @@ function EstimateEditor({ request, reviewer, onChanged }: { request: MyRequest; 
 export function AdminRequestDetail({ request, today, onClose, onChanged, onChat, onOpenPackage, reviewer }: { request: ReviewedRequest | null; today: string; onClose: () => void; onChanged: () => Promise<void>; onChat: (person: Person, relation: string) => void; onOpenPackage?: (parentCode: string) => void; reviewer?: { department: string; assigneeName: string } }) {
   const decideAsAdmin = useServerFn(decideRequest);
   const decideAsDepartment = useServerFn(decideAsReviewer);
-  const [busy, setBusy] = useState<"Autorizado" | "Rechazado" | null>(null);
+  const startReview = useServerFn(startRequestReview);
+  const [busy, setBusy] = useState<"Completada" | "Rechazado" | null>(null);
   const [error, setError] = useState("");
   const [confirmReject, setConfirmReject] = useState(false);
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState("");
   const [delegating, setDelegating] = useState<MyRequest | null>(null);
   useEffect(() => { setError(""); setBusy(null); setReason(""); setReasonError(""); }, [request?.code]);
+  // The administrator opening a sent request is the start of its review: it moves to En revisión.
+  const opensReview = !reviewer && request !== null && startsReview(request.status);
+  useEffect(() => {
+    if (!opensReview || !request) return;
+    startReview({ data: { code: request.code } }).then(response => response.request && onChanged()).catch(() => { /* it stays Enviada; deciding still works */ });
+  }, [opensReview, request?.code]);
 
-  const apply = async (decision: "Autorizado" | "Rechazado") => {
+  const apply = async (decision: "Completada" | "Rechazado") => {
     if (!request) return;
     const why = decision === "Rechazado" ? reason.trim() : undefined;
     if (why !== undefined && why.length < REJECTION_REASON_MIN) { setReasonError(`Escribe la razón del rechazo (al menos ${REJECTION_REASON_MIN} caracteres).`); return; }
@@ -158,7 +165,7 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat,
       onClose();
     } catch { setError("No se pudo guardar la decisión. Inténtalo de nuevo."); } finally { setBusy(null); }
   };
-  const pending = !request ? false : reviewer ? request.status === "En revisión" && request.assignee?.name === reviewer.assigneeName : canDecide(request.status);
+  const pending = !request ? false : reviewer ? canDecideAsReviewer(request.status) && request.assignee?.name === reviewer.assigneeName : canDecide(request.status);
   // The administrator may set the estimate before or after delegating; a reviewer only for what they are reviewing.
   const estimable = !request ? false : reviewer ? pending : canEstimate(request.status);
 
@@ -181,9 +188,9 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat,
           <DialogFooter className="admin-detail-footer">
             {pending ? <>
               {!reviewer && <Button type="button" className="decision-delegate" disabled={busy !== null} onClick={() => setDelegating(request)}><Building2 />Delegar a un departamento</Button>}
-              <Button type="button" className="decision-authorize" disabled={busy !== null} onClick={() => apply("Autorizado")}>{busy === "Autorizado" ? <Loader2 className="animate-spin" /> : <CheckSquare />}Autorizar</Button>
+              <Button type="button" className="decision-authorize" disabled={busy !== null} onClick={() => apply("Completada")}>{busy === "Completada" ? <Loader2 className="animate-spin" /> : <CheckSquare />}Autorizar</Button>
               <Button type="button" className="decision-reject" disabled={busy !== null} onClick={() => setConfirmReject(true)}><Trash2 />Rechazar</Button>
-            </> : <p className="admin-decided">{request.status === "En revisión" && !reviewer ? "En revisión por el departamento; su encargado decidirá si se autoriza o rechaza." : `Esta solicitud ya está ${statusPhrase(request.status)}.`}</p>}
+            </> : <p className="admin-decided">{request.status === "En gestión" && !reviewer ? "En gestión por el departamento; su encargado decidirá si se autoriza o rechaza." : `Esta solicitud ya está ${statusPhrase(request.status)}.`}</p>}
           </DialogFooter>
         </>}
       </DialogContent>

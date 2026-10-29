@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canCancel, canDecide, canEdit, countByStatus, defaultSort, dueState, emptyFilters, filterRequests, paginate, sampleRequests, seedRequests, sortRequests } from "@/lib/my-requests";
+import { canCancel, canDecide, canDecideAsReviewer, canEdit, countByStatus, normalizeLegacyStatus, startsReview, defaultSort, dueState, emptyFilters, filterRequests, paginate, sampleRequests, seedRequests, sortRequests } from "@/lib/my-requests";
 
 const today = "2026-10-15";
 const requests = sampleRequests(today);
@@ -8,30 +8,45 @@ describe("My requests", () => {
   it("allows editing only while the request is pending and annulling until it is annulled", () => {
     expect(canEdit("Enviada")).toBe(true);
     expect(canEdit("En revisión")).toBe(true);
-    expect(canEdit("Autorizado")).toBe(false);
+    expect(canEdit("En gestión")).toBe(true);
+    expect(canEdit("Completada")).toBe(false);
     expect(canEdit("Rechazado")).toBe(false);
-    expect(canCancel("Autorizado")).toBe(true);
+    expect(canCancel("Completada")).toBe(true);
     expect(canCancel("Anulado")).toBe(false);
   });
   it("warns about pending requests that are due soon or overdue", () => {
-    expect(dueState({ status: "En revisión", dueDate: "2026-10-18" }, today)).toBe("soon");
+    expect(dueState({ status: "En gestión", dueDate: "2026-10-18" }, today)).toBe("soon");
+    expect(dueState({ status: "En revisión", dueDate: "2026-10-14" }, today)).toBe("overdue");
     expect(dueState({ status: "Enviada", dueDate: "2026-10-15" }, today)).toBe("soon");
     expect(dueState({ status: "Enviada", dueDate: "2026-10-19" }, today)).toBeNull();
     expect(dueState({ status: "Enviada", dueDate: "2026-10-14" }, today)).toBe("overdue");
-    expect(dueState({ status: "Autorizado", dueDate: "2026-10-16" }, today)).toBeNull();
+    expect(dueState({ status: "Completada", dueDate: "2026-10-16" }, today)).toBeNull();
   });
   it("seeds other requesters and keeps delegated requests assigned", () => {
     const seeded = seedRequests(today);
     expect(new Set(seeded.map(r => r.requester.email)).size).toBeGreaterThan(1);
     expect(new Set(seeded.map(r => r.code)).size).toBe(seeded.length);
-    expect(seeded.filter(r => r.status === "En revisión").every(r => r.department && r.assignee)).toBe(true);
-    expect(seeded.filter(r => r.status === "Enviada").every(r => !r.department && !r.assignee)).toBe(true);
+    expect(seeded.filter(r => r.status === "En gestión").every(r => r.department && r.assignee && r.delegatedAt)).toBe(true);
+    expect(seeded.filter(r => r.status === "Enviada" || r.status === "En revisión").every(r => !r.department && !r.assignee)).toBe(true);
+    expect(seeded.filter(r => r.status === "Completada" || r.status === "Rechazado").every(r => r.resolvedAt && r.resolvedAt <= today && r.resolvedAt >= r.createdAt)).toBe(true);
+  });
+  it("lets the administrator review and decide until a department has the request, then only the department decides", () => {
     expect(canDecide("Enviada")).toBe(true);
-    expect(canDecide("En revisión")).toBe(false);
+    expect(canDecide("En revisión")).toBe(true);
+    expect(canDecide("En gestión")).toBe(false);
+    expect(startsReview("Enviada")).toBe(true);
+    expect(startsReview("En revisión")).toBe(false);
+    expect(canDecideAsReviewer("En gestión")).toBe(true);
+    expect(canDecideAsReviewer("En revisión")).toBe(false);
+  });
+  it("maps statuses stored before the En revisión / En gestión split", () => {
+    expect(normalizeLegacyStatus({ status: "Autorizado" as never, department: null })).toBe("Completada");
+    expect(normalizeLegacyStatus({ status: "En revisión", department: "Bodega" })).toBe("En gestión");
+    expect(normalizeLegacyStatus({ status: "En revisión", department: null })).toBe("En revisión");
   });
   it("matches the reference summary counts", () => {
     const counts = countByStatus(requests);
-    expect([counts["Autorizado"], counts["En revisión"], counts["Rechazado"], counts["Enviada"]]).toEqual([15, 5, 2, 10]);
+    expect([counts["Completada"], counts["En gestión"], counts["Rechazado"], counts["Enviada"] + counts["En revisión"]]).toEqual([15, 5, 2, 10]);
   });
   it("filters by code, status, category and due date range", () => {
     const code = requests[3]!.code;

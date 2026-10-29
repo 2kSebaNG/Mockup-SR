@@ -27,10 +27,15 @@ export const cancelMyRequest = createServerFn({ method: "POST" })
   .inputValidator(input => requestCodeSchema.parse(input))
   .handler(async ({ data }) => (await requester()).cancel(data.code));
 
-// Contract administrator ("Gestionar solicitudes")
+// Contract administrator ("Revisar solicitudes")
 
 export const listAllRequests = createServerFn({ method: "GET" })
   .handler(async () => (await admin()).list());
+
+/** Opening a request in "Revisar solicitudes" starts its review (Enviada → En revisión). */
+export const startRequestReview = createServerFn({ method: "POST" })
+  .inputValidator(input => requestCodeSchema.parse(input))
+  .handler(async ({ data }) => (await admin()).startReview(data.code));
 
 export const decideRequest = createServerFn({ method: "POST" })
   .inputValidator(input => requestDecisionSchema.parse(input))
@@ -40,7 +45,7 @@ export const delegateRequest = createServerFn({ method: "POST" })
   .inputValidator(input => requestDelegationSchema.parse(input))
   .handler(async ({ data }) => (await admin()).delegate(data.code, data.department, data.assigneeName));
 
-// Department reviewer ("Revisión del departamento")
+// Department reviewer ("Gestión de departamento")
 
 const reviewer = async (department: string, assigneeName: string) => (await import("./requests.server")).reviewerService(department, assigneeName);
 

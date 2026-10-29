@@ -1,22 +1,22 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { SquareArrowOutUpRight } from "lucide-react";
+import { SquareArrowOutUpRight, Info } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs";
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
-import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, PaginationFooter, PersonLink, StatusBadge, formatDate, useRequestList } from "@/components/requests/request-list";
+import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, ViewToggle, viewSearch, withView, PaginationFooter, PersonLink, StatusBadge, formatDate, useRequestList, type ViewMode, type ViewSearch } from "@/components/requests/request-list";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { RequestsPageSkeleton } from "@/components/requests/request-skeletons";
-import { RequestsSummary, type SummaryStatus } from "@/components/requests/request-charts";
+import { DepartmentDashboard } from "@/components/dashboard/department-dashboard";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { todayIso, type MyRequest } from "@/lib/my-requests";
 import { departments, findDepartment, findMember } from "@/lib/organization";
 import { getReviewerPackage, listReviewerRequests } from "@/lib/requests.functions";
 
-type ReviewerSearch = { departamento?: string; encargado?: string };
+type ReviewerSearch = ViewSearch & { departamento?: string; encargado?: string };
 
 /** No sign-in yet: the reviewer comes from the URL, falling back to the first department and its head. */
 function resolveReviewer(search: ReviewerSearch) {
@@ -28,26 +28,20 @@ function resolveReviewer(search: ReviewerSearch) {
 export const Route = createFileRoute("/revision-departamento")({
   validateSearch: (search: Record<string, unknown>): ReviewerSearch => {
     const { departamento, encargado } = search;
-    return { ...(typeof departamento === "string" && { departamento }), ...(typeof encargado === "string" && { encargado }) };
+    return { ...viewSearch(search), ...(typeof departamento === "string" && { departamento }), ...(typeof encargado === "string" && { encargado }) };
   },
   loaderDeps: ({ search }) => resolveReviewer(search),
   loader: ({ deps }) => listReviewerRequests({ data: deps }),
-  pendingComponent: () => <RequestsPageSkeleton trail={["Solicitudes", "Revisión del departamento"]} title="Revisión del departamento" columns={7} />,
+  pendingComponent: () => <RequestsPageSkeleton trail={["Solicitudes", "Gestión de departamento"]} title="Gestión de departamento" columns={7} />,
   component: DepartmentReviewPage,
   head: () => ({ meta: [
-    { title: "Revisión del departamento | Ecosistema X" },
+    { title: "Gestión de departamento | Ecosistema X" },
     { name: "description", content: "Bandeja del encargado de departamento: autoriza o rechaza las solicitudes que le delegó el Administrador de Contrato." },
-    { property: "og:title", content: "Revisión del departamento | Ecosistema X" },
+    { property: "og:title", content: "Gestión de departamento | Ecosistema X" },
     { property: "og:description", content: "Autoriza o rechaza solicitudes delegadas a tu departamento." },
   ] }),
 });
 
-const summary: SummaryStatus[] = [
-  { status: "En revisión", label: "Por revisar" },
-  { status: "Autorizado", label: "Autorizadas" },
-  { status: "Rechazado", label: "Rechazadas" },
-  { status: "Anulado", label: "Anuladas" },
-];
 
 function DepartmentReviewPage() {
   const today = useMemo(todayIso, []);
@@ -74,14 +68,16 @@ function DepartmentReviewPage() {
     return () => { active = false; };
   }, [packageCode, requests]);
   const members = findDepartment(reviewer.department)?.members ?? [];
-  const actAs = (department: string, assigneeName?: string) => navigate({ search: { departamento: department, encargado: assigneeName ?? findDepartment(department)!.members[0]!.name } });
+  const actAs = (department: string, assigneeName?: string) => navigate({ search: prev => ({ ...prev, departamento: department, encargado: assigneeName ?? findDepartment(department)!.members[0]!.name }) });
+  const view: ViewMode = Route.useSearch().vista ?? "tabla";
+  const setView = (next: ViewMode) => navigate({ search: prev => withView(prev, next), replace: true });
 
   return (
-    <AppShell trail={["Solicitudes", "Revisión del departamento"]}>
+    <AppShell trail={["Solicitudes", "Gestión de departamento"]}>
       <TooltipProvider delayDuration={200}>
         <div className="my-requests">
           <p className="eyebrow">ENCARGADO DE DEPARTAMENTO · {reviewer.department.toUpperCase()}</p>
-          <h1 className="page-heading">Revisión del departamento</h1>
+          <h1 className="page-heading">Gestión de departamento</h1>
           <p className="page-description">Solicitudes que el Administrador de Contrato delegó para tu revisión. Autorízalas o recházalas.</p>
 
           <section className="reviewer-picker" aria-label="Encargado que revisa">
@@ -102,9 +98,11 @@ function DepartmentReviewPage() {
             <p className="reviewer-picker-note">Vista previa sin inicio de sesión: elige qué encargado está revisando.</p>
           </section>
 
+          <div className="page-toolbar"><ViewToggle view={view} onChange={setView} /></div>
           <FiltersBar list={list} />
 
-          <div className="requests-layout">
+          {view === "dashboard" ? <DepartmentDashboard department={reviewer.department} today={today} /> : <>
+            <div className="requests-layout">
             <section className="requests-table-card" aria-label="Solicitudes delegadas">
               <Table className="requests-table">
                 <TableHeader>
@@ -141,8 +139,9 @@ function DepartmentReviewPage() {
               </Table>
               <PaginationFooter list={list} />
             </section>
-            <RequestsSummary list={list} statuses={summary} today={today} note="Solo puedes decidir las solicitudes en revisión que te delegaron. Si una no corresponde a tu departamento, habla con el Administrador de Contrato." />
-          </div>
+            </div>
+            <p className="requests-note"><Info aria-hidden="true" />Solo puedes decidir las solicitudes en gestión que te delegaron. Si una no corresponde a tu departamento, habla con el Administrador de Contrato.</p>
+          </>}
         </div>
 
         <PackageDialog parentCode={packageCode} children={packageState.children} loading={packageState.loading} error={packageState.error} today={today} onClose={() => setPackageCode(null)}
