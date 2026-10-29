@@ -773,3 +773,9 @@
 .dates-only .date-filter-row .filter-trigger { width: auto; min-width: 230px; flex: 1; max-width: 320px; }
 .filters-bar.dates-only { display: flex; }
 @media (max-width: 480px) { .date-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; } .date-presets button { width: 100%; padding: 0 6px; } .date-filter-row .filter-trigger { max-width: none; } }
+
+/* Dashboard period: which date on the left, quick periods below it with the calendar beside them. */
+.period-filter { gap: 10px; }
+.period-filter .date-range-field { padding: 0; border: 0; justify-content: flex-start; }
+.period-filter .date-range-field button { height: 36px; padding: 0 14px; background: var(--card); }
+.period-filter .date-range-field button[data-state=on] { border-color: var(--foreground); background: var(--foreground); color: var(--background); }

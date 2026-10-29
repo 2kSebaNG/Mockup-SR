@@ -44,9 +44,23 @@ function presets(today: Date): { key: string; label: string; from: Date; to: Dat
   ];
 }
 
+/** Which date the range reads, as a segmented choice. */
+function FieldChoice({ id, field, onFieldChange }: { id: string; field: DateField; onFieldChange: (field: DateField) => void }) {
+  return (
+    <div className="date-range-field">
+      <span id={`${id}-field`}>Fecha de</span>
+      <ToggleGroup type="single" variant="outline" size="sm" value={field} aria-labelledby={`${id}-field`} onValueChange={value => value && onFieldChange(value as DateField)}>
+        {(Object.keys(fieldLabels) as DateField[]).map(key => <ToggleGroupItem key={key} value={key}>{fieldLabels[key].option}</ToggleGroupItem>)}
+      </ToggleGroup>
+    </div>
+  );
+}
+
 /**
- * A date range: a popover with which date it reads (creation, due date or resolution) and a shadcn calendar in range
- * mode (two months on wide screens); with `presets`, quick periods beside it (the dashboard, where the period is the only filter).
+ * A date range on a shadcn calendar in range mode (two months on wide screens), plus which date it reads (creation,
+ * due date or resolution). Compact (the table): that choice lives inside the popover. With `presets` (the dashboard,
+ * where the period is the only filter): the choice sits outside on the left, with the quick periods below it and the
+ * calendar trigger beside them.
  */
 export function DateRangeFilter({ id, field, from, to, onChange, onFieldChange, presets: withPresets = false }: { id: string; field: DateField; from: string; to: string; onChange: (range: { from: string; to: string }) => void; onFieldChange: (field: DateField) => void; presets?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -55,47 +69,54 @@ export function DateRangeFilter({ id, field, from, to, onChange, onFieldChange, 
   const active = Boolean(from || to);
   const options = presets(new Date());
   const preset = options.find(option => from === toIso(option.from) && to === toIso(option.to))?.key ?? "";
+  const picker = (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className={`filter-trigger${active ? " active" : ""}`} aria-labelledby={`${id}-label ${id}-value`}>
+          <CalendarRange aria-hidden="true" className="filter-trigger-icon" />
+          <span id={`${id}-value`} className="filter-trigger-value">{summary(range?.from, range?.to)}</span>
+          <ChevronDown aria-hidden="true" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="date-range-popover">
+        {!withPresets && <FieldChoice id={id} field={field} onFieldChange={onFieldChange} />}
+        <Calendar
+          mode="range"
+          locale={es}
+          numberOfMonths={mobile ? 1 : 2}
+          defaultMonth={range?.from ?? new Date()}
+          selected={range}
+          onSelect={next => onChange({ from: toIso(next?.from), to: toIso(next?.to) })}
+        />
+        <div className="date-range-footer">
+          <span>{range?.from && !range.to ? "Elige la fecha final." : "Elige la fecha inicial y la final."}</span>
+          <div>
+            <Button type="button" variant="ghost" size="sm" disabled={!active} onClick={() => onChange({ from: "", to: "" })}><X />Limpiar</Button>
+            <Button type="button" size="sm" onClick={() => setOpen(false)}>Listo</Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+  if (!withPresets) {
+    return (
+      <div className="filter-field filter-dates">
+        <span id={`${id}-label`} className="filter-label">{fieldLabels[field].label}</span>
+        {picker}
+      </div>
+    );
+  }
   return (
-    <div className="filter-field filter-dates">
-      <span id={`${id}-label`} className="filter-label">{fieldLabels[field].label}</span>
+    <div className="filter-field filter-dates period-filter">
+      <span id={`${id}-label`} className="sr-only">{fieldLabels[field].label}</span>
+      <FieldChoice id={id} field={field} onFieldChange={onFieldChange} />
       <div className="date-filter-row">
         {/* Pressing the active preset again clears the range. */}
-      {withPresets && <ToggleGroup type="single" variant="outline" size="sm" className="date-presets" aria-label="Períodos frecuentes" value={preset}
-        onValueChange={value => { const chosen = options.find(option => option.key === value); onChange(chosen ? { from: toIso(chosen.from), to: toIso(chosen.to) } : { from: "", to: "" }); }}>
-        {options.map(option => <ToggleGroupItem key={option.key} value={option.key}>{option.label}</ToggleGroupItem>)}
-      </ToggleGroup>}
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className={`filter-trigger${active ? " active" : ""}`} aria-labelledby={`${id}-label ${id}-value`}>
-            <CalendarRange aria-hidden="true" className="filter-trigger-icon" />
-            <span id={`${id}-value`} className="filter-trigger-value">{summary(range?.from, range?.to)}</span>
-            <ChevronDown aria-hidden="true" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="date-range-popover">
-          <div className="date-range-field">
-            <span id={`${id}-field`}>Fecha de</span>
-            <ToggleGroup type="single" variant="outline" size="sm" value={field} aria-labelledby={`${id}-field`} onValueChange={value => value && onFieldChange(value as DateField)}>
-              {(Object.keys(fieldLabels) as DateField[]).map(key => <ToggleGroupItem key={key} value={key}>{fieldLabels[key].option}</ToggleGroupItem>)}
-            </ToggleGroup>
-          </div>
-          <Calendar
-            mode="range"
-            locale={es}
-            numberOfMonths={mobile ? 1 : 2}
-            defaultMonth={range?.from ?? new Date()}
-            selected={range}
-            onSelect={next => onChange({ from: toIso(next?.from), to: toIso(next?.to) })}
-          />
-          <div className="date-range-footer">
-            <span>{range?.from && !range.to ? "Elige la fecha final." : "Elige la fecha inicial y la final."}</span>
-            <div>
-              <Button type="button" variant="ghost" size="sm" disabled={!active} onClick={() => onChange({ from: "", to: "" })}><X />Limpiar</Button>
-              <Button type="button" size="sm" onClick={() => setOpen(false)}>Listo</Button>
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+        <ToggleGroup type="single" variant="outline" size="sm" className="date-presets" aria-label="Períodos frecuentes" value={preset}
+          onValueChange={value => { const chosen = options.find(option => option.key === value); onChange(chosen ? { from: toIso(chosen.from), to: toIso(chosen.to) } : { from: "", to: "" }); }}>
+          {options.map(option => <ToggleGroupItem key={option.key} value={option.key}>{option.label}</ToggleGroupItem>)}
+        </ToggleGroup>
+        {picker}
       </div>
     </div>
   );
