@@ -1,6 +1,6 @@
 import { addDays, daysBetween } from "./my-requests";
 import { findDepartment } from "./organization";
-import { formatShortDate, lastWeeks, weekStart } from "./request-metrics";
+import { bucketStart, granularityFor, periodBuckets, type Period } from "./request-metrics";
 
 /*
  * SAMPLE DATA. Requests do not have stages yet (a delegated request has one assignee and a decision), so the
@@ -117,21 +117,23 @@ export function skipRateByType(stages: Stage[]) {
   });
 }
 
-/** Stages completed in each of the last weeks. */
-export function completedPerWeek(stages: Stage[], today: string, weeks = 8) {
-  return lastWeeks(today, weeks).map(week => ({
-    week: formatShortDate(week),
-    completadas: stages.filter(stage => stage.completedAt && weekStart(stage.completedAt) === week).length,
+/** Stages completed in each bucket of the period. */
+export function completedOverTime(stages: Stage[], period: Period) {
+  const unit = granularityFor(period);
+  return periodBuckets(period, unit).map(bucket => ({
+    bucket: bucket.label,
+    completadas: stages.filter(stage => stage.completedAt && stage.completedAt >= period.from && stage.completedAt <= period.to && bucketStart(stage.completedAt, unit) === bucket.start).length,
   }));
 }
 
-/** Average estimated vs actual days of the stages completed each week. */
-export function estimateVsActual(stages: Stage[], today: string, weeks = 8) {
-  return lastWeeks(today, weeks).map(week => {
-    const done = stages.filter(stage => stage.completedAt && weekStart(stage.completedAt) === week);
-    const average = (values: number[]) => (values.length ? Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10 : null);
+/** Average estimated vs actual days of the stages completed in each bucket of the period. */
+export function estimateVsActual(stages: Stage[], period: Period) {
+  const unit = granularityFor(period);
+  const average = (values: number[]) => (values.length ? Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10 : null);
+  return periodBuckets(period, unit).map(bucket => {
+    const done = stages.filter(stage => stage.completedAt && stage.completedAt >= period.from && stage.completedAt <= period.to && bucketStart(stage.completedAt, unit) === bucket.start);
     return {
-      week: formatShortDate(week),
+      bucket: bucket.label,
       estimado: average(done.map(stage => stage.estimatedDays)),
       real: average(done.map(stage => daysBetween(stage.startedAt, stage.completedAt!))),
     };

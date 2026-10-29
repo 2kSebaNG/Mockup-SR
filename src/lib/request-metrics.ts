@@ -23,7 +23,74 @@ export function lastDays(today: string, count: number) {
 }
 
 const shortDate = new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", timeZone: "UTC" });
-export const formatShortDate = (iso: string) => shortDate.format(new Date(`${iso}T00:00:00Z`)).replace(".", "");
+export const formatShortDate = (iso: string) => shortDate.format(new Date(`${iso}T00:00:00Z`)).replace(".", "").replace("-", " ");
+const monthLabel = new Intl.DateTimeFormat("es-CL", { month: "short", year: "2-digit", timeZone: "UTC" });
+
+/** A span of days, both ends included. */
+export type Period = { from: string; to: string };
+export type Granularity = "day" | "week" | "month";
+
+/** The period a chart over time shows: the chosen range (up to today), or the default window ending today. */
+export function periodOr(range: { from: string; to: string }, today: string, defaultDays: number): Period {
+  // Days after today have no events yet: drawing them as zeros would read as "nothing happened".
+  const end = (iso: string) => (iso > today ? today : iso);
+  if (range.from && range.to) return { from: end(range.from), to: end(range.to) };
+  if (range.from) return { from: end(range.from), to: today };
+  if (range.to) return { from: addDays(end(range.to), -(defaultDays - 1)), to: end(range.to) };
+  return { from: addDays(today, -(defaultDays - 1)), to: today };
+}
+
+/** Days for up to a month, weeks for up to about six months, months beyond: always a readable number of points. */
+export function granularityFor(period: Period): Granularity {
+  const days = daysBetween(period.from, period.to) + 1;
+  return days <= 31 ? "day" : days <= 183 ? "week" : "month";
+}
+
+/** The first day of the bucket an ISO date falls in. */
+export function bucketStart(iso: string, unit: Granularity) {
+  if (unit === "day") return iso;
+  if (unit === "week") return weekStart(iso);
+  return `${iso.slice(0, 7)}-01`;
+}
+
+const nextBucket = (iso: string, unit: Granularity) => {
+  if (unit === "day") return addDays(iso, 1);
+  if (unit === "week") return addDays(iso, 7);
+  const [year, month] = iso.split("-").map(Number) as [number, number];
+  return month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+};
+
+/** Every bucket the period touches, oldest first, with the label its axis shows. */
+export function periodBuckets(period: Period, unit = granularityFor(period)) {
+  const buckets: { start: string; label: string }[] = [];
+  for (let start = bucketStart(period.from, unit); start <= period.to; start = nextBucket(start, unit)) {
+    buckets.push({ start, label: unit === "month" ? monthLabel.format(new Date(`${start}T00:00:00Z`)).replace(".", "") : formatShortDate(start > period.from ? start : period.from) });
+  }
+  return buckets;
+}
+
+const unitWords: Record<Granularity, string> = { day: "por día", week: "por semana", month: "por mes" };
+/** "06 oct – 18 oct · por día", for chart subtitles. */
+export function describePeriod(period: Period) {
+  return `${formatShortDate(period.from)} – ${formatShortDate(period.to)} · ${unitWords[granularityFor(period)]}`;
+}
+
+/** Counts, per bucket of the period, the requests whose event (creation, completion…) falls in it. */
+export function countOverTime<K extends string>(requests: MyRequest[], period: Period, events: Record<K, (request: MyRequest) => string | null>) {
+  const unit = granularityFor(period);
+  const keys = Object.keys(events) as K[];
+  const rows = periodBuckets(period, unit).map(bucket => ({ bucket: bucket.label, start: bucket.start, ...Object.fromEntries(keys.map(key => [key, 0])) }) as { bucket: string; start: string } & Record<K, number>);
+  const index = new Map(rows.map((row, position) => [row.start, position]));
+  for (const request of requests) {
+    for (const key of keys) {
+      const date = events[key](request);
+      if (!date || date < period.from || date > period.to) continue;
+      const position = index.get(bucketStart(date, unit));
+      if (position !== undefined) rows[position]![key]++;
+    }
+  }
+  return rows;
+}
 
 export type RequesterKpis = { active: number; completed: number; overdue: number; averageResolutionDays: number | null };
 
@@ -38,15 +105,11 @@ export function requesterKpis(requests: MyRequest[], today: string): RequesterKp
   };
 }
 
-/** Requests created and completed in each of the last weeks. */
-export function createdVsCompleted(requests: MyRequest[], today: string, weeks = 8) {
-  return lastWeeks(today, weeks).map(week => {
-    const inWeek = (iso: string | null) => iso !== null && weekStart(iso) === week;
-    return {
-      week: formatShortDate(week),
-      creadas: requests.filter(request => inWeek(request.createdAt)).length,
-      completadas: requests.filter(request => request.status === "Completada" && inWeek(request.resolvedAt)).length,
-    };
+/** Requests created and completed in each bucket of the period. */
+export function createdVsCompleted(requests: MyRequest[], period: Period) {
+  return countOverTime(requests, period, {
+    creadas: request => request.createdAt,
+    completadas: request => (request.status === "Completada" ? request.resolvedAt : null),
   });
 }
 
@@ -95,25 +158,25 @@ export function classifiedOn(request: MyRequest): string | null {
   return !request.department && resolvedByDecision(request) ? request.resolvedAt : null;
 }
 
-/** Requests received and classified on each of the last days. */
-export function receivedVsClassified(requests: MyRequest[], today: string, days = 14) {
-  return lastDays(today, days).map(day => ({
-    day: formatShortDate(day),
-    recibidas: requests.filter(request => request.createdAt === day).length,
-    clasificadas: requests.filter(request => classifiedOn(request) === day).length,
-  }));
+/** Requests received and classified in each bucket of the period. */
+export function receivedVsClassified(requests: MyRequest[], period: Period) {
+  return countOverTime(requests, period, { recibidas: request => request.createdAt, clasificadas: classifiedOn });
 }
 
-/** Per department: what was delegated to it in the last 7 days, and what it rejected in that time. */
-export function weeklyDemandByDepartment(requests: MyRequest[], today: string) {
-  const since = addDays(today, -6);
-  const inWindow = (iso: string | null) => iso !== null && iso >= since && iso <= today;
+/**
+ * Per department: what was delegated to it and what it rejected. Over the last 7 days by default; over a longer
+ * chosen period, as a weekly average so periods of any length compare.
+ */
+export function weeklyDemandByDepartment(requests: MyRequest[], period: Period) {
+  const weeks = Math.max(1, (daysBetween(period.from, period.to) + 1) / 7);
+  const perWeek = (count: number) => Math.round((count / weeks) * 10) / 10;
+  const inWindow = (iso: string | null) => iso !== null && iso >= period.from && iso <= period.to;
   const departments = [...new Set(requests.map(request => request.department).filter((name): name is string => name !== null))];
   return departments
     .map(department => ({
       department,
-      derivadas: requests.filter(request => request.department === department && inWindow(request.delegatedAt)).length,
-      rechazadas: requests.filter(request => request.department === department && request.status === "Rechazado" && inWindow(request.resolvedAt)).length,
+      derivadas: perWeek(requests.filter(request => request.department === department && inWindow(request.delegatedAt)).length),
+      rechazadas: perWeek(requests.filter(request => request.department === department && request.status === "Rechazado" && inWindow(request.resolvedAt)).length),
     }))
     .sort((a, b) => b.derivadas - a.derivadas || b.rechazadas - a.rechazadas || a.department.localeCompare(b.department, "es"));
 }

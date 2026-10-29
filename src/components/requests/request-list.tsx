@@ -11,7 +11,7 @@ import { TableHead } from "@/components/ui/table";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   requestStatuses, pendingStatuses, emptyFilters, defaultSort, dueState, filterRequests, sortRequests, paginate, daysBetween,
-  type MyRequest, type RequestStatus, type RequestFilters, type RequestSort, type SortKey,
+  type DateField, type MyRequest, type RequestStatus, type RequestFilters, type RequestSort, type SortKey,
 } from "@/lib/my-requests";
 import type { Person } from "@/lib/organization";
 
@@ -69,16 +69,23 @@ export function ActionButton({ label, onClick, disabled, children, reason }: { l
 
 const pageSizes = [10, 25, 50];
 
+/** The date the range reads when the viewer has not chosen one: due date in the table, creation in the dashboard. */
+export const defaultDateField = (view: ViewMode): DateField => (view === "dashboard" ? "createdAt" : "dueDate");
+
 /** Search, filters, sorting by creation or due date (newest first by default) and pagination shared by every request table. */
-export function useRequestList<T extends MyRequest>(requests: T[]) {
+export function useRequestList<T extends MyRequest>(requests: T[], view: ViewMode = "tabla") {
+  const fallbackField = defaultDateField(view);
   const [filters, setFilters] = useState<RequestFilters>(emptyFilters);
   const [sort, setSort] = useState<RequestSort>(defaultSort);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const categories = useMemo(() => [...new Set(requests.map(request => request.category))].sort((a, b) => a.localeCompare(b, "es")), [requests]);
-  const visible = useMemo(() => sortRequests(filterRequests(requests, filters), sort), [requests, filters, sort]);
+  const dateField = filters.dateField ?? fallbackField;
+  const visible = useMemo(() => sortRequests(filterRequests(requests, filters, fallbackField), sort), [requests, filters, sort, fallbackField]);
   // Everything but the status filter: the status chart keeps every bar while it is the one filtering.
-  const statusScope = useMemo(() => filterRequests(requests, { ...filters, statuses: [] }), [requests, filters]);
+  const statusScope = useMemo(() => filterRequests(requests, { ...filters, statuses: [] }, fallbackField), [requests, filters, fallbackField]);
+  // Everything but the date range: charts over time count each event (creation, completion…) inside the period.
+  const dateScope = useMemo(() => filterRequests(requests, { ...filters, from: "", to: "" }), [requests, filters]);
   const pageData = paginate(visible, page, pageSize);
   const updateFilters = (patch: Partial<RequestFilters>) => { setFilters(current => ({ ...current, ...patch })); setPage(1); };
   const toggleFilter = (key: "statuses" | "categories", option: string, checked: boolean) => {
@@ -90,7 +97,7 @@ export function useRequestList<T extends MyRequest>(requests: T[]) {
   };
   // A column clicked for the first time starts where it is most useful: newest created, or soonest due.
   const sortBy = (key: SortKey) => { setSort(current => current.key === key ? { key, direction: current.direction === "asc" ? "desc" : "asc" } : { key, direction: key === "createdAt" ? "desc" : "asc" }); setPage(1); };
-  return { filters, updateFilters, toggleFilter, sort, sortBy, page, setPage, pageSize, setPageSize, categories, visible, statusScope, pageData };
+  return { filters, dateField, updateFilters, toggleFilter, sort, sortBy, page, setPage, pageSize, setPageSize, categories, visible, statusScope, dateScope, pageData };
 }
 export type RequestList<T extends MyRequest = MyRequest> = ReturnType<typeof useRequestList<T>>;
 
@@ -184,8 +191,8 @@ export function FiltersBar({ list }: { list: RequestList }) {
       </div>
       <MultiSelectFilter label="Estado" options={requestStatuses} selected={filters.statuses} onToggle={(option, checked) => toggleFilter("statuses", option, checked)} />
       <MultiSelectFilter label="Categoría" options={categories} selected={filters.categories} onToggle={(option, checked) => toggleFilter("categories", option, checked)} />
-      <DateRangeFilter id="filter-due" label="Fecha límite" from={filters.from} to={filters.to} onChange={range => updateFilters(range)} />
-      {activeFilters > 0 && <Button variant="ghost" className="filter-clear" onClick={() => updateFilters({ statuses: [], categories: [], from: "", to: "" })}><X />Limpiar filtros ({activeFilters})</Button>}
+      <DateRangeFilter id="filter-date" field={list.dateField} from={filters.from} to={filters.to} onChange={range => updateFilters(range)} onFieldChange={dateField => updateFilters({ dateField })} />
+      {activeFilters > 0 && <Button variant="ghost" className="filter-clear" onClick={() => updateFilters({ statuses: [], categories: [], from: "", to: "", dateField: null })}><X />Limpiar filtros ({activeFilters})</Button>}
     </section>
   );
 }
@@ -219,4 +226,16 @@ export const viewSearch = (search: Record<string, unknown>): ViewSearch => (pars
 export function withView<T extends ViewSearch>(search: T, view: ViewMode): T {
   const { vista: _previous, ...rest } = search;
   return (view === "dashboard" ? { ...rest, vista: "dashboard" } : rest) as T;
+}
+
+const rangeWords: Record<DateField, string> = { createdAt: "creadas", dueDate: "con fecha límite", resolvedAt: "resueltas" };
+const rangeDate = new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+const fmt = (iso: string) => rangeDate.format(new Date(`${iso}T00:00:00Z`)).replace(".", "");
+/** What the date range keeps, in words, for chart subtitles ("creadas entre 06 oct 2026 y 18 oct 2026"); null with no range. */
+export function rangeScope(list: RequestList): string | null {
+  const { from, to } = list.filters;
+  if (!from && !to) return null;
+  const words = rangeWords[list.dateField];
+  if (from && to) return `${words} entre ${fmt(from)} y ${fmt(to)}`;
+  return from ? `${words} desde ${fmt(from)}` : `${words} hasta ${fmt(to)}`;
 }

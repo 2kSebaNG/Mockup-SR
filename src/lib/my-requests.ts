@@ -49,7 +49,14 @@ export type MyRequest = {
 /** A request as the server returns it: with its proposal compared against the current catalog. */
 export type ReviewedRequest = MyRequest & { review: ProposalReview | null };
 
-export type RequestFilters = { query: string; statuses: RequestStatus[]; categories: string[]; from: string; to: string };
+/** Which date the range filter reads. */
+export const dateFields = ["createdAt", "dueDate", "resolvedAt"] as const;
+export type DateField = (typeof dateFields)[number];
+/**
+ * `dateField` null means "the view's default": the table filters by due date, the dashboard reads the range as a
+ * period of creation. Choosing one explicitly applies it to both views.
+ */
+export type RequestFilters = { query: string; statuses: RequestStatus[]; categories: string[]; from: string; to: string; dateField: DateField | null };
 export type SortDirection = "asc" | "desc";
 export type SortKey = "createdAt" | "dueDate";
 export type RequestSort = { key: SortKey; direction: SortDirection };
@@ -58,7 +65,7 @@ export const defaultSort: RequestSort = { key: "createdAt", direction: "desc" };
 export type DueState = "overdue" | "soon" | null;
 
 export const DUE_SOON_DAYS = 3;
-export const emptyFilters: RequestFilters = { query: "", statuses: [], categories: [], from: "", to: "" };
+export const emptyFilters: RequestFilters = { query: "", statuses: [], categories: [], from: "", to: "", dateField: null };
 
 export const pendingStatuses: RequestStatus[] = ["Enviada", "En revisión", "En gestión"];
 const pending = pendingStatuses;
@@ -139,14 +146,20 @@ export function countByStatus(requests: MyRequest[]) {
   return counts;
 }
 
-export function filterRequests<T extends MyRequest>(requests: T[], filters: RequestFilters): T[] {
+export function filterRequests<T extends MyRequest>(requests: T[], filters: RequestFilters, defaultField: DateField = "dueDate"): T[] {
+  const field = filters.dateField ?? defaultField;
+  // A request that has not reached that date yet (e.g. no resolution) is outside any range on it.
+  const inRange = (request: T) => {
+    if (!filters.from && !filters.to) return true;
+    const date = request[field];
+    return date !== null && (!filters.from || date >= filters.from) && (!filters.to || date <= filters.to);
+  };
   const query = filters.query.trim().toLowerCase();
   return requests.filter(request =>
     (!query || request.code.toLowerCase().includes(query)) &&
     (!filters.statuses.length || filters.statuses.includes(request.status)) &&
     (!filters.categories.length || filters.categories.includes(request.category)) &&
-    (!filters.from || request.dueDate >= filters.from) &&
-    (!filters.to || request.dueDate <= filters.to));
+    inRange(request));
 }
 
 /** Sorts by creation or due date; requests on the same day follow their code (later codes are newer). */

@@ -760,3 +760,12 @@
 }
 @media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 860px) { .dashboard-grid { grid-template-columns: 1fr; } }
+.date-range-field { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; }
+.date-range-body { display: flex; }
+.date-range-presets { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 10px 8px; border-right: 1px solid var(--border); list-style: none; }
+.date-range-presets button { width: 100%; justify-content: flex-start; font-weight: 500; }
+@media (max-width: 640px) {
+  .date-range-body { flex-direction: column; }
+  .date-range-presets { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--border); }
+  .date-range-presets button { width: auto; }
+}

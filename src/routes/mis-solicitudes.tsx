@@ -41,7 +41,7 @@ function MyRequestsPage() {
   const today = useMemo(todayIso, []);
   const requests = Route.useLoaderData();
   const router = useRouter();
-  const list = useRequestList(requests);
+  const list = useRequestList(requests, view);
   const cancelRequest = useServerFn(cancelMyRequest);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState("");

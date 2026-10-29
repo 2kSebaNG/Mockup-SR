@@ -49,7 +49,8 @@ function DepartmentReviewPage() {
   const reviewer = resolveReviewer(Route.useSearch());
   const navigate = useNavigate({ from: Route.fullPath });
   const router = useRouter();
-  const list = useRequestList(requests);
+  const view: ViewMode = Route.useSearch().vista ?? "tabla";
+  const list = useRequestList(requests, view);
   // Keep the code, not a copy, so the open detail shows fresh data after every change.
   const [reviewingCode, setReviewingCode] = useState<string | null>(null);
   const reviewing = requests.find(request => request.code === reviewingCode) ?? null;
@@ -69,7 +70,6 @@ function DepartmentReviewPage() {
   }, [packageCode, requests]);
   const members = findDepartment(reviewer.department)?.members ?? [];
   const actAs = (department: string, assigneeName?: string) => navigate({ search: prev => ({ ...prev, departamento: department, encargado: assigneeName ?? findDepartment(department)!.members[0]!.name }) });
-  const view: ViewMode = Route.useSearch().vista ?? "tabla";
   const setView = (next: ViewMode) => navigate({ search: prev => withView(prev, next), replace: true });
 
   return (
@@ -101,7 +101,7 @@ function DepartmentReviewPage() {
           <div className="page-toolbar"><ViewToggle view={view} onChange={setView} /></div>
           <FiltersBar list={list} />
 
-          {view === "dashboard" ? <DepartmentDashboard department={reviewer.department} today={today} /> : <>
+          {view === "dashboard" ? <DepartmentDashboard department={reviewer.department} today={today} range={list.filters} /> : <>
             <div className="requests-layout">
             <section className="requests-table-card" aria-label="Solicitudes delegadas">
               <Table className="requests-table">

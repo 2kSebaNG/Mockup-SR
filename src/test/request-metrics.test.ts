@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { seedRequests, type MyRequest } from "@/lib/my-requests";
-import { byCategory, classifiedOn, createdVsCompleted, derivationsByDepartment, dueSoon, lastWeeks, receivedVsClassified, requesterKpis, weekStart, weeklyDemandByDepartment } from "@/lib/request-metrics";
+import { emptyFilters, filterRequests, seedRequests, type MyRequest } from "@/lib/my-requests";
+import { bucketStart, byCategory, classifiedOn, createdVsCompleted, derivationsByDepartment, describePeriod, dueSoon, granularityFor, lastWeeks, periodBuckets, periodOr, receivedVsClassified, requesterKpis, weekStart, weeklyDemandByDepartment } from "@/lib/request-metrics";
 import { sampleStages, skipRateByType, stageKpis, stagesNeedingOwner, workloadByExecutor } from "@/lib/department-stages.sample";
 
 const today = "2026-10-29";
@@ -18,8 +18,8 @@ describe("Request dashboard metrics", () => {
     expect(weekStart("2026-10-29")).toBe("2026-10-26");
     expect(weekStart("2026-10-26")).toBe("2026-10-26");
     expect(lastWeeks(today, 3)).toEqual(["2026-10-12", "2026-10-19", "2026-10-26"]);
-    const weekly = createdVsCompleted(requests, today);
-    expect(weekly).toHaveLength(8);
+    const weekly = createdVsCompleted(requests, periodOr({ from: "", to: "" }, today, 56));
+    expect(weekly).toHaveLength(9);
     expect(weekly.reduce((sum, week) => sum + week.creadas, 0)).toBeGreaterThan(0);
   });
   it("folds categories past the limit into Otras", () => {
@@ -44,8 +44,43 @@ describe("Request dashboard metrics", () => {
     expect(classifiedOn(direct)).toBe("2026-10-20");
     expect(classifiedOn({ ...base, department: "Bodega", delegatedAt: "2026-10-18", status: "Completada", resolvedAt: "2026-10-22" })).toBe("2026-10-18");
     expect(classifiedOn({ ...base, status: "En revisión", department: null, delegatedAt: null, resolvedAt: null })).toBeNull();
-    expect(receivedVsClassified(requests, today)).toHaveLength(14);
-    expect(weeklyDemandByDepartment(requests, today).every(row => row.derivadas >= 0 && row.rechazadas >= 0)).toBe(true);
+    expect(receivedVsClassified(requests, periodOr({ from: "", to: "" }, today, 14))).toHaveLength(14);
+    expect(weeklyDemandByDepartment(requests, periodOr({ from: "", to: "" }, today, 7)).every(row => row.derivadas >= 0 && row.rechazadas >= 0)).toBe(true);
+  });
+});
+
+describe("Dashboard periods", () => {
+  it("uses the chosen range, or a default window ending today", () => {
+    expect(periodOr({ from: "2026-10-01", to: "2026-10-10" }, today, 14)).toEqual({ from: "2026-10-01", to: "2026-10-10" });
+    expect(periodOr({ from: "", to: "" }, today, 14)).toEqual({ from: "2026-10-16", to: today });
+    expect(periodOr({ from: "2026-10-20", to: "" }, today, 14)).toEqual({ from: "2026-10-20", to: today });
+    expect(periodOr({ from: "2026-10-01", to: "2026-12-31" }, today, 14)).toEqual({ from: "2026-10-01", to: today });
+  });
+  it("groups by day up to a month, by week up to six months and by month beyond", () => {
+    expect(granularityFor({ from: "2026-10-01", to: "2026-10-31" })).toBe("day");
+    expect(granularityFor({ from: "2026-08-01", to: "2026-10-31" })).toBe("week");
+    expect(granularityFor({ from: "2026-01-01", to: "2026-10-31" })).toBe("month");
+    expect(periodBuckets({ from: "2026-08-15", to: "2026-10-29" }, "month").map(bucket => bucket.start)).toEqual(["2026-08-01", "2026-09-01", "2026-10-01"]);
+    expect(bucketStart("2026-10-29", "week")).toBe("2026-10-26");
+    expect(describePeriod({ from: "2026-10-06", to: "2026-10-18" })).toBe("06 oct – 18 oct · por día");
+  });
+  it("counts events inside the period only, in the bucket they fall in", () => {
+    const period = { from: "2026-10-20", to: "2026-10-26" };
+    const rows = createdVsCompleted(requests, period);
+    expect(rows).toHaveLength(7);
+    expect(rows.reduce((sum, row) => sum + row.creadas, 0)).toBe(requests.filter(r => r.createdAt >= period.from && r.createdAt <= period.to).length);
+  });
+  it("filters the range on the chosen date, or on the view's default", () => {
+    const range = { ...emptyFilters, from: "2026-10-20", to: "2026-10-26" };
+    expect(filterRequests(requests, range).every(r => r.dueDate >= range.from && r.dueDate <= range.to)).toBe(true);
+    expect(filterRequests(requests, range, "createdAt").every(r => r.createdAt >= range.from && r.createdAt <= range.to)).toBe(true);
+    const resolved = filterRequests(requests, { ...range, dateField: "resolvedAt" }, "createdAt");
+    expect(resolved.every(r => r.resolvedAt !== null && r.resolvedAt >= range.from && r.resolvedAt <= range.to)).toBe(true);
+  });
+  it("averages a longer period's demand per week", () => {
+    const month = weeklyDemandByDepartment(requests, { from: "2026-10-01", to: "2026-10-28" });
+    const raw = requests.filter(r => r.department === month[0]!.department && r.delegatedAt && r.delegatedAt >= "2026-10-01" && r.delegatedAt <= "2026-10-28").length;
+    expect(month[0]!.derivadas).toBe(Math.round((raw / 4) * 10) / 10);
   });
 });
 

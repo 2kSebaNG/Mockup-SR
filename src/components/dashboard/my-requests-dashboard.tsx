@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { CheckCircle2, Clock3, Hourglass, TriangleAlert } from "lucide-react";
 import { DashboardCard, DataTable, Donut, KpiRow, LineCompare, type Series } from "@/components/dashboard/dashboard-ui";
 import { StatusChart, type SummaryStatus } from "@/components/requests/request-charts";
-import { StatusBadge, formatDate, type RequestList } from "@/components/requests/request-list";
+import { StatusBadge, formatDate, rangeScope, type RequestList } from "@/components/requests/request-list";
 import { daysBetween } from "@/lib/my-requests";
-import { byCategory, createdVsCompleted, dueSoon, requesterKpis } from "@/lib/request-metrics";
+import { byCategory, createdVsCompleted, describePeriod, dueSoon, periodOr, requesterKpis } from "@/lib/request-metrics";
 
 const statuses: SummaryStatus[] = [
   { status: "Enviada", label: "Enviadas" },
@@ -30,9 +30,13 @@ export function deadlineText(today: string, dueDate: string) {
 export function MyRequestsDashboard({ list, today }: { list: RequestList; today: string }) {
   const requests = list.visible;
   const kpis = useMemo(() => requesterKpis(requests, today), [requests, today]);
-  const weekly = useMemo(() => createdVsCompleted(requests, today), [requests, today]);
+  // The range is the chart's own axis: it counts creations and completions inside it, from every filtered request.
+  const period = periodOr(list.filters, today, 56);
+  const weekly = useMemo(() => createdVsCompleted(list.dateScope, period), [list.dateScope, period.from, period.to]);
+  const scope = rangeScope(list);
   const categories = useMemo(() => byCategory(requests).map((slice, index) => ({ ...slice, color: categoryColor(slice.key, index) })), [requests]);
-  const soon = useMemo(() => dueSoon(requests, today), [requests, today]);
+  // Relative to today, so the period does not narrow it.
+  const soon = useMemo(() => dueSoon(list.dateScope, today), [list.dateScope, today]);
   const weekTotals = weekly.reduce((sum, week) => ({ creadas: sum.creadas + week.creadas, completadas: sum.completadas + week.completadas }), { creadas: 0, completadas: 0 });
 
   return (
@@ -44,16 +48,16 @@ export function MyRequestsDashboard({ list, today }: { list: RequestList; today:
         { label: "Tiempo promedio de resolución", value: kpis.averageResolutionDays === null ? "—" : <>{kpis.averageResolutionDays.toLocaleString("es-CL")}<small> días</small></>, hint: "Desde que se crea hasta que se completa o rechaza", icon: <Clock3 />, tone: "managing" },
       ]} />
       <div className="dashboard-grid">
-        <DashboardCard title="Solicitudes por estado" subtitle={`${list.statusScope.filter(request => statuses.some(item => item.status === request.status)).length} solicitudes`}>
+        <DashboardCard title="Solicitudes por estado" subtitle={`${list.statusScope.filter(request => statuses.some(item => item.status === request.status)).length} solicitudes${scope ? ` ${scope}` : ""}`}>
           <StatusChart list={list} statuses={statuses} />
         </DashboardCard>
-        <DashboardCard title="Creadas vs. completadas" subtitle={`Últimas 8 semanas: ${weekTotals.creadas} creadas, ${weekTotals.completadas} completadas`}>
-          <LineCompare data={weekly} xKey="week" series={trend} />
+        <DashboardCard title="Creadas vs. completadas" subtitle={`${describePeriod(period)}: ${weekTotals.creadas} creadas, ${weekTotals.completadas} completadas`}>
+          <LineCompare data={weekly} xKey="bucket" series={trend} />
         </DashboardCard>
-        <DashboardCard title="Por categoría" subtitle="Qué pides con más frecuencia">
+        <DashboardCard title="Por categoría" subtitle={scope ? `Solicitudes ${scope}` : "Qué pides con más frecuencia"}>
           <Donut slices={categories} totalLabel="solicitudes" />
         </DashboardCard>
-        <DashboardCard title="Próximas a vencer" subtitle="Activas que vencen en 7 días o menos, y las ya vencidas" chart={false}>
+        <DashboardCard title="Próximas a vencer" subtitle="Activas que vencen en 7 días o menos, y las ya vencidas. No depende del período." chart={false}>
           {soon.length ? (
             <DataTable rows={soon} rowKey={request => request.code} columns={[
               { header: "Código", cell: request => request.code, className: "request-code" },

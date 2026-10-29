@@ -42,7 +42,7 @@ function ManageRequestsPage() {
   const today = useMemo(todayIso, []);
   const requests = Route.useLoaderData();
   const router = useRouter();
-  const list = useRequestList(requests);
+  const list = useRequestList(requests, view);
   // Keep the code, not a copy, so the open detail shows fresh data after every decision.
   const [reviewingCode, setReviewingCode] = useState<string | null>(null);
   const reviewing = requests.find(request => request.code === reviewingCode) ?? null;
