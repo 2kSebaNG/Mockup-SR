@@ -5,6 +5,7 @@ import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { DateField } from "@/lib/my-requests";
@@ -110,6 +111,7 @@ export function DateRangeFilter({ id, field, from, to, onChange, onFieldChange, 
     <div className="filter-field filter-dates period-filter">
       <span id={`${id}-label`} className="sr-only">{fieldLabels[field].label}</span>
       <FieldChoice id={id} field={field} onFieldChange={onFieldChange} />
+      <Separator className="period-separator" />
       <div className="date-filter-row">
         {/* Pressing the active preset again clears the range. */}
         <ToggleGroup type="single" variant="outline" size="sm" className="date-presets" aria-label="Períodos frecuentes" value={preset}

@@ -779,3 +779,9 @@
 .period-filter .date-range-field { padding: 0; border: 0; justify-content: flex-start; }
 .period-filter .date-range-field button { height: 36px; padding: 0 14px; background: var(--card); }
 .period-filter .date-range-field button[data-state=on] { border-color: var(--foreground); background: var(--foreground); color: var(--background); }
+/* A hairline between which date and which period; the presets and the range picker share one centred line. */
+.period-separator { background: var(--border); }
+.period-filter .date-filter-row { flex-wrap: nowrap; align-items: center; }
+.period-filter .date-presets { flex-wrap: nowrap; }
+.period-filter .date-filter-row .filter-trigger { align-self: center; height: 40px; }
+@media (max-width: 900px) { .period-filter .date-filter-row { flex-wrap: wrap; } .period-filter .date-presets { flex-wrap: wrap; } }
