@@ -774,59 +774,25 @@
 .filters-bar.dates-only { display: flex; }
 @media (max-width: 480px) { .date-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; } .date-presets button { width: 100%; padding: 0 6px; } .date-filter-row .filter-trigger { max-width: none; } }
 
-/* Dashboard period: which date on the left, quick periods below it with the calendar beside them. */
-.period-filter { gap: 10px; }
+/* Dashboard period, in one row: which date | a hairline | the quick periods and the range picker. */
+.period-filter { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 12px 16px; }
 .period-filter .date-range-field { padding: 0; border: 0; justify-content: flex-start; }
 .period-filter .date-range-field button { height: 36px; padding: 0 14px; background: var(--card); }
 .period-filter .date-range-field button[data-state=on] { border-color: var(--foreground); background: var(--foreground); color: var(--background); }
-/* A hairline between which date and which period; the presets and the range picker share one centred line. */
-.period-separator { background: var(--border); }
-.period-filter .date-filter-row { flex-wrap: nowrap; align-items: center; }
-.period-filter .date-presets { flex-wrap: nowrap; }
-.period-filter .date-filter-row .filter-trigger { align-self: center; height: 40px; }
-@media (max-width: 900px) { .period-filter .date-filter-row { flex-wrap: wrap; } .period-filter .date-presets { flex-wrap: wrap; } }
-
-/* Layouts to compare (?filtros=a|b|c). */
-/* Connected groups: one border around the options, like the Tabla / Dashboard switch. */
-.joined .date-presets, .joined .date-range-field [role=radiogroup] { gap: 0; flex-wrap: nowrap; }
-.joined .date-presets button, .joined .date-range-field [role=radiogroup] button { margin-left: -1px; border-radius: 0; }
-.joined .date-presets button:first-child, .joined .date-range-field [role=radiogroup] button:first-child { margin-left: 0; border-radius: 6px 0 0 6px; }
-.joined .date-presets button:last-child, .joined .date-range-field [role=radiogroup] button:last-child { border-radius: 0 6px 6px 0; }
-.joined .date-presets button[data-state=on], .joined .date-range-field [role=radiogroup] button[data-state=on] { position: relative; z-index: 1; }
-/* One row: which date | which period, filling the width. */
-.period-inline { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 12px 16px; }
-.period-inline .period-separator { height: 28px; }
-.period-inline .date-filter-row { flex: 1; justify-content: flex-start; }
-.layout-b .period-inline .date-filter-row .filter-trigger { max-width: none; }
-/* a: the page toolbar carries the period on the left and the view switch on the right. */
-.toolbar-a { justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px 16px; margin: -8px 0 20px; }
-.toolbar-a .period-filter { flex: 1; min-width: 0; }
-.toolbar-a .date-filter-row { flex: 0 1 auto; }
-/* c: two rows of controls with the period's summary in the space beside them. */
-.layout-c { display: grid; grid-template-columns: auto minmax(220px, 1fr); align-items: stretch; gap: 16px 24px; }
-.period-summary { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding-left: 24px; border-left: 1px solid var(--border); color: var(--muted-foreground); font-size: 13px; }
-.period-summary strong { color: var(--foreground); font: 700 26px/1.1 var(--font-display); }
-@media (max-width: 1100px) { .layout-c { grid-template-columns: 1fr; } .period-summary { padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--border); } }
-@media (max-width: 900px) {
-  .period-inline .period-separator { display: none; }
-  .toolbar-a { flex-direction: column-reverse; align-items: stretch; }
-  .toolbar-a .view-toggle { align-self: flex-end; }
-}
-@media (max-width: 600px) {
-  .joined .date-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-  .joined .date-presets button, .joined .date-presets button:first-child, .joined .date-presets button:last-child { margin-left: 0; border-radius: 6px; }
-  .toolbar-a .view-toggle { align-self: stretch; }
-}
-/* Options never squeeze: a group that does not fit moves to the next line whole. */
-.period-filter .date-presets button, .period-filter .date-range-field button { flex-shrink: 0; white-space: nowrap; }
-.period-inline .date-filter-row { flex-wrap: nowrap; }
-.toolbar-a { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
-.toolbar-a .period-separator { display: none; }
-.toolbar-a .date-filter-row .filter-trigger { min-width: 200px; max-width: 280px; }
-@media (min-width: 1600px) { .toolbar-a .period-separator { display: block; } }
-@media (max-width: 900px) { .toolbar-a { grid-template-columns: 1fr; } .period-inline .date-filter-row { flex-wrap: wrap; } }
+.period-separator { height: 28px; background: var(--border); }
 /* The period group moves to the next line whole when the row is too narrow. */
-.period-inline .date-filter-row { flex: 0 1 auto; }
-@media (max-width: 900px) { .toolbar-a .view-toggle { order: -1; } }
-.filters-bar.layout-c { display: grid; }
-@media (max-width: 1280px) { .period-inline .period-separator { display: none; } }
+.period-filter .date-filter-row { flex: 0 1 auto; flex-wrap: nowrap; align-items: center; justify-content: flex-start; }
+.period-filter .date-filter-row .filter-trigger { align-self: center; height: 40px; max-width: none; }
+/* Options never squeeze; each choice is one connected group, like the Tabla / Dashboard switch. */
+.period-filter .date-presets button, .period-filter .date-range-field button { flex-shrink: 0; white-space: nowrap; }
+.period-filter .date-presets, .period-filter .date-range-field [role=radiogroup] { gap: 0; flex-wrap: nowrap; }
+.period-filter .date-presets button, .period-filter .date-range-field [role=radiogroup] button { margin-left: -1px; border-radius: 0; }
+.period-filter .date-presets button:first-child, .period-filter .date-range-field [role=radiogroup] button:first-child { margin-left: 0; border-radius: 6px 0 0 6px; }
+.period-filter .date-presets button:last-child, .period-filter .date-range-field [role=radiogroup] button:last-child { border-radius: 0 6px 6px 0; }
+.period-filter .date-presets button[data-state=on], .period-filter .date-range-field [role=radiogroup] button[data-state=on] { position: relative; z-index: 1; }
+@media (max-width: 1280px) { .period-separator { display: none; } }
+@media (max-width: 900px) { .period-filter .date-filter-row { flex-wrap: wrap; } }
+@media (max-width: 600px) {
+  .period-filter .date-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .period-filter .date-presets button, .period-filter .date-presets button:first-child, .period-filter .date-presets button:last-child { margin-left: 0; border-radius: 6px; }
+}

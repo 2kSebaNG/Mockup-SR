@@ -98,7 +98,7 @@ function DepartmentReviewPage() {
             <p className="reviewer-picker-note">Vista previa sin inicio de sesión: elige qué encargado está revisando.</p>
           </section>
 
-          <RequestsToolbar list={list} view={view} onViewChange={setView} layout={Route.useSearch().filtros} />
+          <RequestsToolbar list={list} view={view} onViewChange={setView} />
 
           {view === "dashboard" ? <DepartmentDashboard department={reviewer.department} today={today} range={list.filters} /> : <>
             <div className="requests-layout">

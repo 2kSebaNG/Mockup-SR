@@ -58,18 +58,11 @@ function FieldChoice({ id, field, onFieldChange }: { id: string; field: DateFiel
 }
 
 /**
- * "compact": the table's filter, with the date choice inside the popover. In the dashboard, where the period is the
- * only filter, the choice and the quick periods sit outside: "stacked" puts the choice above them, "inline" keeps
- * everything on one row with a divider.
- */
-export type DateRangeVariant = "compact" | "stacked" | "inline";
-
-/**
  * A date range on a shadcn calendar in range mode (two months on wide screens), plus which date it reads (creation,
- * due date or resolution) and, outside the table, quick periods. `joined` draws each choice as one connected group.
+ * due date or resolution). In the table the date choice lives inside the popover; with `withPresets` (the dashboard,
+ * where the period is the only filter) it sits outside, on one row with a divider and the quick periods.
  */
-export function DateRangeFilter({ id, field, from, to, onChange, onFieldChange, variant = "compact", joined = false }: { id: string; field: DateField; from: string; to: string; onChange: (range: { from: string; to: string }) => void; onFieldChange: (field: DateField) => void; variant?: DateRangeVariant; joined?: boolean }) {
-  const withPresets = variant !== "compact";
+export function DateRangeFilter({ id, field, from, to, onChange, onFieldChange, withPresets = false }: { id: string; field: DateField; from: string; to: string; onChange: (range: { from: string; to: string }) => void; onFieldChange: (field: DateField) => void; withPresets?: boolean }) {
   const [open, setOpen] = useState(false);
   const mobile = useIsMobile();
   const range: DateRange | undefined = from || to ? { from: toDate(from), to: toDate(to) } : undefined;
@@ -114,10 +107,10 @@ export function DateRangeFilter({ id, field, from, to, onChange, onFieldChange, 
     );
   }
   return (
-    <div className={`filter-field filter-dates period-filter period-${variant}${joined ? " joined" : ""}`}>
+    <div className="filter-field filter-dates period-filter">
       <span id={`${id}-label`} className="sr-only">{fieldLabels[field].label}</span>
       <FieldChoice id={id} field={field} onFieldChange={onFieldChange} />
-      <Separator orientation={variant === "inline" ? "vertical" : "horizontal"} className="period-separator" />
+      <Separator orientation="vertical" className="period-separator" />
       <div className="date-filter-row">
         {/* Pressing the active preset again clears the range. */}
         <ToggleGroup type="single" variant="outline" size="sm" className="date-presets" aria-label="Períodos frecuentes" value={preset}
