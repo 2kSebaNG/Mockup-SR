@@ -22,10 +22,8 @@ import { Route as RevisionDepartamentoRouteImport } from './routes/revision-depa
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as EmpleadosIndexRouteImport } from './routes/empleados.index'
 import { Route as EmpleadosIdRouteImport } from './routes/empleados.$id'
-import { Route as EmpleadosNuevoRouteImport } from './routes/empleados.nuevo'
 import { Route as RolesIndexRouteImport } from './routes/roles.index'
 import { Route as RolesIdRouteImport } from './routes/roles.$id'
-import { Route as RolesNuevoRouteImport } from './routes/roles.nuevo'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -92,11 +90,6 @@ const EmpleadosIdRoute = EmpleadosIdRouteImport.update({
   path: '/empleados/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EmpleadosNuevoRoute = EmpleadosNuevoRouteImport.update({
-  id: '/empleados/nuevo',
-  path: '/empleados/nuevo',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RolesIndexRoute = RolesIndexRouteImport.update({
   id: '/roles/',
   path: '/roles/',
@@ -105,11 +98,6 @@ const RolesIndexRoute = RolesIndexRouteImport.update({
 const RolesIdRoute = RolesIdRouteImport.update({
   id: '/roles/$id',
   path: '/roles/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RolesNuevoRoute = RolesNuevoRouteImport.update({
-  id: '/roles/nuevo',
-  path: '/roles/nuevo',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -126,9 +114,7 @@ export interface FileRoutesByFullPath {
   '/revision-departamento': typeof RevisionDepartamentoRoute
   '/terminos': typeof TerminosRoute
   '/empleados/$id': typeof EmpleadosIdRoute
-  '/empleados/nuevo': typeof EmpleadosNuevoRoute
   '/roles/$id': typeof RolesIdRoute
-  '/roles/nuevo': typeof RolesNuevoRoute
   '/empleados/': typeof EmpleadosIndexRoute
   '/roles/': typeof RolesIndexRoute
 }
@@ -145,9 +131,7 @@ export interface FileRoutesByTo {
   '/revision-departamento': typeof RevisionDepartamentoRoute
   '/terminos': typeof TerminosRoute
   '/empleados/$id': typeof EmpleadosIdRoute
-  '/empleados/nuevo': typeof EmpleadosNuevoRoute
   '/roles/$id': typeof RolesIdRoute
-  '/roles/nuevo': typeof RolesNuevoRoute
   '/empleados': typeof EmpleadosIndexRoute
   '/roles': typeof RolesIndexRoute
 }
@@ -165,9 +149,7 @@ export interface FileRoutesById {
   '/revision-departamento': typeof RevisionDepartamentoRoute
   '/terminos': typeof TerminosRoute
   '/empleados/$id': typeof EmpleadosIdRoute
-  '/empleados/nuevo': typeof EmpleadosNuevoRoute
   '/roles/$id': typeof RolesIdRoute
-  '/roles/nuevo': typeof RolesNuevoRoute
   '/empleados/': typeof EmpleadosIndexRoute
   '/roles/': typeof RolesIndexRoute
 }
@@ -186,9 +168,7 @@ export interface FileRouteTypes {
     | '/revision-departamento'
     | '/terminos'
     | '/empleados/$id'
-    | '/empleados/nuevo'
     | '/roles/$id'
-    | '/roles/nuevo'
     | '/empleados/'
     | '/roles/'
   fileRoutesByTo: FileRoutesByTo
@@ -205,9 +185,7 @@ export interface FileRouteTypes {
     | '/revision-departamento'
     | '/terminos'
     | '/empleados/$id'
-    | '/empleados/nuevo'
     | '/roles/$id'
-    | '/roles/nuevo'
     | '/empleados'
     | '/roles'
   id:
@@ -224,9 +202,7 @@ export interface FileRouteTypes {
     | '/revision-departamento'
     | '/terminos'
     | '/empleados/$id'
-    | '/empleados/nuevo'
     | '/roles/$id'
-    | '/roles/nuevo'
     | '/empleados/'
     | '/roles/'
   fileRoutesById: FileRoutesById
@@ -244,9 +220,7 @@ export interface RootRouteChildren {
   RevisionDepartamentoRoute: typeof RevisionDepartamentoRoute
   TerminosRoute: typeof TerminosRoute
   EmpleadosIdRoute: typeof EmpleadosIdRoute
-  EmpleadosNuevoRoute: typeof EmpleadosNuevoRoute
   RolesIdRoute: typeof RolesIdRoute
-  RolesNuevoRoute: typeof RolesNuevoRoute
   EmpleadosIndexRoute: typeof EmpleadosIndexRoute
   RolesIndexRoute: typeof RolesIndexRoute
 }
@@ -344,13 +318,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmpleadosIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/empleados/nuevo': {
-      id: '/empleados/nuevo'
-      path: '/empleados/nuevo'
-      fullPath: '/empleados/nuevo'
-      preLoaderRoute: typeof EmpleadosNuevoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/roles/': {
       id: '/roles/'
       path: '/roles'
@@ -363,13 +330,6 @@ declare module '@tanstack/react-router' {
       path: '/roles/$id'
       fullPath: '/roles/$id'
       preLoaderRoute: typeof RolesIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/roles/nuevo': {
-      id: '/roles/nuevo'
-      path: '/roles/nuevo'
-      fullPath: '/roles/nuevo'
-      preLoaderRoute: typeof RolesNuevoRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -388,9 +348,7 @@ const rootRouteChildren: RootRouteChildren = {
   RevisionDepartamentoRoute: RevisionDepartamentoRoute,
   TerminosRoute: TerminosRoute,
   EmpleadosIdRoute: EmpleadosIdRoute,
-  EmpleadosNuevoRoute: EmpleadosNuevoRoute,
   RolesIdRoute: RolesIdRoute,
-  RolesNuevoRoute: RolesNuevoRoute,
   EmpleadosIndexRoute: EmpleadosIndexRoute,
   RolesIndexRoute: RolesIndexRoute,
 }

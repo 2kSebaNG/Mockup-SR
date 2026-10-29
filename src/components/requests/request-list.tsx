@@ -53,7 +53,7 @@ export function PersonLink({ person, onOpen }: { person: Person; onOpen: () => v
   return <button type="button" className="authorizer-link" onClick={onOpen} title={`Abrir chat interno con ${person.name}`}>{person.name}</button>;
 }
 
-export function ActionButton({ label, onClick, disabled, children, reason }: { label: string; onClick: () => void; disabled?: boolean; children: ReactNode; reason?: string }) {
+export function ActionButton({ label, onClick, disabled, children, reason }: { label: string; onClick: () => void; disabled?: boolean; children: ReactNode; reason?: string | undefined }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>

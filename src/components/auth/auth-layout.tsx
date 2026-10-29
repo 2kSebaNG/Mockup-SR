@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { applyTheme, storedTheme, systemTheme } from "@/lib/theme";
 
 /** Microsoft's four squares, for "Continuar con Microsoft". */
 export function MicrosoftIcon() {
@@ -17,17 +17,22 @@ export function MicrosoftIcon() {
 /**
  * The shadcn login-02 block: the form centred in the left column under the brand, and a full-height visual on the
  * right from `lg` up. The visual is the sidebar's graphite with the brand, so sign-in reads as the same product.
+ * These pages have no theme switch: they stay light, on white.
  */
 export function AuthLayout({ children }: { children: ReactNode }) {
+  // Sign-in is always light (the head script already skips dark here); the app's theme comes back on the way out.
+  useEffect(() => {
+    applyTheme("light");
+    return () => applyTheme(storedTheme() ?? systemTheme());
+  }, []);
   return (
-    <div className="grid min-h-svh bg-background lg:grid-cols-2">
+    <div className="auth-page grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex justify-center gap-2 md:justify-start">
           <Link to="/" className="flex items-center gap-2 font-medium">
             <div className="auth-brand-mark flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">X</div>
             <span className="auth-brand-name">ECOSISTEMA X</span>
           </Link>
-          <ThemeToggle />
         </div>
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">{children}</div>

@@ -5,7 +5,7 @@ import { seedAccess, type AccessState, type Outcome, type Step } from "./access"
 // and starts from the sample in `seedAccess`. Calls wait a moment like a request would, so the screens show their
 // busy states. The server renders the sample without a session; the browser then shows its own state.
 
-const KEY = "ecosistema-x.access.v1";
+const KEY = "ecosistema-x.access.v2";
 const LATENCY = 350;
 
 const serverState = seedAccess(Date.parse("2026-10-29T12:00:00Z"));

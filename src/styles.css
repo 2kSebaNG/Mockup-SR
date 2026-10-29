@@ -799,7 +799,7 @@
 
 /* People and access: employees, roles and permissions, on the requests pages' cards, tables and badges. */
 .access-heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; }
-.access-heading > div { min-width: 0; flex: 1 1 420px; }
+.access-heading > div:first-child { min-width: 0; flex: 1 1 420px; }
 .access-heading > a, .access-heading > button { margin-top: 6px; }
 .access-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 16px; color: var(--muted-foreground); font-size: 14px; font-weight: 600; }
 .access-back:hover { color: var(--foreground); }
@@ -831,7 +831,6 @@
 .role-chip { display: inline-flex; align-items: center; padding: 2px 9px; border: 1px solid var(--border); border-radius: 4px; background: var(--secondary); font-size: 12px; font-weight: 600; white-space: nowrap; }
 .role-chip.link { color: var(--link); }
 .role-chip.link:hover { border-color: var(--link); }
-.system-badge { padding: 1px 7px; border-radius: 999px; background: var(--foreground); color: var(--background); font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
 .role-description { max-width: 360px; color: var(--muted-foreground); }
 .numeric-head, .numeric-cell { text-align: right; }
 .numeric-cell { font-variant-numeric: tabular-nums; }
@@ -858,7 +857,6 @@
 .permission-group-title { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; padding: 0; font: 600 14px var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; }
 .permission-all { color: var(--link); font: 600 13px var(--font-sans); text-transform: none; letter-spacing: 0; background: none; border: 0; padding: 0; cursor: pointer; }
 .permission-option > span { flex: 1; }
-.permission-code { flex-shrink: 0; padding: 1px 6px; border-radius: 4px; background: var(--secondary); color: var(--muted-foreground); font-size: 11px; }
 .permission-locked { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
 .permission-locked svg { width: 12px; height: 12px; }
 .access-dialog { max-width: 720px; }
@@ -893,6 +891,8 @@
 .permission-matrix td.matrix-permission span { color: var(--muted-foreground); font-size: 13px; }
 .matrix-group td { padding: 10px 18px !important; background: color-mix(in oklab, var(--secondary) 55%, transparent); font: 600 13px var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; }
 .matrix-yes { width: 18px; height: 18px; margin: auto; color: var(--status-completed-text); }
+/* The text tone is near black in dark mode; there the tick takes the status fill, which reads on graphite. */
+.dark .matrix-yes { color: var(--status-completed); }
 .matrix-no { width: 16px; height: 16px; margin: auto; color: var(--muted-foreground); opacity: 0.45; }
 
 @media (max-width: 1100px) {
@@ -946,3 +946,43 @@
 .legal-page { display: flex; flex-direction: column; gap: 14px; font-size: 15px; line-height: 1.6; }
 .legal-page p { margin: 0; }
 .legal-version { color: var(--muted-foreground); font-size: 13px; }
+
+/* Review round: sign-in on white, modals for forms, row menus, phone and password inputs. */
+.auth-page { background: #fff; color: var(--foreground); }
+.auth-page [data-slot=field-separator-content] { background: #fff; }
+.access-heading-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.access-dialog.wide { width: min(780px, calc(100vw - 32px)); max-width: 780px; max-height: calc(100dvh - 48px); overflow: hidden; display: flex; flex-direction: column; gap: 0; padding: 0; }
+.access-dialog.wide .dialog-body-inner { gap: 20px; }
+.access-dialog .access-form-actions { position: sticky; bottom: 0; z-index: 2; margin: 0 -28px -28px; padding: 14px 28px; background: var(--background); border-top: 1px solid var(--border); }
+.access-dialog:not(.wide) .access-form-actions, .access-dialog .inline-role .access-form-actions { position: static; margin: 0; padding: 0; border: 0; background: none; }
+.permission-title { font-weight: 600; font-size: 14px; }
+.permission-option.read-only { cursor: default; opacity: 1; }
+.permission-option.read-only:not(:has([data-state=checked])) { opacity: 0.6; }
+.dark .role-option:has([data-state=checked]), .dark .permission-option:has([data-state=checked]) { background: color-mix(in oklab, var(--primary) 14%, transparent); }
+.role-fields { gap: 18px; }
+.custom-role-button { justify-self: start; width: fit-content; }
+.inline-role { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px; border: 1px dashed color-mix(in oklab, var(--primary) 55%, var(--border)); border-radius: 6px; background: color-mix(in oklab, var(--primary) 4%, transparent); }
+.inline-role-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.inline-role-heading h3 { margin: 0; font: 700 18px var(--font-display); }
+.inline-role-heading p { margin: 2px 0 0; color: var(--muted-foreground); font-size: 13px; }
+.inline-role .permission-group { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.phone-input { display: flex; align-items: stretch; }
+.phone-prefix { display: inline-flex; align-items: center; padding: 0 12px; border: 1px solid var(--input); border-right: 0; border-radius: 6px 0 0 6px; background: var(--secondary); color: var(--muted-foreground); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.phone-input input { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.password-input { position: relative; }
+.password-input input { padding-right: 42px; }
+.password-toggle { position: absolute; top: 50%; right: 4px; display: grid; place-items: center; width: 32px; height: 32px; transform: translateY(-50%); border: 0; border-radius: 4px; background: none; color: var(--muted-foreground); cursor: pointer; }
+.password-toggle:hover:not(:disabled) { color: var(--foreground); background: var(--secondary); }
+.password-toggle:disabled { cursor: not-allowed; opacity: 0.5; }
+.password-toggle svg { width: 17px; height: 17px; }
+.row-menu { min-width: 230px; }
+.row-menu [role=menuitem] { align-items: flex-start; }
+.row-menu [role=menuitem] svg { margin-top: 2px; }
+.row-menu [role=menuitem].danger:not([data-disabled]) { color: var(--destructive); }
+.row-menu-text { display: flex; flex-direction: column; gap: 1px; }
+.row-menu-text span { color: var(--muted-foreground); font-size: 12px; }
+.nav-section-trigger { width: 100%; }
+.nav-section-items { margin-right: 0; }
+@media (max-width: 600px) {
+  .access-heading-actions > * { flex: 1 1 auto; }
+}

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, ArrowUpDown, Eye, Search, UserPlus, X } from "lucide-react";
-import { AccessPage, AccessPagination, EmployeeStatusBadge, formatDay, useActor } from "@/components/access/access-ui";
+import { ArrowDown, ArrowUp, ArrowUpDown, Search, UserPlus, X } from "lucide-react";
+import { AccessPage, AccessPagination, EmployeeStatusBadge, formatDateTime, useActor } from "@/components/access/access-ui";
+import { EmployeeRowActions, InviteEmployeeDialog, useEmployeeActions, useTicking } from "@/components/access/employee-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { PAGE_SIZES, can, employeeStatus, findRole, formatRut, fullName, listEmployees, listRoles, statusLabels, type EmployeeQuery, type EmployeeStatus } from "@/lib/access";
+import { PAGE_SIZES, can, canResendAt, employeeStatus, findRole, formatRut, fullName, listEmployees, listRoles, roleLabel, statusLabels, type EmployeeQuery, type EmployeeStatus } from "@/lib/access";
 
 type Sort = NonNullable<EmployeeQuery["sort"]>;
 type EmployeesSearch = { buscar?: string | undefined; estado?: EmployeeStatus | undefined; rol?: string | undefined; orden?: Sort | undefined; dir?: "desc" | undefined; pagina?: number | undefined; filas?: number | undefined };
@@ -29,14 +29,14 @@ export const Route = createFileRoute("/empleados/")({
       ...(PAGE_SIZES.includes(size as 5) && size !== 10 && { filas: size }),
     };
   },
-  component: () => <AccessPage trail={["Personas y accesos", "Empleados"]} title="Empleados" permission="employees.read"><EmployeesPage /></AccessPage>,
+  component: () => <AccessPage trail={["Recursos Humanos", "Personas y accesos", "Empleados"]} title="Empleados" permission="employees.read"><EmployeesPage /></AccessPage>,
   head: () => ({ meta: [{ title: "Empleados | Ecosistema X" }, { name: "description", content: "Empleados de la empresa: invitaciones, estado de su acceso y roles." }] }),
 });
 
-const sortLabels: Record<Sort, string> = { name: "Nombre", email: "Correo", createdAt: "Alta", status: "Estado" };
+const sortLabels: Record<Sort, string> = { name: "Nombre", email: "Correo", createdAt: "Fecha de registro", status: "Estado" };
 
 function EmployeesPage() {
-  const { state } = useActor();
+  const { state, actor } = useActor();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const setSearch = (change: Partial<EmployeesSearch>, keepPage = false) =>
@@ -54,6 +54,10 @@ function EmployeesPage() {
   const page = useMemo(() => listEmployees(state, { search: search.buscar, status: search.estado, roleId: search.rol, sort, direction, page: search.pagina, pageSize: search.filas }), [state, search, sort, direction]);
   const roles = listRoles(state);
   const filtered = Boolean(search.buscar || search.estado || search.rol);
+  const [inviting, setInviting] = useState(false);
+  const actions = useEmployeeActions(state, actor);
+  // Countdowns on "Reenviar" move while an invitation on this page waits out its cooldown.
+  useTicking(page.items.some(employee => canResendAt(employee) !== null));
 
   const SortHead = ({ column }: { column: Sort }) => {
     const active = sort === column;
@@ -75,7 +79,7 @@ function EmployeesPage() {
           <h1 className="page-heading">Empleados</h1>
           <p className="page-description">Invita a las personas de la empresa, sigue sus invitaciones y gestiona su acceso y sus roles.</p>
         </div>
-        {can(state, "employees.invite") && <Button asChild><Link to="/empleados/nuevo"><UserPlus />Invitar empleado</Link></Button>}
+        {can(state, "employees.invite") && <Button onClick={() => setInviting(true)}><UserPlus />Invitar empleado</Button>}
       </div>
 
       <section className="filters-bar access-filters" aria-label="Búsqueda y filtros">
@@ -94,7 +98,7 @@ function EmployeesPage() {
           <span id="employee-role" className="filter-label">Rol</span>
           <Select value={search.rol ?? "todos"} onValueChange={value => setSearch({ rol: value === "todos" ? undefined : value })}>
             <SelectTrigger aria-labelledby="employee-role" className="filter-trigger"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="todos">Todos</SelectItem>{roles.map(role => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}</SelectContent>
+            <SelectContent><SelectItem value="todos">Todos</SelectItem>{roles.map(role => <SelectItem key={role.id} value={role.id}>{roleLabel(role)}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         {filtered && <Button variant="ghost" className="filter-clear" onClick={() => { setTerm(""); setSearch({ buscar: undefined, estado: undefined, rol: undefined }); }}><X />Limpiar filtros</Button>}
@@ -125,19 +129,10 @@ function EmployeesPage() {
                   </span>
                 </TableCell>
                 <TableCell className="email-cell">{employee.email}</TableCell>
-                <TableCell><span className="role-chips">{employee.roleIds.map(id => findRole(state, id)).filter(Boolean).map(role => <span key={role!.id} className="role-chip">{role!.name}</span>)}</span></TableCell>
+                <TableCell><span className="role-chips">{employee.roleIds.map(id => findRole(state, id)).filter(Boolean).map(role => <span key={role!.id} className="role-chip">{roleLabel(role!)}</span>)}</span></TableCell>
                 <TableCell><EmployeeStatusBadge status={employeeStatus(employee)} /></TableCell>
-                <TableCell className="request-date">{formatDay(employee.createdAt)}</TableCell>
-                <TableCell>
-                  <div className="row-actions">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button asChild variant="ghost" size="icon" className="row-action"><Link to="/empleados/$id" params={{ id: employee.id }} aria-label={`Ver a ${fullName(employee)}`}><Eye /></Link></Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Ver detalle</TooltipContent>
-                    </Tooltip>
-                  </div>
-                </TableCell>
+                <TableCell className="request-date">{formatDateTime(employee.createdAt)}</TableCell>
+                <TableCell><EmployeeRowActions state={state} actor={actor} employee={employee} onAction={actions.start} /></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -145,6 +140,8 @@ function EmployeesPage() {
         <AccessPagination page={page.page} pageSize={page.pageSize} totalCount={page.totalCount}
           onPage={next => setSearch({ pagina: next > 1 ? next : undefined }, true)} onPageSize={size => setSearch({ filas: size === 10 ? undefined : size })} />
       </section>
+      {actions.dialogs}
+      <InviteEmployeeDialog state={state} actor={actor} open={inviting} onOpenChange={setInviting} />
     </div>
   );
 }

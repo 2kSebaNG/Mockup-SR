@@ -67,10 +67,12 @@ describe("employees", () => {
   });
   it("invites with assignable roles only and refuses taken emails and RUTs", () => {
     const state = seed();
-    const base = { email: "nuevo@aecon.cl", firstName: "Ana María", lastName: "Pérez Soto", rut: "21.000.000-" + rutDv(21000000), roleIds: ["role-colaborador"] };
+    const base = { email: "nuevo@aecon.cl", firstName: "Ana María", lastName: "Pérez Soto", rut: "21.000.000-" + rutDv(21000000), phone: "8765 4321", roleIds: ["role-colaborador"] };
     expect(code(createEmployee(state, actor(state, hr), { ...base, roleIds: ["role-admin"] }, NOW).outcome)).toBe("ROLE_ASSIGNMENT_FORBIDDEN");
     expect(code(createEmployee(state, actor(state, hr), { ...base, email: "vpena@aecon.cl" }, NOW).outcome)).toBe("EMAIL_TAKEN");
+    expect(code(createEmployee(state, actor(state, hr), { ...base, phone: "1234" }, NOW).outcome)).toBe("400");
     const created = createEmployee(state, actor(state, hr), base, NOW);
+    expect(created.outcome.ok && created.outcome.data.phone).toBe("87654321");
     expect(created.outcome.ok && employeeStatus(created.outcome.data, NOW)).toBe("pending");
   });
   it("never acts on yourself or on someone with more permissions", () => {
@@ -82,9 +84,9 @@ describe("employees", () => {
   });
   it("lets an admin move the admin role to someone else", () => {
     let state = seed();
-    state = updateEmployee(state, actor(state, admin), "emp-5", { firstName: "Vladimir", lastName: "Peña", rut: actor(state, "emp-5").rut, roleIds: ["role-admin"] }).state;
+    state = updateEmployee(state, actor(state, admin), "emp-5", { firstName: "Vladimir", lastName: "Peña", rut: actor(state, "emp-5").rut, phone: "12345678", roleIds: ["role-admin"] }).state;
     expect(permissionsOf(state, actor(state, "emp-5"))).toContain("employees.delete");
-    expect(code(updateEmployee(state, actor(state, "emp-5"), admin, { firstName: "Pablo", lastName: "Contreras", rut: actor(state, admin).rut, roleIds: ["role-supervisor"] }).outcome)).toBe("ok");
+    expect(code(updateEmployee(state, actor(state, "emp-5"), admin, { firstName: "Pablo", lastName: "Contreras", rut: actor(state, admin).rut, phone: "12345678", roleIds: ["role-supervisor"] }).outcome)).toBe("ok");
   });
   it("sends invitations again within the cooldown and the daily limit", () => {
     const state = seed();

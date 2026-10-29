@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/auth/password-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MicrosoftIcon } from "@/components/auth/auth-layout";
 import { ErrorAlert, fieldError, formatDateTime } from "@/components/access/access-ui";
@@ -104,7 +104,7 @@ export function AcceptInvitationForm({ className, token, redirectError, onAccept
         <form className="contents" onSubmit={event => { event.preventDefault(); if (rulesMet && !mismatch && confirm) void finish("password"); }} noValidate>
           <Field data-invalid={Boolean(fieldError(error, "password"))} data-disabled={!accepted}>
             <FieldLabel htmlFor="new-password">Contraseña</FieldLabel>
-            <Input id="new-password" type="password" autoComplete="new-password" disabled={!accepted} value={password} onChange={event => setPassword(event.target.value)} aria-describedby="password-rules" aria-invalid={Boolean(fieldError(error, "password"))} />
+            <PasswordInput id="new-password" autoComplete="new-password" disabled={!accepted} value={password} onChange={event => setPassword(event.target.value)} aria-describedby="password-rules" aria-invalid={Boolean(fieldError(error, "password"))} />
             <ul id="password-rules" className="password-rules" aria-label="Requisitos de la contraseña">
               {passwordRules.map(rule => {
                 const met = rule.test(password);
@@ -115,7 +115,7 @@ export function AcceptInvitationForm({ className, token, redirectError, onAccept
           </Field>
           <Field data-invalid={mismatch} data-disabled={!accepted}>
             <FieldLabel htmlFor="confirm-password">Repite la contraseña</FieldLabel>
-            <Input id="confirm-password" type="password" autoComplete="new-password" disabled={!accepted} value={confirm} onChange={event => setConfirm(event.target.value)} aria-invalid={mismatch} />
+            <PasswordInput id="confirm-password" autoComplete="new-password" disabled={!accepted} value={confirm} onChange={event => setConfirm(event.target.value)} aria-invalid={mismatch} />
             <FieldError>{mismatch ? "Las contraseñas no coinciden." : undefined}</FieldError>
           </Field>
           <Field>

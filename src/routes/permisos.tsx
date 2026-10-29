@@ -3,10 +3,10 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { Check, Info, Minus } from "lucide-react";
 import { AccessPage, useActor } from "@/components/access/access-ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { listRoles, permissionCatalog, permissionsOf, type PermissionCode } from "@/lib/access";
+import { listRoles, permissionCatalog, roleLabel, permissionsOf, type PermissionCode } from "@/lib/access";
 
 export const Route = createFileRoute("/permisos")({
-  component: () => <AccessPage trail={["Personas y accesos", "Permisos"]} title="Permisos" permission="roles.read"><PermissionsPage /></AccessPage>,
+  component: () => <AccessPage trail={["Recursos Humanos", "Personas y accesos", "Permisos"]} title="Permisos" permission="roles.read"><PermissionsPage /></AccessPage>,
   head: () => ({ meta: [{ title: "Permisos | Ecosistema X" }, { name: "description", content: "El catálogo de permisos y qué roles otorgan cada uno." }] }),
 });
 
@@ -26,7 +26,7 @@ function PermissionsPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="matrix-permission">Permiso</TableHead>
-              {roles.map(role => <TableHead key={role.id} className="matrix-role"><Link to="/roles/$id" params={{ id: role.id }} className="person-link">{role.name}</Link></TableHead>)}
+              {roles.map(role => <TableHead key={role.id} className="matrix-role"><Link to="/roles/$id" params={{ id: role.id }} className="person-link">{roleLabel(role)}</Link></TableHead>)}
               <TableHead className="matrix-role">Tú</TableHead>
             </TableRow>
           </TableHeader>

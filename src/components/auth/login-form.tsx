@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/auth/password-input";
 import { MicrosoftIcon } from "@/components/auth/auth-layout";
 import { ErrorAlert, fieldError } from "@/components/access/access-ui";
 import { DEMO_ADMIN_EMAIL, DEMO_PASSWORD, login, microsoftLogin, type AccessError } from "@/lib/access";
@@ -70,7 +71,7 @@ export function LoginForm({ className, redirectError, onSignedIn, onMicrosoftErr
             <FieldLabel htmlFor="password">Contraseña</FieldLabel>
             <Link to="/recuperar-contrasena" search={email ? { correo: email } : {}} className="ml-auto text-sm underline-offset-4 hover:underline">¿Olvidaste tu contraseña?</Link>
           </div>
-          <Input id="password" type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} aria-invalid={Boolean(fieldError(error, "password"))} />
+          <PasswordInput id="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} aria-invalid={Boolean(fieldError(error, "password"))} />
           <FieldError>{fieldError(error, "password")}</FieldError>
         </Field>
         <Field>

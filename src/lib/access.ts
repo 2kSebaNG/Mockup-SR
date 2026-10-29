@@ -37,7 +37,10 @@ export type SignInMethod = "password" | "microsoft";
 
 export type Invitation = { token: string; expiresAt: string; sends: string[]; email: { status: EmailStatus; updatedAt: string } };
 export type Employee = {
-  id: string; email: string; firstName: string; lastName: string; rut: string; roleIds: string[];
+  id: string; email: string; firstName: string; lastName: string; rut: string;
+  /** Chilean mobile: the 8 digits after +56 9 (the Human360 API has no phone yet; the mockup keeps it here). */
+  phone: string;
+  roleIds: string[];
   password: string | null; signInMethods: SignInMethod[];
   createdAt: string; createdBy: string | null; activatedAt: string | null;
   deactivation: { at: string; by: string | null; reason: string | null } | null;
@@ -315,8 +318,15 @@ export function deleteRole(state: AccessState, id: string): Step<null> {
 
 // --- Employees ----------------------------------------------------------------------------------------------------
 
-export type EmployeeInput = { email: string; firstName: string; lastName: string; rut: string; roleIds: string[] };
+export type EmployeeInput = { email: string; firstName: string; lastName: string; rut: string; phone: string; roleIds: string[] };
 export type EmployeeUpdate = Omit<EmployeeInput, "email">;
+
+/** The 8 digits after +56 9, whatever spaces were typed. */
+export const cleanPhone = (value: string) => value.replace(/\D/g, "");
+/** "12345678" ⇒ "+56 9 1234 5678". */
+export const formatPhone = (phone: string) => `+56 9 ${phone.slice(0, 4)} ${phone.slice(4)}`;
+/** System roles say so after their name: "Administrador - Sistema". */
+export const roleLabel = (role: Role) => (role.isSystem ? `${role.name} - Sistema` : role.name);
 
 function employeeDetails(state: AccessState, input: EmployeeUpdate & { email?: string }) {
   const details: Record<string, string> = {};
@@ -324,6 +334,7 @@ function employeeDetails(state: AccessState, input: EmployeeUpdate & { email?: s
   const first = nameError(input.firstName, "El nombre"); if (first) details["firstName"] = first;
   const last = nameError(input.lastName, "El apellido"); if (last) details["lastName"] = last;
   if (!normalizeRut(input.rut)) details["rut"] = "El RUT no es válido. Revisa el dígito verificador.";
+  if (!/^\d{8}$/.test(cleanPhone(input.phone))) details["phone"] = "Escribe los 8 dígitos que siguen a +56 9.";
   if (input.roleIds.length < 1 || input.roleIds.length > 10) details["roleIds"] = "Asigna entre 1 y 10 roles.";
   else if (input.roleIds.some(id => !findRole(state, id))) details["roleIds"] = "Uno de los roles no existe.";
   return details;
@@ -350,7 +361,7 @@ export function createEmployee(state: AccessState, actor: Employee, input: Emplo
   const rut = normalizeRut(input.rut)!;
   if (rutTaken(state, rut)) return fail(state, 409, "Ya existe un usuario con ese RUT.", "RUT_TAKEN");
   const employee: Employee = {
-    id: newId(), email: input.email.trim().toLowerCase(), firstName: collapse(input.firstName), lastName: collapse(input.lastName), rut, roleIds: [...new Set(input.roleIds)],
+    id: newId(), email: input.email.trim().toLowerCase(), firstName: collapse(input.firstName), lastName: collapse(input.lastName), rut, phone: cleanPhone(input.phone), roleIds: [...new Set(input.roleIds)],
     password: null, signInMethods: [], createdAt: new Date(now).toISOString(), createdBy: actor.id, activatedAt: null, deactivation: null,
     invitation: newInvitation(now), failedLogins: 0, lockedUntil: null,
   };
@@ -377,7 +388,7 @@ export function updateEmployee(state: AccessState, actor: Employee, id: string, 
   if (rolesOutOfReach(state, actor, changed)) return fail(state, 403, "No puedes asignar o quitar roles con permisos que no tienes.", "ROLE_ASSIGNMENT_FORBIDDEN");
   const rut = normalizeRut(input.rut)!;
   if (rutTaken(state, rut, id)) return fail(state, 409, "Ya existe un usuario con ese RUT.", "RUT_TAKEN");
-  const next: Employee = { ...target, firstName: collapse(input.firstName), lastName: collapse(input.lastName), rut, roleIds: [...new Set(input.roleIds)] };
+  const next: Employee = { ...target, firstName: collapse(input.firstName), lastName: collapse(input.lastName), rut, phone: cleanPhone(input.phone), roleIds: [...new Set(input.roleIds)] };
   const after = update(state, id, () => next);
   if (isAdmin(state, target) && !isAdmin(after, next) && activeAdmins(after).length === 0) return fail(state, 409, "Debe quedar al menos un administrador activo.", "LAST_ADMIN");
   return ok(after, next, "Empleado actualizado.");
@@ -555,7 +566,7 @@ export function seedAccess(now = Date.now()): AccessState {
     const created = at(seed.hoursAgo);
     const pending = seed.state === "pending" || seed.state === "expired" || seed.state === "bounced";
     return {
-      id: `emp-${index + 1}`, email, firstName, lastName, rut: `${rutBody}-${rutDv(rutBody)}`, roleIds,
+      id: `emp-${index + 1}`, email, firstName, lastName, rut: `${rutBody}-${rutDv(rutBody)}`, phone: String(rutBody * 7 + 10_000_000).slice(-8), roleIds,
       password: pending ? null : DEMO_PASSWORD, signInMethods: pending ? [] : seed.microsoft ? ["password", "microsoft"] : ["password"],
       createdAt: created, createdBy: index === 0 ? null : "emp-1", activatedAt: pending ? null : at(seed.hoursAgo - 20),
       deactivation: seed.state === "deactivated" ? { at: at(120), by: "emp-2", reason: seed.reason ?? null } : null,
@@ -567,4 +578,14 @@ export function seedAccess(now = Date.now()): AccessState {
     };
   });
   return { roles, employees, sessionId: null, acceptedTokens: [], termsVersion: "2026-10", privacyVersion: "2026-10" };
+}
+
+/** Why a role cannot be edited or deleted right now, or null when it can. */
+export function roleLocks(state: AccessState, role: Role) {
+  const manage = can(state, "roles.manage");
+  const members = roleMembers(state, role.id).length;
+  const edit = !manage ? "Necesitas el permiso «Gestionar roles»" : role.isSystem ? "El rol del sistema no se puede editar" : null;
+  const remove = !manage ? "Necesitas el permiso «Gestionar roles»" : role.isSystem ? "El rol del sistema no se puede eliminar"
+    : members ? `Lo ${members === 1 ? "tiene 1 empleado" : `tienen ${members} empleados`}: quítaselo antes de eliminarlo` : null;
+  return { edit, remove };
 }

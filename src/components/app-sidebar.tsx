@@ -33,7 +33,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Signed in, the menu shows what the session's permissions open; signed out, every link leads to the login first.
   const signedIn = sessionEmployee(access) !== null;
   const people = accessLinks.filter(link => !signedIn || can(access, link.permission)).map(({ title, to }) => ({ title, to }));
-  const items: NavItem[] = people.length ? [...navigation, { title: "Personas y accesos", icon: UsersRound, items: people }] : navigation;
+  // Personas y accesos is a section of the Recursos Humanos module.
+  const items: NavItem[] = people.length ? [...navigation, { title: "Recursos Humanos", icon: UsersRound, items: [{ title: "Personas y accesos", items: people }] }] : navigation;
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>

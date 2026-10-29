@@ -30,5 +30,5 @@ export function saveTheme(theme: Theme) {
   }
 }
 
-/** Runs in <head> before the app renders, so the dark theme never flashes light first. */
-export const themeScript = `(function(){try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";var r=document.documentElement;if(t==="dark")r.classList.add("dark");r.style.colorScheme=t;}catch(e){}})();`;
+/** Runs in <head> before the app renders, so the dark theme never flashes light first. Sign-in pages are always light. */
+export const themeScript = `(function(){try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";if(/^\\/(login|recuperar-contrasena|invitacion|terminos|privacidad)(\\/|$)/.test(location.pathname))t="light";var r=document.documentElement;if(t==="dark")r.classList.add("dark");r.style.colorScheme=t;}catch(e){}})();`;
