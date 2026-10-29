@@ -81,11 +81,13 @@ export function useRequestList<T extends MyRequest>(requests: T[], view: ViewMod
   const [pageSize, setPageSize] = useState(10);
   const categories = useMemo(() => [...new Set(requests.map(request => request.category))].sort((a, b) => a.localeCompare(b, "es")), [requests]);
   const dateField = filters.dateField ?? fallbackField;
-  const visible = useMemo(() => sortRequests(filterRequests(requests, filters, fallbackField), sort), [requests, filters, sort, fallbackField]);
+  // The dashboard only filters by period; search, status and category stay set for when the table comes back.
+  const applied = useMemo(() => (view === "dashboard" ? { ...emptyFilters, from: filters.from, to: filters.to, dateField: filters.dateField } : filters), [view, filters]);
+  const visible = useMemo(() => sortRequests(filterRequests(requests, applied, fallbackField), sort), [requests, applied, sort, fallbackField]);
   // Everything but the status filter: the status chart keeps every bar while it is the one filtering.
-  const statusScope = useMemo(() => filterRequests(requests, { ...filters, statuses: [] }, fallbackField), [requests, filters, fallbackField]);
+  const statusScope = useMemo(() => filterRequests(requests, { ...applied, statuses: [] }, fallbackField), [requests, applied, fallbackField]);
   // Everything but the date range: charts over time count each event (creation, completion…) inside the period.
-  const dateScope = useMemo(() => filterRequests(requests, { ...filters, from: "", to: "" }), [requests, filters]);
+  const dateScope = useMemo(() => filterRequests(requests, { ...applied, from: "", to: "" }), [requests, applied]);
   const pageData = paginate(visible, page, pageSize);
   const updateFilters = (patch: Partial<RequestFilters>) => { setFilters(current => ({ ...current, ...patch })); setPage(1); };
   const toggleFilter = (key: "statuses" | "categories", option: string, checked: boolean) => {
@@ -180,8 +182,11 @@ function MultiSelectFilter({ label, options, selected, onToggle }: { label: stri
 }
 
 /** Search and filters in one bar above the table and charts, which both follow it. */
-export function FiltersBar({ list }: { list: RequestList }) {
+export function FiltersBar({ list, view = "tabla" }: { list: RequestList; view?: ViewMode }) {
   const { filters, updateFilters, toggleFilter, categories } = list;
+  const dates = <DateRangeFilter id="filter-date" field={list.dateField} from={filters.from} to={filters.to} onChange={range => updateFilters(range)} onFieldChange={dateField => updateFilters({ dateField })} />;
+  // The dashboard reads only the period, so it shows only that control.
+  if (view === "dashboard") return <section className="filters-bar dates-only" aria-label="Período">{dates}</section>;
   const activeFilters = filters.statuses.length + filters.categories.length + (filters.from || filters.to ? 1 : 0);
   return (
     <section className="filters-bar" aria-label="Búsqueda y filtros">
@@ -191,7 +196,7 @@ export function FiltersBar({ list }: { list: RequestList }) {
       </div>
       <MultiSelectFilter label="Estado" options={requestStatuses} selected={filters.statuses} onToggle={(option, checked) => toggleFilter("statuses", option, checked)} />
       <MultiSelectFilter label="Categoría" options={categories} selected={filters.categories} onToggle={(option, checked) => toggleFilter("categories", option, checked)} />
-      <DateRangeFilter id="filter-date" field={list.dateField} from={filters.from} to={filters.to} onChange={range => updateFilters(range)} onFieldChange={dateField => updateFilters({ dateField })} />
+      {dates}
       {activeFilters > 0 && <Button variant="ghost" className="filter-clear" onClick={() => updateFilters({ statuses: [], categories: [], from: "", to: "", dateField: null })}><X />Limpiar filtros ({activeFilters})</Button>}
     </section>
   );

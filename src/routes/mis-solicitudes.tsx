@@ -72,7 +72,7 @@ function MyRequestsPage() {
           <p className="page-description">Revisa el avance de tus solicitudes, quién las revisa y cuáles están próximas a vencer.</p>
 
           <div className="page-toolbar"><ViewToggle view={view} onChange={setView} /></div>
-          <FiltersBar list={list} />
+          <FiltersBar list={list} view={view} />
 
           {view === "dashboard" ? <MyRequestsDashboard list={list} today={today} /> : <>
             <div className="requests-layout">

@@ -99,7 +99,7 @@ function DepartmentReviewPage() {
           </section>
 
           <div className="page-toolbar"><ViewToggle view={view} onChange={setView} /></div>
-          <FiltersBar list={list} />
+          <FiltersBar list={list} view={view} />
 
           {view === "dashboard" ? <DepartmentDashboard department={reviewer.department} today={today} range={list.filters} /> : <>
             <div className="requests-layout">

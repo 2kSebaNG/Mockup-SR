@@ -58,7 +58,7 @@ function ManageRequestsPage() {
           <p className="page-description">Autoriza o rechaza las solicitudes pendientes, o delégalas al departamento que debe revisarlas.</p>
 
           <div className="page-toolbar"><ViewToggle view={view} onChange={setView} /></div>
-          <FiltersBar list={list} />
+          <FiltersBar list={list} view={view} />
 
           {view === "dashboard" ? <ReviewDashboard list={list} today={today} /> : <>
             <div className="requests-layout">

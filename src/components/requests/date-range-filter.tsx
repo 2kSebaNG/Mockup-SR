@@ -32,30 +32,38 @@ const endOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() 
 const daysAgo = (date: Date, days: number) => new Date(date.getFullYear(), date.getMonth(), date.getDate() - days);
 
 /** The ranges people ask for most, computed from today. */
-function presets(today: Date): { label: string; from: Date; to: Date }[] {
+function presets(today: Date): { key: string; label: string; from: Date; to: Date }[] {
   const quarter = Math.floor(today.getMonth() / 3) * 3;
   const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
   return [
-    { label: "Últimos 7 días", from: daysAgo(today, 6), to: today },
-    { label: "Últimos 30 días", from: daysAgo(today, 29), to: today },
-    { label: "Este mes", from: new Date(today.getFullYear(), today.getMonth(), 1), to: endOfMonth(today) },
-    { label: "Mes anterior", from: lastMonth, to: endOfMonth(lastMonth) },
-    { label: "Este trimestre", from: new Date(today.getFullYear(), quarter, 1), to: new Date(today.getFullYear(), quarter + 3, 0) },
+    { key: "7d", label: "7 días", from: daysAgo(today, 6), to: today },
+    { key: "30d", label: "30 días", from: daysAgo(today, 29), to: today },
+    { key: "mes", label: "Este mes", from: new Date(today.getFullYear(), today.getMonth(), 1), to: endOfMonth(today) },
+    { key: "mes-anterior", label: "Mes anterior", from: lastMonth, to: endOfMonth(lastMonth) },
+    { key: "trimestre", label: "Trimestre", from: new Date(today.getFullYear(), quarter, 1), to: new Date(today.getFullYear(), quarter + 3, 0) },
   ];
 }
 
 /**
- * One control for a date range: which date it reads (creation, due date or resolution), quick presets, and a shadcn
- * calendar in range mode inside a popover (two months on wide screens).
+ * A date range: quick presets beside it, and a popover with which date it reads (creation, due date or resolution)
+ * and a shadcn calendar in range mode for any other range (two months on wide screens).
  */
 export function DateRangeFilter({ id, field, from, to, onChange, onFieldChange }: { id: string; field: DateField; from: string; to: string; onChange: (range: { from: string; to: string }) => void; onFieldChange: (field: DateField) => void }) {
   const [open, setOpen] = useState(false);
   const mobile = useIsMobile();
   const range: DateRange | undefined = from || to ? { from: toDate(from), to: toDate(to) } : undefined;
   const active = Boolean(from || to);
+  const options = presets(new Date());
+  const preset = options.find(option => from === toIso(option.from) && to === toIso(option.to))?.key ?? "";
   return (
     <div className="filter-field filter-dates">
       <span id={`${id}-label`} className="filter-label">{fieldLabels[field].label}</span>
+      <div className="date-filter-row">
+        {/* Pressing the active preset again clears the range. */}
+      <ToggleGroup type="single" variant="outline" size="sm" className="date-presets" aria-label="Períodos frecuentes" value={preset}
+        onValueChange={value => { const chosen = options.find(option => option.key === value); onChange(chosen ? { from: toIso(chosen.from), to: toIso(chosen.to) } : { from: "", to: "" }); }}>
+        {options.map(option => <ToggleGroupItem key={option.key} value={option.key}>{option.label}</ToggleGroupItem>)}
+      </ToggleGroup>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" className={`filter-trigger${active ? " active" : ""}`} aria-labelledby={`${id}-label ${id}-value`}>
@@ -71,28 +79,16 @@ export function DateRangeFilter({ id, field, from, to, onChange, onFieldChange }
               {(Object.keys(fieldLabels) as DateField[]).map(key => <ToggleGroupItem key={key} value={key}>{fieldLabels[key].option}</ToggleGroupItem>)}
             </ToggleGroup>
           </div>
-          <div className="date-range-body">
-            <ul className="date-range-presets" aria-label="Períodos frecuentes">
-              {presets(new Date()).map(preset => {
-                const selected = from === toIso(preset.from) && to === toIso(preset.to);
-                return (
-                  <li key={preset.label}>
-                    <Button type="button" variant={selected ? "secondary" : "ghost"} size="sm" aria-pressed={selected} onClick={() => onChange({ from: toIso(preset.from), to: toIso(preset.to) })}>{preset.label}</Button>
-                  </li>
-                );
-              })}
-            </ul>
-            <Calendar
-              mode="range"
-              locale={es}
-              numberOfMonths={mobile ? 1 : 2}
-              defaultMonth={range?.from ?? new Date()}
-              selected={range}
-              onSelect={next => onChange({ from: toIso(next?.from), to: toIso(next?.to) })}
-            />
-          </div>
+          <Calendar
+            mode="range"
+            locale={es}
+            numberOfMonths={mobile ? 1 : 2}
+            defaultMonth={range?.from ?? new Date()}
+            selected={range}
+            onSelect={next => onChange({ from: toIso(next?.from), to: toIso(next?.to) })}
+          />
           <div className="date-range-footer">
-            <span>{range?.from && !range.to ? "Elige la fecha final." : "Elige un período frecuente o la fecha inicial y la final."}</span>
+            <span>{range?.from && !range.to ? "Elige la fecha final." : "Elige la fecha inicial y la final."}</span>
             <div>
               <Button type="button" variant="ghost" size="sm" disabled={!active} onClick={() => onChange({ from: "", to: "" })}><X />Limpiar</Button>
               <Button type="button" size="sm" onClick={() => setOpen(false)}>Listo</Button>
@@ -100,6 +96,7 @@ export function DateRangeFilter({ id, field, from, to, onChange, onFieldChange }
           </div>
         </PopoverContent>
       </Popover>
+      </div>
     </div>
   );
 }

@@ -8,8 +8,7 @@ import { ChartSkeleton } from "@/components/requests/request-skeletons";
 /** A status the page summarizes, with the short name its chart row shows. */
 export type SummaryStatus = { status: RequestStatus; label: string };
 
-/** `dimmed` fades a bar while other bars are the ones filtering the table. */
-type Row = { key: string; label: string; count: number; color: string; dimmed?: boolean };
+type Row = { key: string; label: string; count: number; color: string };
 
 const ROW_HEIGHT = 40;
 // Same colors as the status badges in the table, so a state reads the same everywhere.
@@ -43,7 +42,7 @@ function RowTooltip({ active, payload, total }: { active?: boolean; payload?: { 
  * One horizontal bar per row with its value written at the end: readable at a glance on a phone
  * without a legend. Each bar wears the color of what it counts; the label beside it names it.
  */
-function HorizontalBars({ rows, title, onSelect }: { rows: Row[]; title: string; onSelect?: (row: Row) => void }) {
+function HorizontalBars({ rows, title }: { rows: Row[]; title: string }) {
   const total = rows.reduce((sum, row) => sum + row.count, 0);
   // The chart measures its container before drawing (and cannot on the server): hold its place until then.
   const [mounted, setMounted] = useState(false);
@@ -63,9 +62,8 @@ function HorizontalBars({ rows, title, onSelect }: { rows: Row[]; title: string;
             isAnimationActive={false}
             minPointSize={2}
             background={{ fill: "var(--muted)", radius: 4 }}
-            {...(onSelect && { className: "chart-bar-selectable", onClick: (data: { payload?: Row }) => data.payload && onSelect(data.payload) })}
           >
-            {rows.map(row => <Cell key={row.key} fill={row.color} fillOpacity={row.dimmed ? 0.3 : 1} />)}
+            {rows.map(row => <Cell key={row.key} fill={row.color} />)}
             <LabelList dataKey="count" position="right" className="chart-value" />
           </Bar>
         </BarChart>
@@ -78,20 +76,17 @@ function HorizontalBars({ rows, title, onSelect }: { rows: Row[]; title: string;
   );
 }
 
-/** Requests by status. Ignores the status filter so every bar stays visible; clicking a bar toggles that filter. */
+/** Requests by status in the dashboard's period. */
 export function StatusChart({ list, statuses }: { list: RequestList; statuses: SummaryStatus[] }) {
-  const selected = list.filters.statuses;
   const rows = statuses.map(({ status, label }): Row => ({
     key: status,
     label,
     count: list.statusScope.filter(request => request.status === status).length,
     color: statusColors[status],
-    dimmed: selected.length > 0 && !selected.includes(status),
   }));
   return (
     <>
-      <HorizontalBars rows={rows} title="Solicitudes por estado" onSelect={row => list.toggleFilter("statuses", row.key, !selected.includes(row.key as RequestStatus))} />
-      <p className="chart-hint">{selected.length ? "Las barras con color pleno son las que filtran. Tócalas de nuevo para quitarlas." : "Toca una barra para filtrar por ese estado."}</p>
+      <HorizontalBars rows={rows} title="Solicitudes por estado" />
     </>
   );
 }

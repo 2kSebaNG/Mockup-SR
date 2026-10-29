@@ -630,7 +630,6 @@
 .request-chart { width: 100%; aspect-ratio: auto; }
 .request-chart .recharts-cartesian-axis-tick text { fill: var(--foreground); }
 .chart-value { fill: var(--foreground); fill-opacity: 1; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.chart-bar-selectable { cursor: pointer; }
 .chart-hint, .chart-empty { margin: 0; color: var(--muted-foreground); font-size: 12px; line-height: 1.4; }
 .chart-empty { font-size: 14px; }
 .chart-tooltip { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: var(--tooltip); color: var(--tooltip-foreground); border-radius: 6px; font-size: 13px; box-shadow: 0 8px 20px oklch(0.2 0 0 / 12%); }
@@ -761,11 +760,13 @@
 @media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 860px) { .dashboard-grid { grid-template-columns: 1fr; } }
 .date-range-field { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; }
-.date-range-body { display: flex; }
-.date-range-presets { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 10px 8px; border-right: 1px solid var(--border); list-style: none; }
-.date-range-presets button { width: 100%; justify-content: flex-start; font-weight: 500; }
-@media (max-width: 640px) {
-  .date-range-body { flex-direction: column; }
-  .date-range-presets { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--border); }
-  .date-range-presets button { width: auto; }
-}
+
+/* Period presets beside the range trigger; in the table the date filter takes its own row. */
+.date-filter-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.date-presets { flex-wrap: wrap; justify-content: flex-start; }
+.date-presets button { height: 40px; padding: 0 12px; background: var(--card); }
+.date-presets button[data-state=on] { border-color: var(--primary); background: var(--accent); color: var(--foreground); font-weight: 600; }
+.date-filter-row .filter-trigger { width: auto; min-width: 230px; flex: 1; max-width: 320px; }
+.filters-bar:not(.dates-only) .filter-dates { grid-column: 1 / -1; }
+.filters-bar.dates-only { display: flex; }
+@media (max-width: 480px) { .date-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; } .date-presets button { width: 100%; padding: 0 6px; } .date-filter-row .filter-trigger { max-width: none; } }

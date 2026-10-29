@@ -25,7 +25,7 @@ export function DepartmentDashboard({ department, today, range }: { department: 
   return (
     <div className="dashboard">
       <SampleDataNotice>
-        <strong>Datos de ejemplo.</strong> Las solicitudes todavía no tienen etapas, así que este dashboard muestra un set de etapas generado para {department}. Los filtros de estado y categoría no lo cambian; el período sí define la ventana de los gráficos de tiempo.
+        <strong>Datos de ejemplo.</strong> Las solicitudes todavía no tienen etapas, así que este dashboard muestra un set de etapas generado para {department}. El período de arriba define la ventana de los gráficos de tiempo.
       </SampleDataNotice>
       <KpiRow items={[
         { label: "Etapas activas", value: kpis.active, count: kpis.active, hint: "En curso en el departamento", icon: <Layers />, tone: "managing", share: { of: stages.length, label: "de todas las etapas" } },
