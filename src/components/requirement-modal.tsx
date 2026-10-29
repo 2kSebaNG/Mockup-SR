@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useServerFn } from "@tanstack/react-start";
 import { Plus, Trash2, Wand2, Loader2, Check, FilePlus2, Save, Send, Hourglass, Package, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -235,7 +236,7 @@ export function RequirementModal({ open, onOpenChange, request = null, onSaved }
   const count = items.length;
   return <Dialog open={open} onOpenChange={value => { if (!busy) onOpenChange(value); }}><DialogContent className="requirement-modal" onInteractOutside={event => event.preventDefault()}>
     <DialogHeader className="requirement-modal-header"><div className="modal-eyebrow"><FilePlus2 size={15} />SOLICITUD DE REQUERIMIENTOS</div><DialogTitle className="requirement-modal-title">{request ? `Editar solicitud ${request.code}` : "Nueva solicitud"}</DialogTitle><DialogDescription>{request?.parentCode ? `Parte del paquete ${request.parentCode}` : "Detalle del requerimiento"}</DialogDescription></DialogHeader>
-    <div className="requirement-modal-body">
+    <ScrollArea type="auto" className="requirement-modal-scroll"><div className="requirement-modal-body">
       <section className="description-section"><div className="description-heading"><label htmlFor="request-description">Describe lo que necesitas</label><span className="ai-indicator"><Wand2 size={14} />Asistencia IA</span></div>
         <p className="description-hint">{editing ? "La IA completa los campos de abajo a partir de tu descripción." : "La IA completa los requerimientos de abajo. Puedes pedir varias cosas a la vez: cada una se enviará como una solicitud individual."}</p>
         <Textarea id="request-description" maxLength={4000} value={description} disabled={busy} onChange={e => { setDescription(e.target.value); setNotice(""); }} placeholder={editing ? "Ej. Necesito 50 litros de jugo de naranja marca Soprole para el 30 de octubre." : "Ej. Necesito 2 soldadores y una grúa horquilla por un día para el 30 de octubre."} className="requirement-description" />
@@ -255,7 +256,7 @@ export function RequirementModal({ open, onOpenChange, request = null, onSaved }
       </div>}
       {!editing && count > 1 && <p role="status" className="package-notice"><Package size={16} /><span>Se crearán <strong>{count} solicitudes individuales</strong> agrupadas en un paquete. Cada una se autoriza, rechaza o delega por separado, y podrás seguir el paquete completo desde Mis solicitudes.</span></p>}
       {error && <p role="alert" className="requirement-error">{error}</p>}
-    </div>
+    </div></ScrollArea>
     <footer className="requirement-modal-footer"><span>{request ? `Responsable: ${responsibleFor(request).name}` : "Los campos con * son obligatorios. Se enviará al Administrador de Contrato para su revisión"}</span><div className="requirement-footer-actions"><Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cerrar</Button><Button type="button" disabled={busy} onClick={save}>{saving ? <Loader2 className="animate-spin" /> : request ? <Save /> : <Send />}{saving ? "Guardando…" : request ? "Guardar cambios" : count > 1 ? `Enviar ${count} solicitudes` : "Enviar solicitud"}</Button></div></footer>
   </DialogContent></Dialog>;
 }

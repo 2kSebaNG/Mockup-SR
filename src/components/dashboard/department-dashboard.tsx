@@ -25,14 +25,17 @@ export function DepartmentDashboard({ department, today }: { department: string;
         <strong>Datos de ejemplo.</strong> Las solicitudes todavía no tienen etapas, así que este dashboard muestra un set de etapas generado para {department}. Los filtros de arriba no lo cambian.
       </SampleDataNotice>
       <KpiRow items={[
-        { label: "Etapas activas", value: kpis.active, hint: "En curso en el departamento", icon: <Layers /> },
-        { label: "Etapas sin asignar", value: kpis.unassigned, hint: "Activas sin ejecutor", icon: <UserX />, tone: kpis.unassigned ? "alert" : "neutral" },
-        { label: "Reasignaciones pendientes", value: kpis.reassignments, hint: "Esperan pasar a otra persona", icon: <Repeat2 /> },
-        { label: "Etapas atrasadas", value: kpis.overdue, hint: "Activas con el plazo vencido", icon: <CalendarX2 />, tone: kpis.overdue ? "alert" : "neutral" },
+        { label: "Etapas activas", value: kpis.active, count: kpis.active, hint: "En curso en el departamento", icon: <Layers />, tone: "managing", share: { of: stages.length, label: "de todas las etapas" } },
+        { label: "Etapas sin asignar", value: kpis.unassigned, count: kpis.unassigned, hint: "Activas sin ejecutor", icon: <UserX />, tone: "review", share: { of: kpis.active, label: "de las activas" } },
+        { label: "Reasignaciones pendientes", value: kpis.reassignments, count: kpis.reassignments, hint: "Esperan pasar a otra persona", icon: <Repeat2 />, tone: "sent", share: { of: kpis.active, label: "de las activas" } },
+        { label: "Etapas atrasadas", value: kpis.overdue, count: kpis.overdue, hint: "Activas con el plazo vencido", icon: <CalendarX2 />, tone: "rejected", share: { of: kpis.active, label: "de las activas" } },
       ]} />
       <div className="dashboard-grid">
-        <DashboardCard title="Carga de trabajo por persona" subtitle="Etapas activas de cada ejecutor, por tipo de etapa" height={people.length * 40 + 80} wide>
+        <DashboardCard title="Carga de trabajo por persona" subtitle="Etapas activas de cada ejecutor, por tipo de etapa">
           <StackedBars data={people} categoryKey="executor" series={workload} labelWidth={128} />
+        </DashboardCard>
+        <DashboardCard title="Rendimiento semanal" subtitle="Etapas completadas por semana, últimas 8 semanas">
+          <AreaCompare data={completedPerWeek(stages, today)} xKey="week" series={throughput} />
         </DashboardCard>
         <DashboardCard title="Tiempo promedio por tipo de etapa" subtitle="Días desde que empieza hasta que se completa">
           <ColumnBars data={averageDaysByType(stages)} categoryKey="type" valueKey="dias" label="Días promedio" color="var(--series-1)" format={value => `${value.toLocaleString("es-CL")} d`} />
@@ -40,10 +43,7 @@ export function DepartmentDashboard({ department, today }: { department: string;
         <DashboardCard title="Tasa de omisión por etapa" subtitle="Porcentaje de etapas de cada tipo que se omitieron">
           <ColumnBars data={skipRateByType(stages)} categoryKey="type" valueKey="tasa" label="Omitidas (%)" color="var(--series-2)" format={value => `${value}%`} />
         </DashboardCard>
-        <DashboardCard title="Rendimiento semanal" subtitle="Etapas completadas por semana, últimas 8 semanas">
-          <AreaCompare data={completedPerWeek(stages, today)} xKey="week" series={throughput} />
-        </DashboardCard>
-        <DashboardCard title="Estimado vs. real" subtitle="Días promedio de las etapas completadas cada semana: sobre la línea estimada es atraso">
+        <DashboardCard title="Estimado vs. real" subtitle="Días promedio de las etapas completadas cada semana: sobre la línea estimada es atraso" wide>
           <LineCompare data={estimateVsActual(stages, today)} xKey="week" series={compliance} unit=" d" />
         </DashboardCard>
         <DashboardCard title="Etapas sin responsable o por reasignar" subtitle={`${needingOwner.length} etapas, las más urgentes primero`} chart={false} wide>

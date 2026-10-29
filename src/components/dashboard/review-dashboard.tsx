@@ -34,17 +34,17 @@ export function ReviewDashboard({ list, today }: { list: RequestList; today: str
   return (
     <div className="dashboard">
       <div className="dashboard-grid">
-        <DashboardCard title="Derivaciones por departamento" subtitle={`${unclassified} sin clasificar · ${derivations.departments.length} departamentos con solicitudes`} height={rows.length * 40 + 56} wide>
+        <DashboardCard title="Derivaciones por departamento" subtitle={`${unclassified} sin clasificar · ${derivations.departments.length} departamentos con solicitudes`}>
           <StackedBars data={rows} categoryKey="department" series={stack} labelWidth={128} />
+        </DashboardCard>
+        <DashboardCard title="Por categoría" subtitle="Desglose de las solicitudes recibidas">
+          <Donut slices={categories} totalLabel="solicitudes" />
         </DashboardCard>
         <DashboardCard title="Recibidas vs. clasificadas" subtitle={`Últimos 14 días: ${totals.recibidas} recibidas, ${totals.clasificadas} clasificadas (delegadas o decididas)`}>
           <AreaCompare data={daily} xKey="day" series={flow} />
         </DashboardCard>
-        <DashboardCard title="Demanda semanal por departamento" subtitle="Derivadas y rechazadas en los últimos 7 días" height={Math.max(weekly.length, 1) * 54 + 56}>
+        <DashboardCard title="Demanda semanal por departamento" subtitle="Derivadas y rechazadas en los últimos 7 días">
           {weekly.length ? <GroupedBars data={weekly} categoryKey="department" series={demand} labelWidth={128} /> : <p className="chart-empty">Ninguna solicitud se ha derivado a un departamento con los filtros actuales.</p>}
-        </DashboardCard>
-        <DashboardCard title="Por categoría" subtitle="Desglose de las solicitudes recibidas" height={220}>
-          <Donut slices={categories} totalLabel="solicitudes" />
         </DashboardCard>
       </div>
     </div>

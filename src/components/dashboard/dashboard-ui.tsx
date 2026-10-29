@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { type LabelProps, Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, LabelList, Line, LineChart, Pie, PieChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +15,10 @@ export type Series = { key: string; label: string; color: string };
 const configOf = (series: Series[]): ChartConfig => Object.fromEntries(series.map(item => [item.key, { label: item.label }]));
 const tooltip = <ChartTooltipContent className="chart-tooltip-content" />;
 const axis = { tickLine: false, axisLine: false, tick: { fontSize: 12 } } as const;
+/** Every chart draws at this height, so cards side by side line up. */
+export const CHART_HEIGHT = 260;
+/** Lines and outlines take a deeper step of their soft fill, so they stay legible on the card. */
+const strokeOf = (color: string) => `color-mix(in oklab, ${color} 70%, var(--foreground))`;
 
 function useMounted() {
   const [mounted, setMounted] = useState(false);
@@ -21,7 +27,7 @@ function useMounted() {
 }
 
 /** A chart's card: title and a short reading of it, then the chart, drawn once it can measure its width. */
-export function DashboardCard({ title, subtitle, children, height = 240, wide = false, chart = true }: { title: string; subtitle?: ReactNode; children: ReactNode; height?: number; wide?: boolean; chart?: boolean }) {
+export function DashboardCard({ title, subtitle, children, height = CHART_HEIGHT, wide = false, chart = true }: { title: string; subtitle?: ReactNode; children: ReactNode; height?: number; wide?: boolean; chart?: boolean }) {
   const mounted = useMounted();
   return (
     <section className={`dashboard-card${wide ? " wide" : ""}`} aria-label={title}>
@@ -29,27 +35,39 @@ export function DashboardCard({ title, subtitle, children, height = 240, wide = 
         <h2>{title}</h2>
         {subtitle && <p>{subtitle}</p>}
       </header>
-      {chart && !mounted ? <Skeleton className="dashboard-chart-skeleton" style={{ height }} /> : <div className="dashboard-card-body" style={chart ? { minHeight: height } : undefined}>{children}</div>}
+      {chart && !mounted ? <Skeleton className="dashboard-chart-skeleton" style={{ height }} /> : <div className={`dashboard-card-body${chart ? " chart" : ""}`} style={chart ? { minHeight: height } : undefined}>{children}</div>}
     </section>
   );
 }
 
-export type Kpi = { label: string; value: ReactNode; hint: string; icon: ReactNode; tone?: "neutral" | "alert" };
+/** The status color a KPI wears; the same soft fills as the badges and charts. */
+export type KpiTone = "sent" | "review" | "managing" | "completed" | "rejected" | "cancelled";
+/** How much of a whole the number is, drawn as a short meter so its weight reads before the digits. */
+export type KpiShare = { of: number; label: string };
+export type Kpi = { label: string; value: ReactNode; count?: number; hint: string; icon: ReactNode; tone: KpiTone; share?: KpiShare };
 
-/** The headline numbers of a dashboard: value first, then what it counts. */
+/** The headline numbers of a dashboard: value first, then what it counts and, when it helps, its share of a whole. */
 export function KpiRow({ items }: { items: Kpi[] }) {
   return (
     <section className="kpi-row" aria-label="Indicadores">
-      {items.map(item => (
-        <article key={item.label} className={`kpi-card${item.tone === "alert" ? " alert" : ""}`}>
-          <span className="kpi-icon" aria-hidden="true">{item.icon}</span>
-          <div>
-            <strong>{item.value}</strong>
-            <span className="kpi-label">{item.label}</span>
-            <span className="kpi-hint">{item.hint}</span>
-          </div>
-        </article>
-      ))}
+      {items.map(item => {
+        const percent = item.share && item.count !== undefined && item.share.of > 0 ? Math.round((item.count / item.share.of) * 100) : null;
+        return (
+          <article key={item.label} className={`kpi-card status-${item.tone}`}>
+            <div className="kpi-top">
+              <span className="kpi-icon" aria-hidden="true">{item.icon}</span>
+              <span className="kpi-label">{item.label}</span>
+            </div>
+            <strong className="kpi-value">{item.value}</strong>
+            {percent !== null ? (
+              <div className="kpi-share">
+                <div className="kpi-meter" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label={`${percent}% ${item.share!.label}`}><span style={{ width: `${Math.min(percent, 100)}%` }} /></div>
+                <span>{percent}% {item.share!.label}</span>
+              </div>
+            ) : <span className="kpi-hint">{item.hint}</span>}
+          </article>
+        );
+      })}
     </section>
   );
 }
@@ -64,7 +82,7 @@ function endLabel(last: number) {
 }
 
 /** Two or more measures over time on one scale. */
-export function LineCompare({ data, xKey, series, height = 240, unit }: { data: Record<string, unknown>[]; xKey: string; series: Series[]; height?: number; unit?: string }) {
+export function LineCompare({ data, xKey, series, height = CHART_HEIGHT, unit }: { data: Record<string, unknown>[]; xKey: string; series: Series[]; height?: number; unit?: string }) {
   return (
     <ChartContainer config={configOf(series)} className="dashboard-chart" style={{ height }}>
       <LineChart data={data} margin={{ top: 8, right: 28, bottom: 0, left: -16 }}>
@@ -74,7 +92,7 @@ export function LineCompare({ data, xKey, series, height = 240, unit }: { data: 
         <ChartTooltip content={tooltip} />
         <ChartLegend content={<ChartLegendContent />} />
         {series.map(item => (
-          <Line key={item.key} dataKey={item.key} name={item.key} type="monotone" stroke={item.color} strokeWidth={2} dot={{ r: 3, fill: item.color }} activeDot={{ r: 5 }} connectNulls isAnimationActive={false}>
+          <Line key={item.key} dataKey={item.key} name={item.key} type="monotone" stroke={strokeOf(item.color)} strokeWidth={2} dot={{ r: 3, fill: item.color, stroke: strokeOf(item.color) }} activeDot={{ r: 5 }} connectNulls isAnimationActive={false}>
             <LabelList content={endLabel(data.length - 1)} />
           </Line>
         ))}
@@ -84,7 +102,7 @@ export function LineCompare({ data, xKey, series, height = 240, unit }: { data: 
 }
 
 /** Volumes over time; with two series they overlap lightly so both stay visible. */
-export function AreaCompare({ data, xKey, series, height = 240 }: { data: Record<string, unknown>[]; xKey: string; series: Series[]; height?: number }) {
+export function AreaCompare({ data, xKey, series, height = CHART_HEIGHT }: { data: Record<string, unknown>[]; xKey: string; series: Series[]; height?: number }) {
   return (
     <ChartContainer config={configOf(series)} className="dashboard-chart" style={{ height }}>
       <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -16 }}>
@@ -94,7 +112,7 @@ export function AreaCompare({ data, xKey, series, height = 240 }: { data: Record
         <ChartTooltip content={tooltip} />
         {series.length > 1 && <ChartLegend content={<ChartLegendContent />} />}
         {series.map(item => (
-          <Area key={item.key} dataKey={item.key} name={item.key} type="monotone" stroke={item.color} strokeWidth={2} fill={item.color} fillOpacity={series.length > 1 ? 0.18 : 0.28} isAnimationActive={false} />
+          <Area key={item.key} dataKey={item.key} name={item.key} type="monotone" stroke={strokeOf(item.color)} strokeWidth={2} fill={item.color} fillOpacity={series.length > 1 ? 0.35 : 0.5} isAnimationActive={false} />
         ))}
       </AreaChart>
     </ChartContainer>
@@ -109,7 +127,7 @@ export function StackedBars({ data, categoryKey, series, labelWidth = 120, rowHe
   const rows = data.map(row => ({ ...row, total: series.reduce((sum, item) => sum + Number(row[item.key] ?? 0), 0) }));
   const last = series.length - 1;
   return (
-    <ChartContainer config={configOf(series)} className="dashboard-chart" style={{ height: rows.length * rowHeight + 56 }}>
+    <ChartContainer config={configOf(series)} className="dashboard-chart" style={{ height: Math.max(CHART_HEIGHT, rows.length * rowHeight + 56) }}>
       <BarChart data={rows} layout="vertical" margin={{ top: 0, right: 36, bottom: 0, left: 0 }} barCategoryGap={8}>
         <XAxis type="number" hide allowDecimals={false} />
         <YAxis type="category" dataKey={categoryKey} width={labelWidth} {...axis} tick={{ fontSize: 13 }} />
@@ -129,7 +147,7 @@ export function StackedBars({ data, categoryKey, series, labelWidth = 120, rowHe
 /** Side-by-side bars per category for measures that are compared, not added. */
 export function GroupedBars({ data, categoryKey, series, labelWidth = 120 }: { data: Record<string, unknown>[]; categoryKey: string; series: Series[]; labelWidth?: number }) {
   return (
-    <ChartContainer config={configOf(series)} className="dashboard-chart" style={{ height: data.length * (series.length * 18 + 18) + 56 }}>
+    <ChartContainer config={configOf(series)} className="dashboard-chart" style={{ height: Math.max(CHART_HEIGHT, data.length * (series.length * 18 + 18) + 56) }}>
       <BarChart data={data} layout="vertical" margin={{ top: 0, right: 32, bottom: 0, left: 0 }} barCategoryGap={10} barGap={2}>
         <XAxis type="number" hide allowDecimals={false} />
         <YAxis type="category" dataKey={categoryKey} width={labelWidth} {...axis} tick={{ fontSize: 13 }} />
@@ -146,7 +164,7 @@ export function GroupedBars({ data, categoryKey, series, labelWidth = 120 }: { d
 }
 
 /** One measure per category in a single color, the value on top of each bar. */
-export function ColumnBars({ data, categoryKey, valueKey, label, color, format = value => String(value), height = 240 }: { data: Record<string, unknown>[]; categoryKey: string; valueKey: string; label: string; color: string; format?: (value: number) => string; height?: number }) {
+export function ColumnBars({ data, categoryKey, valueKey, label, color, format = value => String(value), height = CHART_HEIGHT }: { data: Record<string, unknown>[]; categoryKey: string; valueKey: string; label: string; color: string; format?: (value: number) => string; height?: number }) {
   return (
     <ChartContainer config={{ [valueKey]: { label } }} className="dashboard-chart" style={{ height }}>
       <BarChart data={data} margin={{ top: 22, right: 4, bottom: 0, left: 4 }}>
@@ -197,7 +215,11 @@ export function Donut({ slices, totalLabel }: { slices: DonutSlice[]; totalLabel
 export type Column<T> = { header: string; cell: (row: T) => ReactNode; className?: string };
 
 /** A short data table; on phones each row becomes a card with its labels, since the columns would not fit. */
-export function DataTable<T>({ rows, columns, rowKey }: { rows: T[]; columns: Column<T>[]; rowKey: (row: T) => string }) {
+export function DataTable<T>({ rows: all, columns, rowKey, pageSize = 5 }: { rows: T[]; columns: Column<T>[]; rowKey: (row: T) => string; pageSize?: number }) {
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(all.length / pageSize));
+  const current = Math.min(page, pages - 1);
+  const rows = all.slice(current * pageSize, current * pageSize + pageSize);
   return (
     <>
       <div className="dashboard-table">
@@ -215,6 +237,16 @@ export function DataTable<T>({ rows, columns, rowKey }: { rows: T[]; columns: Co
           </li>
         ))}
       </ul>
+      {pages > 1 && (
+        <footer className="dashboard-pager">
+          <span aria-live="polite">{current * pageSize + 1}–{current * pageSize + rows.length} de {all.length}</span>
+          <div>
+            <Button type="button" variant="outline" size="sm" disabled={current === 0} onClick={() => setPage(current - 1)} aria-label="Página anterior"><ChevronLeft /></Button>
+            <span>{current + 1} / {pages}</span>
+            <Button type="button" variant="outline" size="sm" disabled={current >= pages - 1} onClick={() => setPage(current + 1)} aria-label="Página siguiente"><ChevronRight /></Button>
+          </div>
+        </footer>
+      )}
     </>
   );
 }

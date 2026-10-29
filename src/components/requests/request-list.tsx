@@ -1,9 +1,11 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChartColumnBig, ChevronDown, Table2, ChevronLeft, ChevronRight, Search, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DateRangeFilter } from "@/components/requests/date-range-filter";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { TableHead } from "@/components/ui/table";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -150,6 +152,7 @@ function MultiSelectFilter({ label, options, selected, onToggle }: { label: stri
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="filter-popover">
+          <ScrollArea type="auto" className="filter-popover-scroll">
           <fieldset className="filter-options">
             <legend className="sr-only">{label}</legend>
             {options.map(option => {
@@ -162,6 +165,7 @@ function MultiSelectFilter({ label, options, selected, onToggle }: { label: stri
               );
             })}
           </fieldset>
+          </ScrollArea>
         </PopoverContent>
       </Popover>
     </div>
@@ -171,7 +175,7 @@ function MultiSelectFilter({ label, options, selected, onToggle }: { label: stri
 /** Search and filters in one bar above the table and charts, which both follow it. */
 export function FiltersBar({ list }: { list: RequestList }) {
   const { filters, updateFilters, toggleFilter, categories } = list;
-  const activeFilters = filters.statuses.length + filters.categories.length + (filters.from ? 1 : 0) + (filters.to ? 1 : 0);
+  const activeFilters = filters.statuses.length + filters.categories.length + (filters.from || filters.to ? 1 : 0);
   return (
     <section className="filters-bar" aria-label="Búsqueda y filtros">
       <div className="filter-field filter-search">
@@ -180,14 +184,7 @@ export function FiltersBar({ list }: { list: RequestList }) {
       </div>
       <MultiSelectFilter label="Estado" options={requestStatuses} selected={filters.statuses} onToggle={(option, checked) => toggleFilter("statuses", option, checked)} />
       <MultiSelectFilter label="Categoría" options={categories} selected={filters.categories} onToggle={(option, checked) => toggleFilter("categories", option, checked)} />
-      <div className="filter-field filter-dates" role="group" aria-labelledby="filter-due-label">
-        <span id="filter-due-label" className="filter-label">Fecha límite</span>
-        <div className="date-range">
-          <Input type="date" aria-label="Fecha límite desde" value={filters.from} max={filters.to || undefined} onChange={event => updateFilters({ from: event.target.value })} />
-          <span aria-hidden="true">–</span>
-          <Input type="date" aria-label="Fecha límite hasta" value={filters.to} min={filters.from || undefined} onChange={event => updateFilters({ to: event.target.value })} />
-        </div>
-      </div>
+      <DateRangeFilter id="filter-due" label="Fecha límite" from={filters.from} to={filters.to} onChange={range => updateFilters(range)} />
       {activeFilters > 0 && <Button variant="ghost" className="filter-clear" onClick={() => updateFilters({ statuses: [], categories: [], from: "", to: "" })}><X />Limpiar filtros ({activeFilters})</Button>}
     </section>
   );

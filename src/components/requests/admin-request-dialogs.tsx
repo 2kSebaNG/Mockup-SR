@@ -4,7 +4,7 @@ import { Bot, Building2, CalendarClock, CheckSquare, Loader2, Save, Trash2, Wand
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogBody } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { RequestContent, RequestOutcome } from "@/components/requests/request-content";
@@ -172,6 +172,7 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat,
   return <>
     <Dialog open={request !== null && delegating === null} onOpenChange={open => { if (!open && !busy) onClose(); }}>
       <DialogContent className="admin-detail">
+        <DialogBody>
         {request && <>
           <DialogHeader>
             <div className="admin-detail-heading"><DialogTitle className="request-detail-title">Solicitud {request.code}</DialogTitle><span className="status-line"><StatusBadge status={request.status} /><DueWarning request={request} today={today} /></span></div>
@@ -193,6 +194,7 @@ export function AdminRequestDetail({ request, today, onClose, onChanged, onChat,
             </> : <p className="admin-decided">{request.status === "En gestión" && !reviewer ? "En gestión por el departamento; su encargado decidirá si se autoriza o rechaza." : `Esta solicitud ya está ${statusPhrase(request.status)}.`}</p>}
           </DialogFooter>
         </>}
+        </DialogBody>
       </DialogContent>
     </Dialog>
 

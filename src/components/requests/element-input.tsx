@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -68,12 +69,14 @@ export function ElementInput({ id, category, value, onChange, onKnownChange, dis
         {loading && <Loader2 className="animate-spin element-input-spinner" aria-hidden="true" />}
       </div>
       {visible && (
-        <ul id={listId} role="listbox" className="element-suggestions">
+        <ScrollArea type="auto" className="element-suggestions">
+        <ul id={listId} role="listbox">
           {suggestions.map((name, index) => (
             // onMouseDown keeps the input focused, so the choice is applied before the list closes.
             <li key={name} id={`${listId}-${index}`} role="option" aria-selected={index === active} className={index === active ? "active" : undefined} onMouseDown={event => { event.preventDefault(); choose(name); }}>{name}</li>
           ))}
         </ul>
+        </ScrollArea>
       )}
     </div>
   );

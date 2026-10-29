@@ -38,19 +38,19 @@ export function MyRequestsDashboard({ list, today }: { list: RequestList; today:
   return (
     <div className="dashboard">
       <KpiRow items={[
-        { label: "Activas", value: kpis.active, hint: "Enviadas, en revisión o en gestión", icon: <Hourglass /> },
-        { label: "Completadas", value: kpis.completed, hint: "Resueltas a favor", icon: <CheckCircle2 /> },
-        { label: "Atrasadas", value: kpis.overdue, hint: "Activas con la fecha límite vencida", icon: <TriangleAlert />, tone: kpis.overdue ? "alert" : "neutral" },
-        { label: "Tiempo promedio de resolución", value: kpis.averageResolutionDays === null ? "—" : <>{kpis.averageResolutionDays.toLocaleString("es-CL")}<small> días</small></>, hint: "Desde que se crea hasta que se completa o rechaza", icon: <Clock3 /> },
+        { label: "Activas", value: kpis.active, count: kpis.active, hint: "Enviadas, en revisión o en gestión", icon: <Hourglass />, tone: "sent", share: { of: requests.length, label: "del total" } },
+        { label: "Completadas", value: kpis.completed, count: kpis.completed, hint: "Resueltas a favor", icon: <CheckCircle2 />, tone: "completed", share: { of: requests.length, label: "del total" } },
+        { label: "Atrasadas", value: kpis.overdue, count: kpis.overdue, hint: "Activas con la fecha límite vencida", icon: <TriangleAlert />, tone: "rejected", share: { of: kpis.active, label: "de las activas" } },
+        { label: "Tiempo promedio de resolución", value: kpis.averageResolutionDays === null ? "—" : <>{kpis.averageResolutionDays.toLocaleString("es-CL")}<small> días</small></>, hint: "Desde que se crea hasta que se completa o rechaza", icon: <Clock3 />, tone: "managing" },
       ]} />
       <div className="dashboard-grid">
-        <DashboardCard title="Solicitudes por estado" subtitle={`${list.statusScope.filter(request => statuses.some(item => item.status === request.status)).length} solicitudes`} height={statuses.length * 40}>
+        <DashboardCard title="Solicitudes por estado" subtitle={`${list.statusScope.filter(request => statuses.some(item => item.status === request.status)).length} solicitudes`}>
           <StatusChart list={list} statuses={statuses} />
         </DashboardCard>
         <DashboardCard title="Creadas vs. completadas" subtitle={`Últimas 8 semanas: ${weekTotals.creadas} creadas, ${weekTotals.completadas} completadas`}>
           <LineCompare data={weekly} xKey="week" series={trend} />
         </DashboardCard>
-        <DashboardCard title="Por categoría" subtitle="Qué pides con más frecuencia" height={220}>
+        <DashboardCard title="Por categoría" subtitle="Qué pides con más frecuencia">
           <Donut slices={categories} totalLabel="solicitudes" />
         </DashboardCard>
         <DashboardCard title="Próximas a vencer" subtitle="Activas que vencen en 7 días o menos, y las ya vencidas" chart={false}>

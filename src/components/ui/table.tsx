@@ -1,12 +1,15 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
+    // Wide tables scroll sideways inside their own area, never the page.
+    <ScrollArea type="auto" className="table-scroll relative w-full">
       <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
-    </div>
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
   ),
 );
 Table.displayName = "Table";

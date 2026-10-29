@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { CalendarClock, Check, Eye, Package, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody } from "@/components/ui/dialog";
 import { PackageSkeleton } from "@/components/requests/request-skeletons";
 import { DueWarning, StatusBadge, formatDate, statusClass } from "@/components/requests/request-list";
 import { packageProgress, pendingStatuses, responsibleFor, type MyRequest, type RequestStatus } from "@/lib/my-requests";
@@ -65,6 +65,7 @@ export function PackageDialog({ parentCode: openCode, children: openChildren, to
   return (
     <Dialog open={openCode !== null} onOpenChange={open => { if (!open) onClose(); }}>
       <DialogContent className="admin-detail package-dialog">
+        <DialogBody>
         <DialogHeader>
           <div className="modal-eyebrow"><Package size={15} />SEGUIMIENTO DEL PAQUETE</div>
           <div className="admin-detail-heading"><DialogTitle className="request-detail-title">Solicitud {parentCode}</DialogTitle>{first && <span className={`package-state ${progress.label === "En curso" ? "open" : progress.label === "Anulada" ? "cancelled" : "closed"}`}>{progress.label}</span>}</div>
@@ -103,6 +104,7 @@ export function PackageDialog({ parentCode: openCode, children: openChildren, to
             ))}
           </ol>
         </>}
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

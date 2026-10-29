@@ -12,7 +12,7 @@ import { RequestsPageSkeleton } from "@/components/requests/request-skeletons";
 import { MyRequestsDashboard } from "@/components/dashboard/my-requests-dashboard";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { canEdit, canCancel, packageChildren, responsibleFor, todayIso, type MyRequest } from "@/lib/my-requests";
 import { cancelMyRequest, listMyRequests } from "@/lib/requests.functions";
@@ -124,6 +124,7 @@ function MyRequestsPage() {
 
         <Dialog open={viewing !== null} onOpenChange={open => { if (!open) setViewing(null); }}>
           <DialogContent className="admin-detail">
+        <DialogBody>
             {viewing && <>
               <DialogHeader>
                 <div className="modal-eyebrow"><ClipboardList size={15} />DETALLE DE SOLICITUD</div>
@@ -134,7 +135,8 @@ function MyRequestsPage() {
               <RequestOutcome request={viewing} />
               <p className="admin-assignment"><Building2 aria-hidden="true" />{viewing.department ? <>Delegada a <strong>{viewing.department}</strong> · revisa </> : <>Responsable: </>}<PersonLink person={responsibleFor(viewing)} onOpen={() => { openChat(viewing); setViewing(null); }} /><span className="detail-role">{responsibleFor(viewing).role}</span></p>
             </>}
-          </DialogContent>
+        </DialogBody>
+      </DialogContent>
         </Dialog>
 
         <AlertDialog open={cancelling !== null} onOpenChange={open => { if (!open && !cancelBusy) { setCancelling(null); setCancelError(""); } }}>
