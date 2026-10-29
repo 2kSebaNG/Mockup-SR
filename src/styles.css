@@ -660,6 +660,9 @@
 .skeleton-block { width: 100%; height: 120px; }
 .skeleton-nav-item { width: 100%; height: 40px; }
 .skeleton-toggle { width: 230px; height: 44px; }
+.skeleton-period { width: min(700px, 100%); }
+.skeleton-kpi { height: 140px; }
+.skeleton-chart-card { height: 340px; }
 .chart-skeleton { display: flex; flex-direction: column; justify-content: space-around; }
 .chart-skeleton-row { display: flex; align-items: center; gap: 12px; height: 40px; }
 .chart-skeleton-label { flex: 0 0 92px; height: 12px; }
@@ -766,7 +769,7 @@
 .date-presets { flex-wrap: wrap; justify-content: flex-start; }
 .date-presets button { height: 40px; padding: 0 12px; background: var(--card); }
 .date-presets button[data-state=on] { border-color: var(--primary); background: var(--accent); color: var(--foreground); font-weight: 600; }
-.date-filter-row .filter-trigger { width: auto; min-width: 230px; flex: 1; max-width: 320px; }
-.filters-bar:not(.dates-only) .filter-dates { grid-column: 1 / -1; }
+.date-filter-row { min-width: 0; }
+.dates-only .date-filter-row .filter-trigger { width: auto; min-width: 230px; flex: 1; max-width: 320px; }
 .filters-bar.dates-only { display: flex; }
 @media (max-width: 480px) { .date-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; } .date-presets button { width: 100%; padding: 0 6px; } .date-filter-row .filter-trigger { max-width: none; } }

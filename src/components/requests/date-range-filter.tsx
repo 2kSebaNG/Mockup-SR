@@ -45,10 +45,10 @@ function presets(today: Date): { key: string; label: string; from: Date; to: Dat
 }
 
 /**
- * A date range: quick presets beside it, and a popover with which date it reads (creation, due date or resolution)
- * and a shadcn calendar in range mode for any other range (two months on wide screens).
+ * A date range: a popover with which date it reads (creation, due date or resolution) and a shadcn calendar in range
+ * mode (two months on wide screens); with `presets`, quick periods beside it (the dashboard, where the period is the only filter).
  */
-export function DateRangeFilter({ id, field, from, to, onChange, onFieldChange }: { id: string; field: DateField; from: string; to: string; onChange: (range: { from: string; to: string }) => void; onFieldChange: (field: DateField) => void }) {
+export function DateRangeFilter({ id, field, from, to, onChange, onFieldChange, presets: withPresets = false }: { id: string; field: DateField; from: string; to: string; onChange: (range: { from: string; to: string }) => void; onFieldChange: (field: DateField) => void; presets?: boolean }) {
   const [open, setOpen] = useState(false);
   const mobile = useIsMobile();
   const range: DateRange | undefined = from || to ? { from: toDate(from), to: toDate(to) } : undefined;
@@ -60,10 +60,10 @@ export function DateRangeFilter({ id, field, from, to, onChange, onFieldChange }
       <span id={`${id}-label`} className="filter-label">{fieldLabels[field].label}</span>
       <div className="date-filter-row">
         {/* Pressing the active preset again clears the range. */}
-      <ToggleGroup type="single" variant="outline" size="sm" className="date-presets" aria-label="Períodos frecuentes" value={preset}
+      {withPresets && <ToggleGroup type="single" variant="outline" size="sm" className="date-presets" aria-label="Períodos frecuentes" value={preset}
         onValueChange={value => { const chosen = options.find(option => option.key === value); onChange(chosen ? { from: toIso(chosen.from), to: toIso(chosen.to) } : { from: "", to: "" }); }}>
         {options.map(option => <ToggleGroupItem key={option.key} value={option.key}>{option.label}</ToggleGroupItem>)}
-      </ToggleGroup>
+      </ToggleGroup>}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" className={`filter-trigger${active ? " active" : ""}`} aria-labelledby={`${id}-label ${id}-value`}>

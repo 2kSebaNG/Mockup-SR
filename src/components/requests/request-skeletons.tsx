@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useSearch } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -34,7 +35,9 @@ function TableSkeleton({ columns, rows = 8 }: { columns: number; rows?: number }
   );
 }
 
-function FiltersSkeleton() {
+/** The table's four filters, or only the period in the dashboard. */
+function FiltersSkeleton({ dashboard }: { dashboard: boolean }) {
+  if (dashboard) return <div className="filters-bar dates-only"><div className="filter-field filter-dates"><Skeleton className="skeleton-line short" /><Skeleton className="skeleton-control skeleton-period" /></div></div>;
   return (
     <div className="filters-bar">
       {["filter-search", "", "", "filter-dates"].map((className, index) => (
@@ -47,8 +50,20 @@ function FiltersSkeleton() {
   );
 }
 
-/** Shown while a request page loads its data: the real title, then the view switch, filters and table as placeholders. */
+/** Shown while a request page loads its data: the real title, then the view switch, filters and table or dashboard as placeholders. */
+/** Headline numbers and chart cards while a dashboard loads. */
+function DashboardSkeleton() {
+  return (
+    <div className="dashboard">
+      <div className="kpi-row">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="skeleton-kpi" />)}</div>
+      <div className="dashboard-grid">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="skeleton-chart-card" />)}</div>
+    </div>
+  );
+}
+
 export function RequestsPageSkeleton({ trail, title, columns, children }: { trail: string[]; title: string; columns: number; children?: ReactNode }) {
+  // The pending page already knows its search, so the placeholder matches the view being opened.
+  const dashboard = (useSearch({ strict: false }) as { vista?: string }).vista === "dashboard";
   return (
     <AppShell trail={trail}>
       <div className="my-requests" role="status" aria-busy="true" aria-label={`Cargando ${title.toLowerCase()}`}>
@@ -57,8 +72,8 @@ export function RequestsPageSkeleton({ trail, title, columns, children }: { trai
         <Skeleton className="skeleton-description" />
         {children}
         <div className="page-toolbar"><Skeleton className="skeleton-toggle" /></div>
-        <FiltersSkeleton />
-        <TableSkeleton columns={columns} />
+        <FiltersSkeleton dashboard={dashboard} />
+        {dashboard ? <DashboardSkeleton /> : <TableSkeleton columns={columns} />}
       </div>
     </AppShell>
   );

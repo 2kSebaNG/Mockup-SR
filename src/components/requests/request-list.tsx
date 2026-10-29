@@ -184,9 +184,9 @@ function MultiSelectFilter({ label, options, selected, onToggle }: { label: stri
 /** Search and filters in one bar above the table and charts, which both follow it. */
 export function FiltersBar({ list, view = "tabla" }: { list: RequestList; view?: ViewMode }) {
   const { filters, updateFilters, toggleFilter, categories } = list;
-  const dates = <DateRangeFilter id="filter-date" field={list.dateField} from={filters.from} to={filters.to} onChange={range => updateFilters(range)} onFieldChange={dateField => updateFilters({ dateField })} />;
-  // The dashboard reads only the period, so it shows only that control.
-  if (view === "dashboard") return <section className="filters-bar dates-only" aria-label="Período">{dates}</section>;
+  const dates = (presets: boolean) => <DateRangeFilter id="filter-date" field={list.dateField} from={filters.from} to={filters.to} presets={presets} onChange={range => updateFilters(range)} onFieldChange={dateField => updateFilters({ dateField })} />;
+  // The dashboard reads only the period: just that control, with quick periods beside it.
+  if (view === "dashboard") return <section className="filters-bar dates-only" aria-label="Período">{dates(true)}</section>;
   const activeFilters = filters.statuses.length + filters.categories.length + (filters.from || filters.to ? 1 : 0);
   return (
     <section className="filters-bar" aria-label="Búsqueda y filtros">
@@ -196,7 +196,7 @@ export function FiltersBar({ list, view = "tabla" }: { list: RequestList; view?:
       </div>
       <MultiSelectFilter label="Estado" options={requestStatuses} selected={filters.statuses} onToggle={(option, checked) => toggleFilter("statuses", option, checked)} />
       <MultiSelectFilter label="Categoría" options={categories} selected={filters.categories} onToggle={(option, checked) => toggleFilter("categories", option, checked)} />
-      {dates}
+      {dates(false)}
       {activeFilters > 0 && <Button variant="ghost" className="filter-clear" onClick={() => updateFilters({ statuses: [], categories: [], from: "", to: "", dateField: null })}><X />Limpiar filtros ({activeFilters})</Button>}
     </section>
   );
