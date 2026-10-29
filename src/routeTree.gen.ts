@@ -12,8 +12,20 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as GestionarSolicitudesRouteImport } from './routes/gestionar-solicitudes'
+import { Route as InvitacionRouteImport } from './routes/invitacion'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as MisSolicitudesRouteImport } from './routes/mis-solicitudes'
+import { Route as PermisosRouteImport } from './routes/permisos'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
+import { Route as RecuperarContrasenaRouteImport } from './routes/recuperar-contrasena'
 import { Route as RevisionDepartamentoRouteImport } from './routes/revision-departamento'
+import { Route as TerminosRouteImport } from './routes/terminos'
+import { Route as EmpleadosIndexRouteImport } from './routes/empleados.index'
+import { Route as EmpleadosIdRouteImport } from './routes/empleados.$id'
+import { Route as EmpleadosNuevoRouteImport } from './routes/empleados.nuevo'
+import { Route as RolesIndexRouteImport } from './routes/roles.index'
+import { Route as RolesIdRouteImport } from './routes/roles.$id'
+import { Route as RolesNuevoRouteImport } from './routes/roles.nuevo'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -30,9 +42,34 @@ const GestionarSolicitudesRoute = GestionarSolicitudesRouteImport.update({
   path: '/gestionar-solicitudes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InvitacionRoute = InvitacionRouteImport.update({
+  id: '/invitacion',
+  path: '/invitacion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MisSolicitudesRoute = MisSolicitudesRouteImport.update({
   id: '/mis-solicitudes',
   path: '/mis-solicitudes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PermisosRoute = PermisosRouteImport.update({
+  id: '/permisos',
+  path: '/permisos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecuperarContrasenaRoute = RecuperarContrasenaRouteImport.update({
+  id: '/recuperar-contrasena',
+  path: '/recuperar-contrasena',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RevisionDepartamentoRoute = RevisionDepartamentoRouteImport.update({
@@ -40,28 +77,99 @@ const RevisionDepartamentoRoute = RevisionDepartamentoRouteImport.update({
   path: '/revision-departamento',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TerminosRoute = TerminosRouteImport.update({
+  id: '/terminos',
+  path: '/terminos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmpleadosIndexRoute = EmpleadosIndexRouteImport.update({
+  id: '/empleados/',
+  path: '/empleados/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmpleadosIdRoute = EmpleadosIdRouteImport.update({
+  id: '/empleados/$id',
+  path: '/empleados/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmpleadosNuevoRoute = EmpleadosNuevoRouteImport.update({
+  id: '/empleados/nuevo',
+  path: '/empleados/nuevo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RolesIndexRoute = RolesIndexRouteImport.update({
+  id: '/roles/',
+  path: '/roles/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RolesIdRoute = RolesIdRouteImport.update({
+  id: '/roles/$id',
+  path: '/roles/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RolesNuevoRoute = RolesNuevoRouteImport.update({
+  id: '/roles/nuevo',
+  path: '/roles/nuevo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/catalogo': typeof CatalogoRoute
   '/gestionar-solicitudes': typeof GestionarSolicitudesRoute
+  '/invitacion': typeof InvitacionRoute
+  '/login': typeof LoginRoute
   '/mis-solicitudes': typeof MisSolicitudesRoute
+  '/permisos': typeof PermisosRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/recuperar-contrasena': typeof RecuperarContrasenaRoute
   '/revision-departamento': typeof RevisionDepartamentoRoute
+  '/terminos': typeof TerminosRoute
+  '/empleados/$id': typeof EmpleadosIdRoute
+  '/empleados/nuevo': typeof EmpleadosNuevoRoute
+  '/roles/$id': typeof RolesIdRoute
+  '/roles/nuevo': typeof RolesNuevoRoute
+  '/empleados/': typeof EmpleadosIndexRoute
+  '/roles/': typeof RolesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/catalogo': typeof CatalogoRoute
   '/gestionar-solicitudes': typeof GestionarSolicitudesRoute
+  '/invitacion': typeof InvitacionRoute
+  '/login': typeof LoginRoute
   '/mis-solicitudes': typeof MisSolicitudesRoute
+  '/permisos': typeof PermisosRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/recuperar-contrasena': typeof RecuperarContrasenaRoute
   '/revision-departamento': typeof RevisionDepartamentoRoute
+  '/terminos': typeof TerminosRoute
+  '/empleados/$id': typeof EmpleadosIdRoute
+  '/empleados/nuevo': typeof EmpleadosNuevoRoute
+  '/roles/$id': typeof RolesIdRoute
+  '/roles/nuevo': typeof RolesNuevoRoute
+  '/empleados': typeof EmpleadosIndexRoute
+  '/roles': typeof RolesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/catalogo': typeof CatalogoRoute
   '/gestionar-solicitudes': typeof GestionarSolicitudesRoute
+  '/invitacion': typeof InvitacionRoute
+  '/login': typeof LoginRoute
   '/mis-solicitudes': typeof MisSolicitudesRoute
+  '/permisos': typeof PermisosRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/recuperar-contrasena': typeof RecuperarContrasenaRoute
   '/revision-departamento': typeof RevisionDepartamentoRoute
+  '/terminos': typeof TerminosRoute
+  '/empleados/$id': typeof EmpleadosIdRoute
+  '/empleados/nuevo': typeof EmpleadosNuevoRoute
+  '/roles/$id': typeof RolesIdRoute
+  '/roles/nuevo': typeof RolesNuevoRoute
+  '/empleados/': typeof EmpleadosIndexRoute
+  '/roles/': typeof RolesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -69,30 +177,78 @@ export interface FileRouteTypes {
     | '/'
     | '/catalogo'
     | '/gestionar-solicitudes'
+    | '/invitacion'
+    | '/login'
     | '/mis-solicitudes'
+    | '/permisos'
+    | '/privacidad'
+    | '/recuperar-contrasena'
     | '/revision-departamento'
+    | '/terminos'
+    | '/empleados/$id'
+    | '/empleados/nuevo'
+    | '/roles/$id'
+    | '/roles/nuevo'
+    | '/empleados/'
+    | '/roles/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/catalogo'
     | '/gestionar-solicitudes'
+    | '/invitacion'
+    | '/login'
     | '/mis-solicitudes'
+    | '/permisos'
+    | '/privacidad'
+    | '/recuperar-contrasena'
     | '/revision-departamento'
+    | '/terminos'
+    | '/empleados/$id'
+    | '/empleados/nuevo'
+    | '/roles/$id'
+    | '/roles/nuevo'
+    | '/empleados'
+    | '/roles'
   id:
     | '__root__'
     | '/'
     | '/catalogo'
     | '/gestionar-solicitudes'
+    | '/invitacion'
+    | '/login'
     | '/mis-solicitudes'
+    | '/permisos'
+    | '/privacidad'
+    | '/recuperar-contrasena'
     | '/revision-departamento'
+    | '/terminos'
+    | '/empleados/$id'
+    | '/empleados/nuevo'
+    | '/roles/$id'
+    | '/roles/nuevo'
+    | '/empleados/'
+    | '/roles/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CatalogoRoute: typeof CatalogoRoute
   GestionarSolicitudesRoute: typeof GestionarSolicitudesRoute
+  InvitacionRoute: typeof InvitacionRoute
+  LoginRoute: typeof LoginRoute
   MisSolicitudesRoute: typeof MisSolicitudesRoute
+  PermisosRoute: typeof PermisosRoute
+  PrivacidadRoute: typeof PrivacidadRoute
+  RecuperarContrasenaRoute: typeof RecuperarContrasenaRoute
   RevisionDepartamentoRoute: typeof RevisionDepartamentoRoute
+  TerminosRoute: typeof TerminosRoute
+  EmpleadosIdRoute: typeof EmpleadosIdRoute
+  EmpleadosNuevoRoute: typeof EmpleadosNuevoRoute
+  RolesIdRoute: typeof RolesIdRoute
+  RolesNuevoRoute: typeof RolesNuevoRoute
+  EmpleadosIndexRoute: typeof EmpleadosIndexRoute
+  RolesIndexRoute: typeof RolesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -118,11 +274,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GestionarSolicitudesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invitacion': {
+      id: '/invitacion'
+      path: '/invitacion'
+      fullPath: '/invitacion'
+      preLoaderRoute: typeof InvitacionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mis-solicitudes': {
       id: '/mis-solicitudes'
       path: '/mis-solicitudes'
       fullPath: '/mis-solicitudes'
       preLoaderRoute: typeof MisSolicitudesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/permisos': {
+      id: '/permisos'
+      path: '/permisos'
+      fullPath: '/permisos'
+      preLoaderRoute: typeof PermisosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar-contrasena': {
+      id: '/recuperar-contrasena'
+      path: '/recuperar-contrasena'
+      fullPath: '/recuperar-contrasena'
+      preLoaderRoute: typeof RecuperarContrasenaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/revision-departamento': {
@@ -132,6 +323,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RevisionDepartamentoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terminos': {
+      id: '/terminos'
+      path: '/terminos'
+      fullPath: '/terminos'
+      preLoaderRoute: typeof TerminosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/empleados/': {
+      id: '/empleados/'
+      path: '/empleados'
+      fullPath: '/empleados/'
+      preLoaderRoute: typeof EmpleadosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/empleados/$id': {
+      id: '/empleados/$id'
+      path: '/empleados/$id'
+      fullPath: '/empleados/$id'
+      preLoaderRoute: typeof EmpleadosIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/empleados/nuevo': {
+      id: '/empleados/nuevo'
+      path: '/empleados/nuevo'
+      fullPath: '/empleados/nuevo'
+      preLoaderRoute: typeof EmpleadosNuevoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roles/': {
+      id: '/roles/'
+      path: '/roles'
+      fullPath: '/roles/'
+      preLoaderRoute: typeof RolesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roles/$id': {
+      id: '/roles/$id'
+      path: '/roles/$id'
+      fullPath: '/roles/$id'
+      preLoaderRoute: typeof RolesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roles/nuevo': {
+      id: '/roles/nuevo'
+      path: '/roles/nuevo'
+      fullPath: '/roles/nuevo'
+      preLoaderRoute: typeof RolesNuevoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -139,8 +379,20 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CatalogoRoute: CatalogoRoute,
   GestionarSolicitudesRoute: GestionarSolicitudesRoute,
+  InvitacionRoute: InvitacionRoute,
+  LoginRoute: LoginRoute,
   MisSolicitudesRoute: MisSolicitudesRoute,
+  PermisosRoute: PermisosRoute,
+  PrivacidadRoute: PrivacidadRoute,
+  RecuperarContrasenaRoute: RecuperarContrasenaRoute,
   RevisionDepartamentoRoute: RevisionDepartamentoRoute,
+  TerminosRoute: TerminosRoute,
+  EmpleadosIdRoute: EmpleadosIdRoute,
+  EmpleadosNuevoRoute: EmpleadosNuevoRoute,
+  RolesIdRoute: RolesIdRoute,
+  RolesNuevoRoute: RolesNuevoRoute,
+  EmpleadosIndexRoute: EmpleadosIndexRoute,
+  RolesIndexRoute: RolesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

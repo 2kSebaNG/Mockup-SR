@@ -1,11 +1,12 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
-import { ClipboardList, House } from "lucide-react";
+import { ClipboardList, House, UsersRound } from "lucide-react";
 
 import { NavMain, type NavItem } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@/components/ui/sidebar";
-import { DEMO_USER } from "@/lib/organization";
+import { can, sessionEmployee, type PermissionCode } from "@/lib/access";
+import { useAccess } from "@/lib/access-store";
 
 const navigation: NavItem[] = [
   { title: "Inicio", to: "/", icon: House },
@@ -21,7 +22,18 @@ const navigation: NavItem[] = [
   },
 ];
 
+const accessLinks: { title: string; to: "/empleados" | "/roles" | "/permisos"; permission: PermissionCode }[] = [
+  { title: "Empleados", to: "/empleados", permission: "employees.read" },
+  { title: "Roles", to: "/roles", permission: "roles.read" },
+  { title: "Permisos", to: "/permisos", permission: "roles.read" },
+];
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const access = useAccess();
+  // Signed in, the menu shows what the session's permissions open; signed out, every link leads to the login first.
+  const signedIn = sessionEmployee(access) !== null;
+  const people = accessLinks.filter(link => !signedIn || can(access, link.permission)).map(({ title, to }) => ({ title, to }));
+  const items: NavItem[] = people.length ? [...navigation, { title: "Personas y accesos", icon: UsersRound, items: people }] : navigation;
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -40,10 +52,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navigation} />
+        <NavMain items={items} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={DEMO_USER} />
+        <NavUser />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

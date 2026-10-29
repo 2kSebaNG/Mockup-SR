@@ -4,8 +4,11 @@ import { ChevronRight, type LucideIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from "@/components/ui/sidebar";
 
-type NavLink = { title: string; to: "/" | "/mis-solicitudes" | "/gestionar-solicitudes" | "/revision-departamento" | "/catalogo" };
+type NavLink = { title: string; to: "/" | "/mis-solicitudes" | "/gestionar-solicitudes" | "/revision-departamento" | "/catalogo" | "/empleados" | "/roles" | "/permisos" };
 export type NavItem = { title: string; icon: LucideIcon } & ({ to: NavLink["to"]; items?: never } | { to?: never; items: NavLink[] });
+
+// A section stays highlighted on its inner pages (/empleados/nuevo, /roles/…).
+const within = (pathname: string, to: string) => pathname === to || (to !== "/" && pathname.startsWith(`${to}/`));
 
 export function NavMain({ items }: { items: NavItem[] }) {
   const pathname = useRouterState({ select: state => state.location.pathname });
@@ -17,7 +20,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
           <Collapsible key={item.title} asChild defaultOpen className="group/collapsible">
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
-                <SidebarMenuButton tooltip={item.title} isActive={item.items.some(sub => sub.to === pathname)}>
+                <SidebarMenuButton tooltip={item.title} isActive={item.items.some(sub => within(pathname, sub.to))}>
                   <item.icon />
                   <span>{item.title}</span>
                   <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -27,7 +30,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                 <SidebarMenuSub>
                   {item.items.map(sub => (
                     <SidebarMenuSubItem key={sub.title}>
-                      <SidebarMenuSubButton asChild isActive={sub.to === pathname}>
+                      <SidebarMenuSubButton asChild isActive={within(pathname, sub.to)}>
                         <Link to={sub.to}><span>{sub.title}</span></Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>

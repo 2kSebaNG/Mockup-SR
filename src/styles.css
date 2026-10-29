@@ -796,3 +796,153 @@
   .period-filter .date-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .period-filter .date-presets button, .period-filter .date-presets button:first-child, .period-filter .date-presets button:last-child { margin-left: 0; border-radius: 6px; }
 }
+
+/* People and access: employees, roles and permissions, on the requests pages' cards, tables and badges. */
+.access-heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; }
+.access-heading > div { min-width: 0; flex: 1 1 420px; }
+.access-heading > a, .access-heading > button { margin-top: 6px; }
+.access-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 16px; color: var(--muted-foreground); font-size: 14px; font-weight: 600; }
+.access-back:hover { color: var(--foreground); }
+.access-back svg { width: 16px; height: 16px; }
+.access-narrow { max-width: 880px; }
+.access-filters { grid-template-columns: minmax(220px, 2fr) repeat(2, minmax(170px, 1fr)) auto; }
+.roles-filters { grid-template-columns: minmax(220px, 420px) 1fr; }
+.roles-matrix-link { justify-self: end; height: 40px; }
+.access-card { min-width: 0; padding: 20px 22px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; }
+.access-card-title { margin: 0 0 14px; font: 700 20px var(--font-display); }
+.access-subtitle { margin: 18px 0 8px; color: var(--muted-foreground); font: 600 13px var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; }
+.access-alert { display: flex; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 6px; border-left: 3px solid var(--destructive); background: color-mix(in oklab, var(--destructive) 9%, transparent); color: var(--foreground); font-size: 14px; line-height: 1.45; }
+.access-alert svg { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; color: var(--destructive); }
+.access-warning { display: flex; gap: 10px; margin: 16px 0 0; padding: 12px 14px; border-radius: 6px; background: color-mix(in oklab, var(--status-review) 24%, transparent); font-size: 14px; line-height: 1.45; }
+.access-warning svg { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; color: var(--status-review-text); }
+.access-note { margin: 0 0 20px; }
+.access-demo-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; color: var(--link); font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.access-demo-link svg { width: 15px; height: 15px; }
+.access-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 520px; margin: 24px auto; padding: 40px 28px; text-align: center; background: var(--card); border: 1px solid var(--border); border-radius: 6px; }
+.access-empty > svg { width: 36px; height: 36px; color: var(--muted-foreground); }
+.access-empty h2 { margin: 0; font: 700 24px var(--font-display); }
+.access-empty p { margin: 0 0 6px; color: var(--muted-foreground); line-height: 1.5; }
+.person-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.person-link { color: var(--link); font-weight: 600; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; }
+.person-link:hover { text-decoration-color: currentColor; }
+.person-meta { color: var(--muted-foreground); font-size: 12px; white-space: nowrap; }
+.email-cell { color: var(--muted-foreground); }
+.role-chips, .role-links { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.role-chip { display: inline-flex; align-items: center; padding: 2px 9px; border: 1px solid var(--border); border-radius: 4px; background: var(--secondary); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.role-chip.link { color: var(--link); }
+.role-chip.link:hover { border-color: var(--link); }
+.system-badge { padding: 1px 7px; border-radius: 999px; background: var(--foreground); color: var(--background); font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+.role-description { max-width: 360px; color: var(--muted-foreground); }
+.numeric-head, .numeric-cell { text-align: right; }
+.numeric-cell { font-variant-numeric: tabular-nums; }
+.numeric-cell .person-meta { display: block; }
+.count-link { color: var(--link); font-weight: 600; }
+.field-optional { color: var(--muted-foreground); font-weight: 400; }
+
+/* Forms: invite / edit an employee, a role and its permissions. */
+.access-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.access-rut { max-width: 260px; }
+.access-form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+.role-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.role-option, .permission-option { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+.role-option:hover, .permission-option:not(.locked):hover { border-color: color-mix(in oklab, var(--foreground) 30%, var(--border)); }
+.role-option:has([data-state=checked]), .permission-option:has([data-state=checked]) { border-color: var(--primary); background: color-mix(in oklab, var(--primary) 5%, transparent); }
+.role-option > span, .permission-option > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 14px; }
+.role-option > span > span, .permission-option > span > span { color: var(--muted-foreground); font-size: 13px; line-height: 1.4; }
+.role-option button, .permission-option button { margin-top: 2px; }
+.role-option.locked, .permission-option.locked { cursor: default; opacity: 0.75; }
+.permission-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.permission-count { color: var(--muted-foreground); font-size: 14px; }
+.permission-groups { display: flex; flex-direction: column; gap: 18px; margin-top: 14px; }
+.permission-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; margin: 0; padding: 0; border: 0; }
+.permission-group-title { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; padding: 0; font: 600 14px var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; }
+.permission-all { color: var(--link); font: 600 13px var(--font-sans); text-transform: none; letter-spacing: 0; background: none; border: 0; padding: 0; cursor: pointer; }
+.permission-option > span { flex: 1; }
+.permission-code { flex-shrink: 0; padding: 1px 6px; border-radius: 4px; background: var(--secondary); color: var(--muted-foreground); font-size: 11px; }
+.permission-locked { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
+.permission-locked svg { width: 12px; height: 12px; }
+.access-dialog { max-width: 720px; }
+.confirm-fields { gap: 16px; }
+
+/* Employee detail. */
+.employee-header { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; }
+.employee-avatar { display: grid; place-items: center; flex-shrink: 0; width: 64px; height: 64px; border-radius: 8px; background: var(--primary); color: var(--primary-foreground); font: 700 26px var(--font-display); }
+.employee-title { min-width: 0; }
+.employee-title .eyebrow { margin-bottom: 4px; }
+.employee-title .page-heading { margin-bottom: 6px; overflow-wrap: anywhere; }
+.employee-subtitle { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 0; color: var(--muted-foreground); }
+.employee-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+.detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.detail-list { display: grid; gap: 12px; margin: 0; }
+.detail-item { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; font-size: 14px; }
+.detail-item dt { color: var(--muted-foreground); }
+.detail-item dd { margin: 0; overflow-wrap: anywhere; }
+.permission-summary { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.permission-summary strong { margin-right: 8px; }
+.role-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; gap: 18px; }
+.role-members { position: sticky; top: 84px; }
+.role-members ul { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.role-members li { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; }
+
+/* Permission matrix: the catalog against every role. */
+.permission-matrix th.matrix-role, .permission-matrix td.matrix-cell { text-align: center; }
+.permission-matrix th.matrix-role { min-width: 112px; white-space: normal; line-height: 1.15; }
+.permission-matrix th.matrix-role a { text-transform: none; font-family: var(--font-sans); font-size: 14px; }
+.permission-matrix td.matrix-permission { min-width: 260px; }
+.permission-matrix td.matrix-permission strong { display: block; }
+.permission-matrix td.matrix-permission span { color: var(--muted-foreground); font-size: 13px; }
+.matrix-group td { padding: 10px 18px !important; background: color-mix(in oklab, var(--secondary) 55%, transparent); font: 600 13px var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; }
+.matrix-yes { width: 18px; height: 18px; margin: auto; color: var(--status-completed-text); }
+.matrix-no { width: 16px; height: 16px; margin: auto; color: var(--muted-foreground); opacity: 0.45; }
+
+@media (max-width: 1100px) {
+  .access-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .roles-filters { grid-template-columns: 1fr auto; }
+  .roles-filters .filter-search { grid-column: auto; }
+  .role-layout { grid-template-columns: 1fr; }
+  .role-members { position: static; }
+}
+@media (max-width: 860px) { .detail-grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+  .access-form-row { grid-template-columns: 1fr; }
+  .access-rut { max-width: none; }
+  .detail-item { grid-template-columns: 1fr; gap: 2px; }
+  .employee-avatar { width: 48px; height: 48px; font-size: 20px; }
+  .employee-actions > * { flex: 1 1 auto; }
+  .roles-filters { grid-template-columns: 1fr; }
+  .roles-matrix-link { justify-self: stretch; }
+  .access-card { padding: 16px; }
+}
+
+/* Sign-in pages (shadcn login-02): the form column and the brand visual. */
+.auth-brand-mark { font: 800 16px var(--font-display); }
+.auth-brand-name { font: 700 18px var(--font-display); letter-spacing: 0.02em; }
+.auth-title { margin: 0; font: 700 32px/1.1 var(--font-display); }
+.auth-visual { overflow: hidden; background: var(--sidebar); color: var(--sidebar-foreground); }
+.auth-visual-grid { position: absolute; inset: 0; background-image: linear-gradient(color-mix(in oklab, var(--sidebar-foreground) 7%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--sidebar-foreground) 7%, transparent) 1px, transparent 1px); background-size: 48px 48px; mask-image: radial-gradient(circle at 70% 30%, black, transparent 75%); }
+.auth-visual::after { content: ""; position: absolute; right: -18%; bottom: -30%; width: 70%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, color-mix(in oklab, var(--primary) 45%, transparent), transparent 70%); }
+.auth-visual-copy { position: absolute; left: 12%; right: 14%; bottom: 14%; z-index: 1; display: flex; flex-direction: column; gap: 12px; }
+.auth-visual-mark { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: 12px; border-radius: 4px; background: var(--primary); color: var(--primary-foreground); font: 800 36px var(--font-display); }
+.auth-visual-eyebrow { margin: 0; color: var(--primary); font: 700 14px var(--font-display); letter-spacing: 0.08em; }
+.auth-visual-title { margin: 0; font: 700 44px/1.05 var(--font-display); }
+.auth-visual-text { max-width: 460px; margin: 0; color: color-mix(in oklab, var(--sidebar-foreground) 72%, transparent); font-size: 17px; line-height: 1.5; }
+.auth-demo-hint { margin: 0; padding: 10px 12px; border-radius: 6px; background: var(--secondary); color: var(--muted-foreground); font-size: 12.5px; line-height: 1.5; }
+.auth-demo-hint strong { color: var(--foreground); word-break: break-all; }
+.auth-back { display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted-foreground); font-size: 14px; }
+.auth-back:hover { color: var(--foreground); }
+.auth-back svg { width: 15px; height: 15px; }
+.auth-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: color-mix(in oklab, var(--status-completed) 40%, transparent); color: var(--status-completed-text); }
+.auth-icon.warning { background: color-mix(in oklab, var(--status-review) 40%, transparent); color: var(--status-review-text); }
+.auth-icon svg { width: 22px; height: 22px; }
+.auth-terms { align-items: flex-start; }
+.auth-terms label { line-height: 1.45; }
+.password-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 10px; margin: 2px 0 0; padding: 0; list-style: none; color: var(--muted-foreground); font-size: 12.5px; }
+.password-rules li { display: flex; align-items: center; gap: 5px; }
+.password-rules svg { flex-shrink: 0; width: 13px; height: 13px; }
+.password-rules li.met { color: var(--status-completed-text); }
+.microsoft-dialog { max-width: 420px; }
+.microsoft-accounts { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.microsoft-account { width: 100%; justify-content: flex-start; height: 44px; }
+.legal-page { display: flex; flex-direction: column; gap: 14px; font-size: 15px; line-height: 1.6; }
+.legal-page p { margin: 0; }
+.legal-version { color: var(--muted-foreground); font-size: 13px; }
