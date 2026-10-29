@@ -104,7 +104,8 @@ function EmployeesPage() {
         {filtered && <Button variant="ghost" className="filter-clear" onClick={() => { setTerm(""); setSearch({ buscar: undefined, estado: undefined, rol: undefined }); }}><X />Limpiar filtros</Button>}
       </section>
 
-      <section className="requests-table-card" aria-label="Listado de empleados">
+      <section className="requests-table-card access-list" aria-label="Listado de empleados">
+        <div className="access-table-wrap">
         <Table className="requests-table access-table">
           <TableHeader>
             <TableRow>
@@ -137,6 +138,27 @@ function EmployeesPage() {
             ))}
           </TableBody>
         </Table>
+        </div>
+        {/* On phones each employee is a card: the table would hide the status and actions off to the side. */}
+        <ul className="access-cards" aria-label="Empleados">
+          {page.items.length === 0 && <li className="requests-empty">{filtered ? "No hay empleados que coincidan con la búsqueda o los filtros." : "Todavía no hay empleados. Invita al primero."}</li>}
+          {page.items.map(employee => (
+            <li key={employee.id}>
+              <div className="access-card-row">
+                <span className="person-cell">
+                  <Link to="/empleados/$id" params={{ id: employee.id }} className="person-link">{fullName(employee)}</Link>
+                  <span className="person-meta">{employee.email}</span>
+                </span>
+                <EmployeeStatusBadge status={employeeStatus(employee)} />
+              </div>
+              <span className="role-chips">{employee.roleIds.map(id => findRole(state, id)).filter(Boolean).map(role => <span key={role!.id} className="role-chip">{roleLabel(role!)}</span>)}</span>
+              <div className="access-card-row">
+                <span className="person-meta">{formatRut(employee.rut)} · Registro {formatDateTime(employee.createdAt)}</span>
+                <EmployeeRowActions state={state} actor={actor} employee={employee} onAction={actions.start} />
+              </div>
+            </li>
+          ))}
+        </ul>
         <AccessPagination page={page.page} pageSize={page.pageSize} totalCount={page.totalCount}
           onPage={next => setSearch({ pagina: next > 1 ? next : undefined }, true)} onPageSize={size => setSearch({ filas: size === 10 ? undefined : size })} />
       </section>

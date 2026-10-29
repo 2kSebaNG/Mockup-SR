@@ -927,7 +927,7 @@
 .auth-visual-title { margin: 0; font: 700 44px/1.05 var(--font-display); }
 .auth-visual-text { max-width: 460px; margin: 0; color: color-mix(in oklab, var(--sidebar-foreground) 72%, transparent); font-size: 17px; line-height: 1.5; }
 .auth-demo-hint { margin: 0; padding: 10px 12px; border-radius: 6px; background: var(--secondary); color: var(--muted-foreground); font-size: 12.5px; line-height: 1.5; }
-.auth-demo-hint strong { color: var(--foreground); word-break: break-all; }
+.auth-demo-hint strong { color: var(--foreground); overflow-wrap: anywhere; }
 .auth-back { display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted-foreground); font-size: 14px; }
 .auth-back:hover { color: var(--foreground); }
 .auth-back svg { width: 15px; height: 15px; }
@@ -986,3 +986,42 @@
 @media (max-width: 600px) {
   .access-heading-actions > * { flex: 1 1 auto; }
 }
+
+/* Responsive pass: phone cards for the people and roles tables, choice grids that never exceed their card. */
+.access-heading { margin-bottom: 27px; }
+.access-heading .page-description { margin-bottom: 0; }
+.access-cards { display: none; margin: 0; padding: 0; list-style: none; }
+.access-cards > li { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.access-cards > li.requests-empty { display: block; }
+.access-card-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.access-card-row > .person-cell, .access-card-row > .person-meta { min-width: 0; }
+.access-cards .person-meta { white-space: normal; overflow-wrap: anywhere; }
+.access-cards .row-actions { flex-shrink: 0; }
+.role-options { grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); }
+.permission-group { grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); }
+.inline-role .permission-group { grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); }
+@media (max-width: 600px) {
+  .employee-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .employee-actions > *, .employee-actions button { width: 100%; min-width: 0; }
+  .employee-actions button { height: auto; min-height: 36px; padding-block: 7px; white-space: normal; line-height: 1.2; }
+  .access-heading-actions { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .access-heading-actions button { width: 100%; }
+  .inline-role { padding: 14px; }
+}
+/* The header's breadcrumb gives way to the theme switch and Módulos on narrow screens. */
+.header-trail .header-breadcrumb, .header-trail nav { min-width: 0; }
+/* Cards whenever the list itself is narrow (a phone, or a tablet with the sidebar open), not only by viewport. */
+.access-list { container: access-list / inline-size; }
+@container access-list (max-width: 880px) { .access-table-wrap { display: none; } .access-cards { display: block; } }
+.header-trail nav { overflow: hidden; }
+.header-breadcrumb li { white-space: nowrap; }
+.header-crumb-parent { overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+@media (max-width: 1180px) { .header-crumb-parent { display: none; } }
+.header-trail .header-breadcrumb li:last-child { min-width: 0; }
+.header-crumb-current { display: block; overflow: hidden; text-overflow: ellipsis; }
+/* Below 420px "Módulos" keeps only its icon (the text stays as its accessible name). */
+@media (max-width: 420px) { .header-button { gap: 0; padding: 0 10px; font-size: 0; } .header-button svg { margin: 0; } }
+/* The matrix scrolls sideways on narrow screens; the permission column stays put so each row keeps its name. */
+.permission-matrix .matrix-permission { position: sticky; left: 0; z-index: 1; background: var(--card); box-shadow: 1px 0 0 var(--border); }
+.permission-matrix th.matrix-permission { background: var(--secondary); }
+@media (max-width: 600px) { .permission-matrix td.matrix-permission { min-width: 170px; max-width: 200px; } .permission-matrix th.matrix-role { min-width: 96px; } }

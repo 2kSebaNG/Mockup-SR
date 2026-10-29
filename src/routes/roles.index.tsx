@@ -62,7 +62,8 @@ function RolesPage() {
         <Button asChild variant="outline" className="roles-matrix-link"><Link to="/permisos"><ShieldCheck />Ver permisos por rol</Link></Button>
       </section>
 
-      <section className="requests-table-card" aria-label="Listado de roles">
+      <section className="requests-table-card access-list" aria-label="Listado de roles">
+        <div className="access-table-wrap">
         <Table className="requests-table access-table">
           <TableHeader>
             <TableRow>
@@ -101,6 +102,34 @@ function RolesPage() {
             })}
           </TableBody>
         </Table>
+        </div>
+        <ul className="access-cards" aria-label="Roles">
+          {visible.length === 0 && <li className="requests-empty">No hay roles con ese nombre.</li>}
+          {visible.map(role => {
+            const locks = roleLocks(state, role);
+            return (
+              <li key={role.id}>
+                <span className="person-cell">
+                  <Link to="/roles/$id" params={{ id: role.id }} className="person-link">{roleLabel(role)}</Link>
+                  <span className="person-meta">{role.description ?? "Sin descripción"}</span>
+                </span>
+                <div className="access-card-row">
+                  <span className="person-meta">{role.permissions.length} {role.permissions.length === 1 ? "permiso" : "permisos"} · <Link to="/empleados" search={{ rol: role.id }} className="count-link">{roleMembers(state, role.id).length} empleados</Link></span>
+                  <div className="row-actions">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button asChild variant="ghost" size="icon" className="row-action"><Link to="/roles/$id" params={{ id: role.id }} aria-label={`Ver ${roleLabel(role)}`}><Eye /></Link></Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Ver</TooltipContent>
+                    </Tooltip>
+                    <ActionButton label={`Editar ${role.name}`} disabled={locks.edit !== null} reason={locks.edit ?? undefined} onClick={() => setEditing(role)}><Pencil /></ActionButton>
+                    <ActionButton label={`Eliminar ${role.name}`} disabled={locks.remove !== null} reason={locks.remove ?? undefined} onClick={() => { setError(null); setDeleting(role); }}><Trash2 /></ActionButton>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
         <AccessPagination page={current} pageSize={pageSize} totalCount={roles.length} onPage={setPage} onPageSize={size => { setPageSize(size); setPage(1); }} />
       </section>
 
