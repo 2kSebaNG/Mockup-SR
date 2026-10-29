@@ -7,7 +7,7 @@ import { RequirementModal } from "@/components/requirement-modal";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { RequestContent, RequestOutcome } from "@/components/requests/request-content";
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
-import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, ViewToggle, viewSearch, withView, PaginationFooter, PersonLink, StatusBadge, formatDate, formatNumericDate, useRequestList, type ViewMode } from "@/components/requests/request-list";
+import { ActionButton, DueDateCell, SortableHead, DueWarning, RequestsToolbar, viewSearch, withView, PaginationFooter, PersonLink, StatusBadge, formatDate, formatNumericDate, useRequestList, type ViewMode } from "@/components/requests/request-list";
 import { RequestsPageSkeleton } from "@/components/requests/request-skeletons";
 import { MyRequestsDashboard } from "@/components/dashboard/my-requests-dashboard";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -71,8 +71,7 @@ function MyRequestsPage() {
           <h1 className="page-heading">Mis solicitudes</h1>
           <p className="page-description">Revisa el avance de tus solicitudes, quién las revisa y cuáles están próximas a vencer.</p>
 
-          <div className="page-toolbar"><ViewToggle view={view} onChange={setView} /></div>
-          <FiltersBar list={list} view={view} />
+          <RequestsToolbar list={list} view={view} onViewChange={setView} layout={Route.useSearch().filtros} />
 
           {view === "dashboard" ? <MyRequestsDashboard list={list} today={today} /> : <>
             <div className="requests-layout">

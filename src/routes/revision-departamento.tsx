@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs";
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
-import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, ViewToggle, viewSearch, withView, PaginationFooter, PersonLink, StatusBadge, formatDate, useRequestList, type ViewMode, type ViewSearch } from "@/components/requests/request-list";
+import { ActionButton, DueDateCell, SortableHead, DueWarning, RequestsToolbar, viewSearch, withView, PaginationFooter, PersonLink, StatusBadge, formatDate, useRequestList, type ViewMode, type ViewSearch } from "@/components/requests/request-list";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { RequestsPageSkeleton } from "@/components/requests/request-skeletons";
 import { DepartmentDashboard } from "@/components/dashboard/department-dashboard";
@@ -98,8 +98,7 @@ function DepartmentReviewPage() {
             <p className="reviewer-picker-note">Vista previa sin inicio de sesión: elige qué encargado está revisando.</p>
           </section>
 
-          <div className="page-toolbar"><ViewToggle view={view} onChange={setView} /></div>
-          <FiltersBar list={list} view={view} />
+          <RequestsToolbar list={list} view={view} onViewChange={setView} layout={Route.useSearch().filtros} />
 
           {view === "dashboard" ? <DepartmentDashboard department={reviewer.department} today={today} range={list.filters} /> : <>
             <div className="requests-layout">

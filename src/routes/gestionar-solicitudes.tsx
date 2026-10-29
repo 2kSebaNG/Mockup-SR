@@ -5,7 +5,7 @@ import { AppShell } from "@/components/app-shell";
 import { InternalChat, type ChatTarget } from "@/components/internal-chat";
 import { AdminRequestDetail } from "@/components/requests/admin-request-dialogs";
 import { PackageDialog, ParentLink } from "@/components/requests/request-package";
-import { ActionButton, DueDateCell, SortableHead, DueWarning, FiltersBar, ViewToggle, viewSearch, withView, PaginationFooter, PersonLink, StatusBadge, formatDate, useRequestList, type ViewMode } from "@/components/requests/request-list";
+import { ActionButton, DueDateCell, SortableHead, DueWarning, RequestsToolbar, viewSearch, withView, PaginationFooter, PersonLink, StatusBadge, formatDate, useRequestList, type ViewMode } from "@/components/requests/request-list";
 import { RequestsPageSkeleton } from "@/components/requests/request-skeletons";
 import { ReviewDashboard } from "@/components/dashboard/review-dashboard";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -57,8 +57,7 @@ function ManageRequestsPage() {
           <h1 className="page-heading">Revisar solicitudes</h1>
           <p className="page-description">Autoriza o rechaza las solicitudes pendientes, o delégalas al departamento que debe revisarlas.</p>
 
-          <div className="page-toolbar"><ViewToggle view={view} onChange={setView} /></div>
-          <FiltersBar list={list} view={view} />
+          <RequestsToolbar list={list} view={view} onViewChange={setView} layout={Route.useSearch().filtros} />
 
           {view === "dashboard" ? <ReviewDashboard list={list} today={today} /> : <>
             <div className="requests-layout">
