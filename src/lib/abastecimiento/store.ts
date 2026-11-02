@@ -4,7 +4,7 @@ import { seedProcurement, type ProcurementState } from "./data";
 // starts from `seedProcurement`. `request` and `mutate` wait a moment like a call would, so screens show their loading
 // and busy states; the hooks in ./hooks.ts are the only callers.
 
-const KEY = "ecosistema-x.abastecimiento.v1";
+const KEY = "ecosistema-x.abastecimiento.v2";
 export const LATENCY = 300;
 
 let state: ProcurementState | null = null;

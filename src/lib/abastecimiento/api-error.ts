@@ -124,6 +124,24 @@ const RULES: Rule[] = [
     (m) => `Ya existe una cuenta contable con el código "${m[1]}".`,
   ],
   [/a role named "(.+)" already exists/i, (m) => `Ya existe un rol llamado "${m[1]}".`],
+  // Administración (answered by the local store until the API is connected; docs/plan-abastecimiento.md)
+  [/a business unit with that name already exists/i, 'Ya existe una unidad de negocio con ese nombre.'],
+  [/an account cannot be moved inside itself/i, 'Una cuenta no puede quedar dentro de sí misma ni de sus subcuentas.'],
+  [/the parent account does not exist/i, 'La cuenta madre ya no existe. Recarga la página.'],
+  [/a rate of that tax already starts on that day/i, 'Ese impuesto ya tiene una tasa que rige desde ese día.'],
+  [/a rate cannot start before the first rate/i, 'Una tasa no puede regir antes que la primera de su impuesto.'],
+  [/the first rate of a tax keeps its date/i, 'La primera tasa mantiene su fecha: cubre los días anteriores.'],
+  [/the first rate of a tax cannot be removed/i, 'La primera tasa de un impuesto no se puede quitar.'],
+  [/percent must be between 0 and 100/i, 'El porcentaje tiene que estar entre 0 y 100, con hasta dos decimales.'],
+  [/taxId must be a valid RUT/i, 'El RUT no es válido. Revisa el dígito verificador.'],
+  [/a client with that tax ID already exists/i, 'Ya existe un cliente con ese RUT.'],
+  [/that sigla is already used by another client/i, 'Esa sigla ya la usa otro cliente.'],
+  [/sigla must be 2 to 10 letters or digits/i, 'La sigla tiene que tener de 2 a 10 letras o números.'],
+  [/a vendor with that tax ID already exists/i, 'Ya existe un proveedor con ese RUT.'],
+  [/a vendor needs at least one contact/i, 'El proveedor necesita al menos un contacto.'],
+  [/a vendor needs at least one payment account/i, 'El proveedor necesita al menos una cuenta de pago.'],
+  [/a category named "(.+)" already exists/i, (m) => `Ya existe una categoría llamada "${m[1]}".`],
+  [/that category is still used by (\d+) vendors?/i, (m) => `La usan ${m[1]} ${m[1] === '1' ? 'proveedor' : 'proveedores'}: quítala de ellos primero.`],
 
   // Scenarios and budget versions
   [

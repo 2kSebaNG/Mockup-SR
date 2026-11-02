@@ -3,6 +3,8 @@
 @import "tw-animate-css";
 /* Design system components (ds-*): built only on the tokens below. */
 @import "./components/ds/ds.css";
+/* Abastecimiento views (ab-*), on the same tokens. */
+@import "./components/abastecimiento/abastecimiento.css";
 
 @custom-variant dark (&:is(.dark *));
 
