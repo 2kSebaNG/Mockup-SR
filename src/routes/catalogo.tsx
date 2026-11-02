@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CatalogPageSkeleton } from "@/components/requests/request-skeletons";
 import { useState, type ReactNode } from "react";
 import { FolderPlus, Inbox, Layers, ListChecks, ListPlus, Loader2, Plus, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
@@ -16,6 +18,7 @@ type CatalogSearch = { ver?: string };
 export const Route = createFileRoute("/catalogo")({
   validateSearch: (search: Record<string, unknown>): CatalogSearch => (typeof search["ver"] === "string" ? { ver: search["ver"] } : {}),
   loader: () => getCatalogReview(),
+  pendingComponent: CatalogPageSkeleton,
   component: CatalogPage,
   head: () => ({ meta: [
     { title: "Catálogo | Ecosistema X" },
@@ -176,6 +179,7 @@ function CatalogPage() {
 
         <div className="catalog-layout">
           <nav className="catalog-nav" aria-label="Categorías del catálogo">
+            <ScrollArea type="auto" className="catalog-nav-scroll"><div className="catalog-nav-inner">
             <ul>
               {navItem("pendientes", <><Inbox aria-hidden="true" /><span className="catalog-nav-name">Por aprobar<small>Todas las categorías</small></span>{groups.length > 0 ? <span className="tab-badge">{groups.length}</span> : <span className="tab-count">0</span>}</>)}
             </ul>
@@ -193,6 +197,7 @@ function CatalogPage() {
               {navItem("atributos", <><ListChecks aria-hidden="true" /><span className="catalog-nav-name">Atributos compartidos<small>Usados por varias categorías</small></span><span className="tab-count">{catalog.fields.length}</span></>)}
               {navItem("nuevo-atributo", <><ListPlus aria-hidden="true" /><span className="catalog-nav-name">Nuevo atributo</span></>)}
             </ul>
+            </div></ScrollArea>
           </nav>
 
           <div className="catalog-main">

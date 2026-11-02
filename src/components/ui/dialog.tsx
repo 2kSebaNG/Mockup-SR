@@ -5,6 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Dialog = DialogPrimitive.Root;
 
@@ -90,7 +91,15 @@ const DialogDescription = React.forwardRef<
 ));
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
+/** The content of a tall dialog, scrolled with the shadcn scrollbar while the dialog frame stays put. */
+const DialogBody = ({ className, children }: { className?: string; children: React.ReactNode }) => (
+  <ScrollArea type="auto" className={cn("dialog-body", className)}>
+    <div className="dialog-body-inner">{children}</div>
+  </ScrollArea>
+);
+
 export {
+  DialogBody,
   Dialog,
   DialogPortal,
   DialogOverlay,

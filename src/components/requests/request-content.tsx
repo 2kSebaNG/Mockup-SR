@@ -3,7 +3,7 @@ import { CalendarClock, MessageSquareX, Sparkles } from "lucide-react";
 import { NoveltyTag } from "@/components/requests/classification-review";
 import { formatDate } from "@/components/requests/request-list";
 import { itemKey, type ProposalReview } from "@/lib/catalog";
-import type { MyRequest } from "@/lib/my-requests";
+import { pendingStatuses, type MyRequest } from "@/lib/my-requests";
 
 type Box = { label: string; value: string; tags?: ReactNode };
 
@@ -55,7 +55,7 @@ export function RequestOutcome({ request }: { request: MyRequest }) {
     {request.status === "Rechazado" && request.rejectionReason && (
       <section className="rejection-reason" aria-label="Razón del rechazo"><MessageSquareX aria-hidden="true" /><div><strong>Razón del rechazo</strong><p>{request.rejectionReason}</p></div></section>
     )}
-    {request.estimatedResolution && (request.status === "Enviada" || request.status === "En revisión") && (
+    {request.estimatedResolution && pendingStatuses.includes(request.status) && (
       <p className="estimate-line"><CalendarClock aria-hidden="true" />Resolución estimada: <strong>{formatDate(request.estimatedResolution)}</strong></p>
     )}
   </>;

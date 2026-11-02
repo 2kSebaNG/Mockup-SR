@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageSquare, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,9 +28,11 @@ export function InternalChat({ target, onOpenChange }: { target: ChatTarget | nu
           <SheetTitle className="chat-title">{target?.person.name}</SheetTitle>
           <SheetDescription>{target?.person.role} · {target?.relation}</SheetDescription>
         </SheetHeader>
-        <div className="chat-messages" aria-live="polite">
-          {messages.length === 0 ? <p className="chat-empty">Aún no hay mensajes en esta conversación.</p> : messages.map((message, index) => <p key={index} className="chat-bubble">{message}</p>)}
-        </div>
+        <ScrollArea type="auto" className="chat-scroll">
+          <div className="chat-messages" aria-live="polite">
+            {messages.length === 0 ? <p className="chat-empty">Aún no hay mensajes en esta conversación.</p> : messages.map((message, index) => <p key={index} className="chat-bubble">{message}</p>)}
+          </div>
+        </ScrollArea>
         <form className="chat-composer" onSubmit={event => { event.preventDefault(); send(); }}>
           <Input aria-label="Mensaje" placeholder="Escribe un mensaje" maxLength={1000} value={draft} onChange={event => setDraft(event.target.value)} />
           <Button type="submit" size="icon" aria-label="Enviar mensaje" disabled={!draft.trim()}><Send /></Button>

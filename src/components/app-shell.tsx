@@ -9,7 +9,7 @@ export function AppShell({ trail, children }: { trail: string[]; children: React
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <SiteHeader trail={trail} />
         {children}
         <QuickAccess />
