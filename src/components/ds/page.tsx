@@ -5,10 +5,11 @@ import { cn } from "@/lib/utils";
 
 /**
  * The content column of a page inside `AppShell`: centered, at most --page-max wide (wider on big screens), with
- * the page padding. `narrow` is for forms and single-record pages.
+ * the page padding. `narrow` is for forms and single-record pages; `full` takes the whole width beside the sidebar,
+ * for wide grids (a report by month).
  */
-export function Page({ narrow = false, className, ...props }: ComponentProps<"div"> & { narrow?: boolean }) {
-  return <div className={cn("ds-page", narrow && "ds-page--narrow", className)} {...props} />;
+export function Page({ narrow = false, full = false, className, ...props }: ComponentProps<"div"> & { narrow?: boolean; full?: boolean }) {
+  return <div className={cn("ds-page", narrow && "ds-page--narrow", full && "ds-page--full", className)} {...props} />;
 }
 
 /**

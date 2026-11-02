@@ -1,22 +1,31 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 
+import type { FileRouteTypes } from "@/routeTree.gen";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from "@/components/ui/sidebar";
 
-type NavLink = { title: string; to: "/" | "/mis-solicitudes" | "/gestionar-solicitudes" | "/revision-departamento" | "/catalogo" | "/empleados" | "/roles" | "/permisos" | "/sistema-diseno" };
+type NavLink = { title: string; to: FileRouteTypes["to"] };
 /** A sub-section inside a module (e.g. Recursos Humanos → Personas y accesos), opened like the module itself. */
 type NavSection = { title: string; items: NavLink[] };
-type NavEntry = NavLink | NavSection;
+export type NavEntry = NavLink | NavSection;
 export type NavItem = { title: string; icon: LucideIcon } & ({ to: NavLink["to"]; items?: never } | { to?: never; items: NavEntry[] });
 
 // A section stays highlighted on its inner pages (/empleados/…, /roles/…).
 const within = (pathname: string, to: string) => pathname === to || (to !== "/" && pathname.startsWith(`${to}/`));
 const isSection = (entry: NavEntry): entry is NavSection => "items" in entry;
-const links = (entries: NavEntry[]): NavLink[] => entries.flatMap(entry => (isSection(entry) ? entry.items : [entry]));
+export const navLinks = (entries: NavEntry[]): NavLink[] => entries.flatMap(entry => (isSection(entry) ? entry.items : [entry]));
+
+/** The one link the page belongs to: the longest that contains it, so /ordenes-compra/aprobacion lights only
+ * "Aprobación OC" and not also "Órdenes de compra". */
+function activeLink(items: NavItem[], pathname: string) {
+  const candidates = items.flatMap(item => (item.items ? navLinks(item.items) : [{ title: item.title, to: item.to }]));
+  return candidates.filter(link => within(pathname, link.to)).sort((a, b) => b.to.length - a.to.length)[0]?.to ?? null;
+}
 
 export function NavMain({ items }: { items: NavItem[] }) {
   const pathname = useRouterState({ select: state => state.location.pathname });
+  const active = activeLink(items, pathname);
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Plataforma</SidebarGroupLabel>
@@ -25,7 +34,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
           <Collapsible key={item.title} asChild defaultOpen className="group/collapsible">
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
-                <SidebarMenuButton tooltip={item.title} isActive={links(item.items).some(sub => within(pathname, sub.to))}>
+                <SidebarMenuButton tooltip={item.title} isActive={navLinks(item.items).some(sub => sub.to === active)}>
                   <item.icon />
                   <span>{item.title}</span>
                   <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -48,7 +57,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                           <SidebarMenuSub className="nav-section-items">
                             {entry.items.map(sub => (
                               <SidebarMenuSubItem key={sub.title}>
-                                <SidebarMenuSubButton asChild isActive={within(pathname, sub.to)}>
+                                <SidebarMenuSubButton asChild isActive={sub.to === active}>
                                   <Link to={sub.to}><span>{sub.title}</span></Link>
                                 </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
@@ -59,7 +68,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                     </Collapsible>
                   ) : (
                     <SidebarMenuSubItem key={entry.title}>
-                      <SidebarMenuSubButton asChild isActive={within(pathname, entry.to)}>
+                      <SidebarMenuSubButton asChild isActive={entry.to === active}>
                         <Link to={entry.to}><span>{entry.title}</span></Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>

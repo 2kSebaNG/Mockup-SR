@@ -157,7 +157,17 @@ Se agrega en la fase 0, con su ejemplo en `/sistema-diseno` y su fila en la guí
 
 Cada fase va en su propia rama `feature/abastecimiento-<fase>` y su PR, y deja la app funcionando. Antes de cerrarla se revisa cada vista a 320, 390, 768, 1024 y 1280 px, en claro y en oscuro, y se corren tsc, lint, Vitest y build.
 
-### Fase 0: base (sin vistas finales)
+### Fase 0: base (sin vistas finales) — hecha
+
+Lo que quedó, para quien siga con la fase 1:
+- **Navegación:** `src/lib/abastecimiento/navigation.ts` declara cada vista una vez (título, ruta, permiso, descripción, fase y origen). De ahí salen la sidebar, el breadcrumb (`procurementTrail`) y la página «en construcción» (`components/abastecimiento/view-in-progress.tsx`) de cada ruta. Una vista nueva reemplaza el `component` de su archivo en `src/routes/abastecimiento.*.tsx`. `/abastecimiento` lleva al Reporte y «Usuarios y roles» a `/empleados`. El módulo no aparece cuando la persona solo tendría ese acceso.
+- **Permisos:** los códigos de budget-control-api están en el catálogo de `lib/access.ts`, sin `users:manage`. Hay dos roles de ejemplo nuevos, «Abastecimiento» (Daniela Vera, `dvera@aecon.cl`) y «Aprobador de OC» (Tomás Bravo, `tbravo@aecon.cl`). El store de accesos pasó a `ecosistema-x.access.v3` para tomar el seed nuevo.
+- **Datos:** `api/schema.d.ts` es copia del origen en `4f7f32d`. `data.ts` tiene el seed y las lecturas de los catálogos: unidades, cuentas, impuestos, empresa, clientes, negocios, proyectos y personas. `store.ts` los guarda en localStorage (`ecosistema-x.abastecimiento.v1`) y `hooks.ts` expone `useBusinessUnits`, `useChartAccounts`, `useTaxRates`, `useCurrentTaxRates`, `useCompany`, `useClients`, `useDeals`, `useProjects`, `useProjectItems` y `usePeople`, con las mismas claves de consulta del origen. Las escrituras (`mutate`) se agregan con las vistas que las usan.
+- **Lógica pura:** los 55 módulos puros de `lib/` del origen están en `src/lib/abastecimiento/` y sus pruebas en `src/test/abastecimiento/` (55 archivos y 690 pruebas, de Jest a Vitest; más las pruebas del seed en `data.test.ts`). Para compilar con las reglas de este repo (índices posiblemente indefinidos, propiedades opcionales exactas) se agregaron aserciones `!` y `| undefined`, sin cambiar el comportamiento.
+- **Sistema de diseño:** `Page full`, `PageTabs`, `SegmentedFilter`, `Stepper`, `MasterDetail`, `Combobox`, `MoneyInput`, `RutInput` y `DataListSkeleton`, con su ejemplo en `/sistema-diseno` (sección «Flujos y selección»). `RutInput` usa `formatRut` y `normalizeRut` de `lib/access.ts`, donde siguen.
+- **Pendiente:** el botón «Módulos» del header todavía no abre ningún menú; cuando lo tenga, se suma Abastecimiento.
+
+Lo planificado era:
 
 1. Agregar la sección Abastecimiento a `app-sidebar.tsx` con la estructura de §2. Cada ruta tiene un placeholder que dice «En construcción», y `NavMain` se ajusta para la coincidencia más larga.
 2. Sumar los permisos de budget-control al catálogo de `lib/access.ts`, en los módulos de `permission-catalog.ts` (Órdenes de compra, Caja chica, Plan, Remuneraciones, Presupuesto/escenarios/negocios, Administración). También asignarlos en los roles de ejemplo, por ejemplo un rol «Abastecimiento» y otro «Aprobador OC».

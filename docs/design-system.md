@@ -117,6 +117,15 @@ Todos se importan desde `@/components/ds`. Los ejemplos vivos y su código está
 | `ChoiceGrid` / `ChoiceCard` | Casillas como tarjetas (roles, permisos); `locked` mantiene el valor |
 | `FormRow` / `FormActions` / `Optional` | Campos lado a lado, botones al final (`sticky` en modales largos) y «(opcional)» |
 | `Stat` / `StatRow` | Cifra suelta con su tono |
+| `Page full` | Página a todo el ancho junto al sidebar, para grillas por mes |
+| `PageTabs` / `PageTab` | Pestañas entre las páginas de un registro; cada una es un enlace (`asChild` con `Link`) |
+| `SegmentedFilter` | Una opción entre pocas, con el conteo de cada una: el filtro de estado sobre una lista |
+| `Stepper` / `stepOf` | En qué etapa va un registro; `failed` marca dónde se detuvo |
+| `MasterDetail` | Una cola y el detalle de lo elegido, lado a lado; angosto, uno a la vez con «Volver a la lista» |
+| `Combobox` | Elegir entre muchos con búsqueda (también por el `hint`: código, RUT) |
+| `MoneyInput` / `formatMoney` | Monto en pesos con separador de miles; entrega un número o null |
+| `RutInput` / `rutProblem` | RUT con dígito verificador; se formatea al salir del campo |
+| `DataListSkeleton` | Una lista mientras carga, con la forma de `DataList` |
 
 Para lo que no está aquí se usan las primitivas de shadcn, en `components/ui`:
 

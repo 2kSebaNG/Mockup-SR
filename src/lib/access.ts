@@ -21,6 +21,50 @@ export const permissionCatalog = [
   { key: "system", name: "Sistema", permissions: [
     { code: "system.jobs", name: "Panel de trabajos", description: "Ver el panel de trabajos en segundo plano (Hangfire)." },
   ] },
+  // Abastecimiento: the codes of budget-control-api (lib/permission-catalog.ts of budget-control-web), kept verbatim so
+  // the roles here can be sent to that API. Its own "users:manage" is not here: people and roles are managed above.
+  { key: "purchase-orders", name: "Órdenes de compra", permissions: [
+    { code: "purchase-orders:read", name: "Ver órdenes de compra", description: "Consultar las órdenes de compra y su historial." },
+    { code: "purchase-orders:create", name: "Crear órdenes de compra", description: "Crear, editar y enviar órdenes de compra a aprobación." },
+    { code: "purchase-orders:approve", name: "Aprobar órdenes de compra", description: "Aprobar, rechazar, marcar pagadas y anular órdenes de compra." },
+  ] },
+  { key: "petty-cash", name: "Caja chica", permissions: [
+    { code: "petty-cash:read", name: "Ver rendiciones", description: "Consultar las rendiciones de caja chica." },
+    { code: "petty-cash:create", name: "Rendir caja chica", description: "Registrar gastos y cerrar la rendición." },
+    { code: "petty-cash:manage-responsible", name: "Reasignar responsables", description: "Cambiar quién es responsable de una caja chica." },
+  ] },
+  { key: "procurement-plan", name: "Plan de abastecimiento", permissions: [
+    { code: "procurement-plan:read", name: "Ver plan de abastecimiento", description: "Consultar el plan de compras de cada proyecto." },
+    { code: "procurement-plan:create", name: "Editar plan de abastecimiento", description: "Agregar ítems al plan y emitir sus órdenes." },
+  ] },
+  { key: "payroll", name: "Remuneraciones", permissions: [
+    { code: "payroll:read", name: "Ver remuneraciones", description: "Consultar las asignaciones de personal y sus costos." },
+    { code: "payroll:create", name: "Editar asignaciones", description: "Asignar personas a proyectos y darlas de baja." },
+  ] },
+  { key: "business", name: "Presupuesto, negocios y escenarios", permissions: [
+    { code: "budget:read", name: "Ver presupuesto", description: "Consultar las versiones del presupuesto de cada proyecto." },
+    { code: "budget:write", name: "Editar presupuesto", description: "Crear versiones del presupuesto e importar el IC." },
+    { code: "forecast:read", name: "Ver proyección", description: "Consultar la proyección mensual de los proyectos." },
+    { code: "forecast:create", name: "Editar proyección", description: "Escribir y repartir la proyección de un proyecto." },
+    { code: "sales:read", name: "Ver negocios", description: "Consultar negocios, proyectos y ventas." },
+    { code: "sales:create", name: "Gestionar negocios", description: "Crear y editar negocios, proyectos y ventas." },
+    { code: "scenario:read", name: "Ver escenarios", description: "Consultar los escenarios y su historial." },
+    { code: "scenario:create", name: "Crear escenarios", description: "Crear escenarios de un proyecto o del portafolio." },
+    { code: "scenario:write", name: "Ajustar escenarios", description: "Agregar y quitar ajustes de un escenario." },
+  ] },
+  { key: "procurement-admin", name: "Administración de abastecimiento", permissions: [
+    { code: "business-units:manage", name: "Unidades de negocio", description: "Crear, renombrar y desactivar unidades de negocio." },
+    { code: "chart-accounts:manage", name: "Cuentas contables", description: "Mantener el árbol de cuentas contables." },
+    { code: "company:manage", name: "Perfil de la empresa e impuestos", description: "Editar el membrete de las órdenes y las tasas del SII." },
+    { code: "vendors:read", name: "Ver proveedores", description: "Consultar el catálogo de proveedores." },
+    { code: "vendors:create", name: "Crear proveedores", description: "Registrar proveedores nuevos." },
+    { code: "vendors:write", name: "Editar proveedores", description: "Editar y desactivar proveedores." },
+    { code: "clients:create", name: "Crear clientes", description: "Registrar clientes nuevos." },
+    { code: "clients:write", name: "Editar clientes", description: "Editar y desactivar clientes." },
+    { code: "contractual-documents:read", name: "Ver documentos contractuales", description: "Consultar garantías, pólizas y permisos y sus vencimientos." },
+    { code: "contractual-documents:create", name: "Registrar documentos contractuales", description: "Agregar documentos a un contrato." },
+    { code: "contractual-documents:write", name: "Renovar documentos contractuales", description: "Editar y renovar documentos contractuales." },
+  ] },
 ] as const;
 
 export type PermissionCode = (typeof permissionCatalog)[number]["permissions"][number]["code"];
@@ -546,6 +590,13 @@ export function seedAccess(now = Date.now()): AccessState {
     { id: "role-accesos", name: "Gestor de accesos", description: "Mantiene los roles y sus permisos.", isSystem: false, permissions: ["roles.read", "roles.manage"], createdAt: at(1500) },
     { id: "role-soporte", name: "Soporte técnico", description: "Diagnóstico de correo y trabajos del sistema.", isSystem: false, permissions: ["notifications.test", "system.jobs"], createdAt: at(1200) },
     { id: "role-colaborador", name: "Colaborador", description: null, isSystem: false, permissions: ["employees.read"], createdAt: at(800) },
+    { id: "role-abastecimiento", name: "Abastecimiento", description: "Compra, rinde caja chica y planifica las compras de los proyectos.", isSystem: false, permissions: [
+      "purchase-orders:read", "purchase-orders:create", "petty-cash:read", "petty-cash:create", "procurement-plan:read", "procurement-plan:create",
+      "payroll:read", "budget:read", "forecast:read", "sales:read", "vendors:read", "vendors:create", "contractual-documents:read",
+    ], createdAt: at(700) },
+    { id: "role-aprobador-oc", name: "Aprobador de OC", description: "Decide las órdenes de compra.", isSystem: false, permissions: [
+      "purchase-orders:read", "purchase-orders:approve", "petty-cash:read", "procurement-plan:read", "budget:read", "vendors:read",
+    ], createdAt: at(650) },
   ];
   type Seed = [string, string, string, number, string[], { hoursAgo: number; state: "active" | "deactivated" | "pending" | "expired" | "bounced"; microsoft?: boolean; reason?: string }];
   const people: Seed[] = [
@@ -561,6 +612,8 @@ export function seedAccess(now = Date.now()): AccessState {
     ["Camila", "Torres", "ctorres@aecon.cl", 20123456, ["role-colaborador"], { hoursAgo: 2, state: "pending" }],
     ["Felipe", "Rivas", "frivas@aecon.cl", 19876543, ["role-colaborador"], { hoursAgo: 96, state: "expired" }],
     ["Ignacio", "Pérez", "iperez@aecon.cll", 18234567, ["role-supervisor"], { hoursAgo: 20, state: "bounced" }],
+    ["Daniela", "Vera", "dvera@aecon.cl", 17345678, ["role-abastecimiento"], { hoursAgo: 600, state: "active" }],
+    ["Tomás", "Bravo", "tbravo@aecon.cl", 15987654, ["role-aprobador-oc", "role-supervisor"], { hoursAgo: 500, state: "active" }],
   ];
   const employees = people.map(([firstName, lastName, email, rutBody, roleIds, seed], index): Employee => {
     const created = at(seed.hoursAgo);

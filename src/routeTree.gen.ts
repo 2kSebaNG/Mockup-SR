@@ -21,10 +21,29 @@ import { Route as RecuperarContrasenaRouteImport } from './routes/recuperar-cont
 import { Route as RevisionDepartamentoRouteImport } from './routes/revision-departamento'
 import { Route as SistemaDisenoRouteImport } from './routes/sistema-diseno'
 import { Route as TerminosRouteImport } from './routes/terminos'
+import { Route as AbastecimientoIndexRouteImport } from './routes/abastecimiento.index'
+import { Route as AbastecimientoCajaChicaRouteImport } from './routes/abastecimiento.caja-chica'
+import { Route as AbastecimientoEscenariosRouteImport } from './routes/abastecimiento.escenarios'
+import { Route as AbastecimientoNegociosRouteImport } from './routes/abastecimiento.negocios'
+import { Route as AbastecimientoPlanRouteImport } from './routes/abastecimiento.plan'
+import { Route as AbastecimientoProyectosRouteImport } from './routes/abastecimiento.proyectos'
+import { Route as AbastecimientoRemuneracionesRouteImport } from './routes/abastecimiento.remuneraciones'
+import { Route as AbastecimientoReporteRouteImport } from './routes/abastecimiento.reporte'
+import { Route as AbastecimientoVencimientosRouteImport } from './routes/abastecimiento.vencimientos'
+import { Route as AbastecimientoVentasRouteImport } from './routes/abastecimiento.ventas'
 import { Route as EmpleadosIndexRouteImport } from './routes/empleados.index'
 import { Route as EmpleadosIdRouteImport } from './routes/empleados.$id'
 import { Route as RolesIndexRouteImport } from './routes/roles.index'
 import { Route as RolesIdRouteImport } from './routes/roles.$id'
+import { Route as AbastecimientoAdminClientesRouteImport } from './routes/abastecimiento.admin.clientes'
+import { Route as AbastecimientoAdminCuentasRouteImport } from './routes/abastecimiento.admin.cuentas'
+import { Route as AbastecimientoAdminEmpresaRouteImport } from './routes/abastecimiento.admin.empresa'
+import { Route as AbastecimientoAdminImpuestosRouteImport } from './routes/abastecimiento.admin.impuestos'
+import { Route as AbastecimientoAdminProveedoresRouteImport } from './routes/abastecimiento.admin.proveedores'
+import { Route as AbastecimientoAdminUnidadesRouteImport } from './routes/abastecimiento.admin.unidades'
+import { Route as AbastecimientoAdminUsuariosRouteImport } from './routes/abastecimiento.admin.usuarios'
+import { Route as AbastecimientoOrdenesCompraIndexRouteImport } from './routes/abastecimiento.ordenes-compra.index'
+import { Route as AbastecimientoOrdenesCompraAprobacionRouteImport } from './routes/abastecimiento.ordenes-compra.aprobacion'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -86,6 +105,59 @@ const TerminosRoute = TerminosRouteImport.update({
   path: '/terminos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AbastecimientoIndexRoute = AbastecimientoIndexRouteImport.update({
+  id: '/abastecimiento/',
+  path: '/abastecimiento/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AbastecimientoCajaChicaRoute = AbastecimientoCajaChicaRouteImport.update({
+  id: '/abastecimiento/caja-chica',
+  path: '/abastecimiento/caja-chica',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AbastecimientoEscenariosRoute =
+  AbastecimientoEscenariosRouteImport.update({
+    id: '/abastecimiento/escenarios',
+    path: '/abastecimiento/escenarios',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AbastecimientoNegociosRoute = AbastecimientoNegociosRouteImport.update({
+  id: '/abastecimiento/negocios',
+  path: '/abastecimiento/negocios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AbastecimientoPlanRoute = AbastecimientoPlanRouteImport.update({
+  id: '/abastecimiento/plan',
+  path: '/abastecimiento/plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AbastecimientoProyectosRoute = AbastecimientoProyectosRouteImport.update({
+  id: '/abastecimiento/proyectos',
+  path: '/abastecimiento/proyectos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AbastecimientoRemuneracionesRoute =
+  AbastecimientoRemuneracionesRouteImport.update({
+    id: '/abastecimiento/remuneraciones',
+    path: '/abastecimiento/remuneraciones',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AbastecimientoReporteRoute = AbastecimientoReporteRouteImport.update({
+  id: '/abastecimiento/reporte',
+  path: '/abastecimiento/reporte',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AbastecimientoVencimientosRoute =
+  AbastecimientoVencimientosRouteImport.update({
+    id: '/abastecimiento/vencimientos',
+    path: '/abastecimiento/vencimientos',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AbastecimientoVentasRoute = AbastecimientoVentasRouteImport.update({
+  id: '/abastecimiento/ventas',
+  path: '/abastecimiento/ventas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EmpleadosIndexRoute = EmpleadosIndexRouteImport.update({
   id: '/empleados/',
   path: '/empleados/',
@@ -106,6 +178,60 @@ const RolesIdRoute = RolesIdRouteImport.update({
   path: '/roles/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AbastecimientoAdminClientesRoute =
+  AbastecimientoAdminClientesRouteImport.update({
+    id: '/abastecimiento/admin/clientes',
+    path: '/abastecimiento/admin/clientes',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AbastecimientoAdminCuentasRoute =
+  AbastecimientoAdminCuentasRouteImport.update({
+    id: '/abastecimiento/admin/cuentas',
+    path: '/abastecimiento/admin/cuentas',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AbastecimientoAdminEmpresaRoute =
+  AbastecimientoAdminEmpresaRouteImport.update({
+    id: '/abastecimiento/admin/empresa',
+    path: '/abastecimiento/admin/empresa',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AbastecimientoAdminImpuestosRoute =
+  AbastecimientoAdminImpuestosRouteImport.update({
+    id: '/abastecimiento/admin/impuestos',
+    path: '/abastecimiento/admin/impuestos',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AbastecimientoAdminProveedoresRoute =
+  AbastecimientoAdminProveedoresRouteImport.update({
+    id: '/abastecimiento/admin/proveedores',
+    path: '/abastecimiento/admin/proveedores',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AbastecimientoAdminUnidadesRoute =
+  AbastecimientoAdminUnidadesRouteImport.update({
+    id: '/abastecimiento/admin/unidades',
+    path: '/abastecimiento/admin/unidades',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AbastecimientoAdminUsuariosRoute =
+  AbastecimientoAdminUsuariosRouteImport.update({
+    id: '/abastecimiento/admin/usuarios',
+    path: '/abastecimiento/admin/usuarios',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AbastecimientoOrdenesCompraIndexRoute =
+  AbastecimientoOrdenesCompraIndexRouteImport.update({
+    id: '/abastecimiento/ordenes-compra/',
+    path: '/abastecimiento/ordenes-compra/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AbastecimientoOrdenesCompraAprobacionRoute =
+  AbastecimientoOrdenesCompraAprobacionRouteImport.update({
+    id: '/abastecimiento/ordenes-compra/aprobacion',
+    path: '/abastecimiento/ordenes-compra/aprobacion',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -120,10 +246,29 @@ export interface FileRoutesByFullPath {
   '/revision-departamento': typeof RevisionDepartamentoRoute
   '/sistema-diseno': typeof SistemaDisenoRoute
   '/terminos': typeof TerminosRoute
+  '/abastecimiento/caja-chica': typeof AbastecimientoCajaChicaRoute
+  '/abastecimiento/escenarios': typeof AbastecimientoEscenariosRoute
+  '/abastecimiento/negocios': typeof AbastecimientoNegociosRoute
+  '/abastecimiento/plan': typeof AbastecimientoPlanRoute
+  '/abastecimiento/proyectos': typeof AbastecimientoProyectosRoute
+  '/abastecimiento/remuneraciones': typeof AbastecimientoRemuneracionesRoute
+  '/abastecimiento/reporte': typeof AbastecimientoReporteRoute
+  '/abastecimiento/vencimientos': typeof AbastecimientoVencimientosRoute
+  '/abastecimiento/ventas': typeof AbastecimientoVentasRoute
   '/empleados/$id': typeof EmpleadosIdRoute
   '/roles/$id': typeof RolesIdRoute
+  '/abastecimiento/': typeof AbastecimientoIndexRoute
   '/empleados/': typeof EmpleadosIndexRoute
   '/roles/': typeof RolesIndexRoute
+  '/abastecimiento/admin/clientes': typeof AbastecimientoAdminClientesRoute
+  '/abastecimiento/admin/cuentas': typeof AbastecimientoAdminCuentasRoute
+  '/abastecimiento/admin/empresa': typeof AbastecimientoAdminEmpresaRoute
+  '/abastecimiento/admin/impuestos': typeof AbastecimientoAdminImpuestosRoute
+  '/abastecimiento/admin/proveedores': typeof AbastecimientoAdminProveedoresRoute
+  '/abastecimiento/admin/unidades': typeof AbastecimientoAdminUnidadesRoute
+  '/abastecimiento/admin/usuarios': typeof AbastecimientoAdminUsuariosRoute
+  '/abastecimiento/ordenes-compra/aprobacion': typeof AbastecimientoOrdenesCompraAprobacionRoute
+  '/abastecimiento/ordenes-compra/': typeof AbastecimientoOrdenesCompraIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -138,10 +283,29 @@ export interface FileRoutesByTo {
   '/revision-departamento': typeof RevisionDepartamentoRoute
   '/sistema-diseno': typeof SistemaDisenoRoute
   '/terminos': typeof TerminosRoute
+  '/abastecimiento/caja-chica': typeof AbastecimientoCajaChicaRoute
+  '/abastecimiento/escenarios': typeof AbastecimientoEscenariosRoute
+  '/abastecimiento/negocios': typeof AbastecimientoNegociosRoute
+  '/abastecimiento/plan': typeof AbastecimientoPlanRoute
+  '/abastecimiento/proyectos': typeof AbastecimientoProyectosRoute
+  '/abastecimiento/remuneraciones': typeof AbastecimientoRemuneracionesRoute
+  '/abastecimiento/reporte': typeof AbastecimientoReporteRoute
+  '/abastecimiento/vencimientos': typeof AbastecimientoVencimientosRoute
+  '/abastecimiento/ventas': typeof AbastecimientoVentasRoute
   '/empleados/$id': typeof EmpleadosIdRoute
   '/roles/$id': typeof RolesIdRoute
+  '/abastecimiento': typeof AbastecimientoIndexRoute
   '/empleados': typeof EmpleadosIndexRoute
   '/roles': typeof RolesIndexRoute
+  '/abastecimiento/admin/clientes': typeof AbastecimientoAdminClientesRoute
+  '/abastecimiento/admin/cuentas': typeof AbastecimientoAdminCuentasRoute
+  '/abastecimiento/admin/empresa': typeof AbastecimientoAdminEmpresaRoute
+  '/abastecimiento/admin/impuestos': typeof AbastecimientoAdminImpuestosRoute
+  '/abastecimiento/admin/proveedores': typeof AbastecimientoAdminProveedoresRoute
+  '/abastecimiento/admin/unidades': typeof AbastecimientoAdminUnidadesRoute
+  '/abastecimiento/admin/usuarios': typeof AbastecimientoAdminUsuariosRoute
+  '/abastecimiento/ordenes-compra/aprobacion': typeof AbastecimientoOrdenesCompraAprobacionRoute
+  '/abastecimiento/ordenes-compra': typeof AbastecimientoOrdenesCompraIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -157,10 +321,29 @@ export interface FileRoutesById {
   '/revision-departamento': typeof RevisionDepartamentoRoute
   '/sistema-diseno': typeof SistemaDisenoRoute
   '/terminos': typeof TerminosRoute
+  '/abastecimiento/caja-chica': typeof AbastecimientoCajaChicaRoute
+  '/abastecimiento/escenarios': typeof AbastecimientoEscenariosRoute
+  '/abastecimiento/negocios': typeof AbastecimientoNegociosRoute
+  '/abastecimiento/plan': typeof AbastecimientoPlanRoute
+  '/abastecimiento/proyectos': typeof AbastecimientoProyectosRoute
+  '/abastecimiento/remuneraciones': typeof AbastecimientoRemuneracionesRoute
+  '/abastecimiento/reporte': typeof AbastecimientoReporteRoute
+  '/abastecimiento/vencimientos': typeof AbastecimientoVencimientosRoute
+  '/abastecimiento/ventas': typeof AbastecimientoVentasRoute
   '/empleados/$id': typeof EmpleadosIdRoute
   '/roles/$id': typeof RolesIdRoute
+  '/abastecimiento/': typeof AbastecimientoIndexRoute
   '/empleados/': typeof EmpleadosIndexRoute
   '/roles/': typeof RolesIndexRoute
+  '/abastecimiento/admin/clientes': typeof AbastecimientoAdminClientesRoute
+  '/abastecimiento/admin/cuentas': typeof AbastecimientoAdminCuentasRoute
+  '/abastecimiento/admin/empresa': typeof AbastecimientoAdminEmpresaRoute
+  '/abastecimiento/admin/impuestos': typeof AbastecimientoAdminImpuestosRoute
+  '/abastecimiento/admin/proveedores': typeof AbastecimientoAdminProveedoresRoute
+  '/abastecimiento/admin/unidades': typeof AbastecimientoAdminUnidadesRoute
+  '/abastecimiento/admin/usuarios': typeof AbastecimientoAdminUsuariosRoute
+  '/abastecimiento/ordenes-compra/aprobacion': typeof AbastecimientoOrdenesCompraAprobacionRoute
+  '/abastecimiento/ordenes-compra/': typeof AbastecimientoOrdenesCompraIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -177,10 +360,29 @@ export interface FileRouteTypes {
     | '/revision-departamento'
     | '/sistema-diseno'
     | '/terminos'
+    | '/abastecimiento/caja-chica'
+    | '/abastecimiento/escenarios'
+    | '/abastecimiento/negocios'
+    | '/abastecimiento/plan'
+    | '/abastecimiento/proyectos'
+    | '/abastecimiento/remuneraciones'
+    | '/abastecimiento/reporte'
+    | '/abastecimiento/vencimientos'
+    | '/abastecimiento/ventas'
     | '/empleados/$id'
     | '/roles/$id'
+    | '/abastecimiento/'
     | '/empleados/'
     | '/roles/'
+    | '/abastecimiento/admin/clientes'
+    | '/abastecimiento/admin/cuentas'
+    | '/abastecimiento/admin/empresa'
+    | '/abastecimiento/admin/impuestos'
+    | '/abastecimiento/admin/proveedores'
+    | '/abastecimiento/admin/unidades'
+    | '/abastecimiento/admin/usuarios'
+    | '/abastecimiento/ordenes-compra/aprobacion'
+    | '/abastecimiento/ordenes-compra/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -195,10 +397,29 @@ export interface FileRouteTypes {
     | '/revision-departamento'
     | '/sistema-diseno'
     | '/terminos'
+    | '/abastecimiento/caja-chica'
+    | '/abastecimiento/escenarios'
+    | '/abastecimiento/negocios'
+    | '/abastecimiento/plan'
+    | '/abastecimiento/proyectos'
+    | '/abastecimiento/remuneraciones'
+    | '/abastecimiento/reporte'
+    | '/abastecimiento/vencimientos'
+    | '/abastecimiento/ventas'
     | '/empleados/$id'
     | '/roles/$id'
+    | '/abastecimiento'
     | '/empleados'
     | '/roles'
+    | '/abastecimiento/admin/clientes'
+    | '/abastecimiento/admin/cuentas'
+    | '/abastecimiento/admin/empresa'
+    | '/abastecimiento/admin/impuestos'
+    | '/abastecimiento/admin/proveedores'
+    | '/abastecimiento/admin/unidades'
+    | '/abastecimiento/admin/usuarios'
+    | '/abastecimiento/ordenes-compra/aprobacion'
+    | '/abastecimiento/ordenes-compra'
   id:
     | '__root__'
     | '/'
@@ -213,10 +434,29 @@ export interface FileRouteTypes {
     | '/revision-departamento'
     | '/sistema-diseno'
     | '/terminos'
+    | '/abastecimiento/caja-chica'
+    | '/abastecimiento/escenarios'
+    | '/abastecimiento/negocios'
+    | '/abastecimiento/plan'
+    | '/abastecimiento/proyectos'
+    | '/abastecimiento/remuneraciones'
+    | '/abastecimiento/reporte'
+    | '/abastecimiento/vencimientos'
+    | '/abastecimiento/ventas'
     | '/empleados/$id'
     | '/roles/$id'
+    | '/abastecimiento/'
     | '/empleados/'
     | '/roles/'
+    | '/abastecimiento/admin/clientes'
+    | '/abastecimiento/admin/cuentas'
+    | '/abastecimiento/admin/empresa'
+    | '/abastecimiento/admin/impuestos'
+    | '/abastecimiento/admin/proveedores'
+    | '/abastecimiento/admin/unidades'
+    | '/abastecimiento/admin/usuarios'
+    | '/abastecimiento/ordenes-compra/aprobacion'
+    | '/abastecimiento/ordenes-compra/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -232,10 +472,29 @@ export interface RootRouteChildren {
   RevisionDepartamentoRoute: typeof RevisionDepartamentoRoute
   SistemaDisenoRoute: typeof SistemaDisenoRoute
   TerminosRoute: typeof TerminosRoute
+  AbastecimientoCajaChicaRoute: typeof AbastecimientoCajaChicaRoute
+  AbastecimientoEscenariosRoute: typeof AbastecimientoEscenariosRoute
+  AbastecimientoNegociosRoute: typeof AbastecimientoNegociosRoute
+  AbastecimientoPlanRoute: typeof AbastecimientoPlanRoute
+  AbastecimientoProyectosRoute: typeof AbastecimientoProyectosRoute
+  AbastecimientoRemuneracionesRoute: typeof AbastecimientoRemuneracionesRoute
+  AbastecimientoReporteRoute: typeof AbastecimientoReporteRoute
+  AbastecimientoVencimientosRoute: typeof AbastecimientoVencimientosRoute
+  AbastecimientoVentasRoute: typeof AbastecimientoVentasRoute
   EmpleadosIdRoute: typeof EmpleadosIdRoute
   RolesIdRoute: typeof RolesIdRoute
+  AbastecimientoIndexRoute: typeof AbastecimientoIndexRoute
   EmpleadosIndexRoute: typeof EmpleadosIndexRoute
   RolesIndexRoute: typeof RolesIndexRoute
+  AbastecimientoAdminClientesRoute: typeof AbastecimientoAdminClientesRoute
+  AbastecimientoAdminCuentasRoute: typeof AbastecimientoAdminCuentasRoute
+  AbastecimientoAdminEmpresaRoute: typeof AbastecimientoAdminEmpresaRoute
+  AbastecimientoAdminImpuestosRoute: typeof AbastecimientoAdminImpuestosRoute
+  AbastecimientoAdminProveedoresRoute: typeof AbastecimientoAdminProveedoresRoute
+  AbastecimientoAdminUnidadesRoute: typeof AbastecimientoAdminUnidadesRoute
+  AbastecimientoAdminUsuariosRoute: typeof AbastecimientoAdminUsuariosRoute
+  AbastecimientoOrdenesCompraAprobacionRoute: typeof AbastecimientoOrdenesCompraAprobacionRoute
+  AbastecimientoOrdenesCompraIndexRoute: typeof AbastecimientoOrdenesCompraIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -324,6 +583,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TerminosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/abastecimiento/': {
+      id: '/abastecimiento/'
+      path: '/abastecimiento'
+      fullPath: '/abastecimiento/'
+      preLoaderRoute: typeof AbastecimientoIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/caja-chica': {
+      id: '/abastecimiento/caja-chica'
+      path: '/abastecimiento/caja-chica'
+      fullPath: '/abastecimiento/caja-chica'
+      preLoaderRoute: typeof AbastecimientoCajaChicaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/escenarios': {
+      id: '/abastecimiento/escenarios'
+      path: '/abastecimiento/escenarios'
+      fullPath: '/abastecimiento/escenarios'
+      preLoaderRoute: typeof AbastecimientoEscenariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/negocios': {
+      id: '/abastecimiento/negocios'
+      path: '/abastecimiento/negocios'
+      fullPath: '/abastecimiento/negocios'
+      preLoaderRoute: typeof AbastecimientoNegociosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/plan': {
+      id: '/abastecimiento/plan'
+      path: '/abastecimiento/plan'
+      fullPath: '/abastecimiento/plan'
+      preLoaderRoute: typeof AbastecimientoPlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/proyectos': {
+      id: '/abastecimiento/proyectos'
+      path: '/abastecimiento/proyectos'
+      fullPath: '/abastecimiento/proyectos'
+      preLoaderRoute: typeof AbastecimientoProyectosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/remuneraciones': {
+      id: '/abastecimiento/remuneraciones'
+      path: '/abastecimiento/remuneraciones'
+      fullPath: '/abastecimiento/remuneraciones'
+      preLoaderRoute: typeof AbastecimientoRemuneracionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/reporte': {
+      id: '/abastecimiento/reporte'
+      path: '/abastecimiento/reporte'
+      fullPath: '/abastecimiento/reporte'
+      preLoaderRoute: typeof AbastecimientoReporteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/vencimientos': {
+      id: '/abastecimiento/vencimientos'
+      path: '/abastecimiento/vencimientos'
+      fullPath: '/abastecimiento/vencimientos'
+      preLoaderRoute: typeof AbastecimientoVencimientosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/ventas': {
+      id: '/abastecimiento/ventas'
+      path: '/abastecimiento/ventas'
+      fullPath: '/abastecimiento/ventas'
+      preLoaderRoute: typeof AbastecimientoVentasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/empleados/': {
       id: '/empleados/'
       path: '/empleados'
@@ -352,6 +681,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RolesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/abastecimiento/admin/clientes': {
+      id: '/abastecimiento/admin/clientes'
+      path: '/abastecimiento/admin/clientes'
+      fullPath: '/abastecimiento/admin/clientes'
+      preLoaderRoute: typeof AbastecimientoAdminClientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/admin/cuentas': {
+      id: '/abastecimiento/admin/cuentas'
+      path: '/abastecimiento/admin/cuentas'
+      fullPath: '/abastecimiento/admin/cuentas'
+      preLoaderRoute: typeof AbastecimientoAdminCuentasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/admin/empresa': {
+      id: '/abastecimiento/admin/empresa'
+      path: '/abastecimiento/admin/empresa'
+      fullPath: '/abastecimiento/admin/empresa'
+      preLoaderRoute: typeof AbastecimientoAdminEmpresaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/admin/impuestos': {
+      id: '/abastecimiento/admin/impuestos'
+      path: '/abastecimiento/admin/impuestos'
+      fullPath: '/abastecimiento/admin/impuestos'
+      preLoaderRoute: typeof AbastecimientoAdminImpuestosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/admin/proveedores': {
+      id: '/abastecimiento/admin/proveedores'
+      path: '/abastecimiento/admin/proveedores'
+      fullPath: '/abastecimiento/admin/proveedores'
+      preLoaderRoute: typeof AbastecimientoAdminProveedoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/admin/unidades': {
+      id: '/abastecimiento/admin/unidades'
+      path: '/abastecimiento/admin/unidades'
+      fullPath: '/abastecimiento/admin/unidades'
+      preLoaderRoute: typeof AbastecimientoAdminUnidadesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/admin/usuarios': {
+      id: '/abastecimiento/admin/usuarios'
+      path: '/abastecimiento/admin/usuarios'
+      fullPath: '/abastecimiento/admin/usuarios'
+      preLoaderRoute: typeof AbastecimientoAdminUsuariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/ordenes-compra/': {
+      id: '/abastecimiento/ordenes-compra/'
+      path: '/abastecimiento/ordenes-compra'
+      fullPath: '/abastecimiento/ordenes-compra/'
+      preLoaderRoute: typeof AbastecimientoOrdenesCompraIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abastecimiento/ordenes-compra/aprobacion': {
+      id: '/abastecimiento/ordenes-compra/aprobacion'
+      path: '/abastecimiento/ordenes-compra/aprobacion'
+      fullPath: '/abastecimiento/ordenes-compra/aprobacion'
+      preLoaderRoute: typeof AbastecimientoOrdenesCompraAprobacionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -368,10 +760,30 @@ const rootRouteChildren: RootRouteChildren = {
   RevisionDepartamentoRoute: RevisionDepartamentoRoute,
   SistemaDisenoRoute: SistemaDisenoRoute,
   TerminosRoute: TerminosRoute,
+  AbastecimientoCajaChicaRoute: AbastecimientoCajaChicaRoute,
+  AbastecimientoEscenariosRoute: AbastecimientoEscenariosRoute,
+  AbastecimientoNegociosRoute: AbastecimientoNegociosRoute,
+  AbastecimientoPlanRoute: AbastecimientoPlanRoute,
+  AbastecimientoProyectosRoute: AbastecimientoProyectosRoute,
+  AbastecimientoRemuneracionesRoute: AbastecimientoRemuneracionesRoute,
+  AbastecimientoReporteRoute: AbastecimientoReporteRoute,
+  AbastecimientoVencimientosRoute: AbastecimientoVencimientosRoute,
+  AbastecimientoVentasRoute: AbastecimientoVentasRoute,
   EmpleadosIdRoute: EmpleadosIdRoute,
   RolesIdRoute: RolesIdRoute,
+  AbastecimientoIndexRoute: AbastecimientoIndexRoute,
   EmpleadosIndexRoute: EmpleadosIndexRoute,
   RolesIndexRoute: RolesIndexRoute,
+  AbastecimientoAdminClientesRoute: AbastecimientoAdminClientesRoute,
+  AbastecimientoAdminCuentasRoute: AbastecimientoAdminCuentasRoute,
+  AbastecimientoAdminEmpresaRoute: AbastecimientoAdminEmpresaRoute,
+  AbastecimientoAdminImpuestosRoute: AbastecimientoAdminImpuestosRoute,
+  AbastecimientoAdminProveedoresRoute: AbastecimientoAdminProveedoresRoute,
+  AbastecimientoAdminUnidadesRoute: AbastecimientoAdminUnidadesRoute,
+  AbastecimientoAdminUsuariosRoute: AbastecimientoAdminUsuariosRoute,
+  AbastecimientoOrdenesCompraAprobacionRoute:
+    AbastecimientoOrdenesCompraAprobacionRoute,
+  AbastecimientoOrdenesCompraIndexRoute: AbastecimientoOrdenesCompraIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

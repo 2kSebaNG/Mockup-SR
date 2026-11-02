@@ -3,11 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Download, Eye, Inbox, Pencil, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import {
+  Combobox, DataListSkeleton, MasterDetail, MoneyInput, PageTab, PageTabs, RutInput, SegmentedFilter, Stepper, rutProblem,
   Actions, Badge, Callout, ChoiceCard, ChoiceGrid, DataList, DescriptionList, EmptyState, FilterBar, FilterField, FormActions, FormRow,
   IconAction, Optional, Page, PageHeader, Pagination, Panel, SearchInput, Stack, Stat, StatRow, Tag, Tags, paginate, type DataColumn, type Tone,
 } from "@/components/ds";
 import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,7 +20,7 @@ export const Route = createFileRoute("/sistema-diseno")({
 
 const sections = [
   ["principios", "Principios"], ["color", "Color"], ["tipografia", "Tipografía"], ["espacio", "Espacio y forma"],
-  ["pagina", "Página"], ["estado", "Estado y mensajes"], ["listados", "Listados"], ["formularios", "Formularios"], ["datos", "Datos"],
+  ["pagina", "Página"], ["estado", "Estado y mensajes"], ["listados", "Listados"], ["formularios", "Formularios"], ["flujos", "Flujos y selección"], ["datos", "Datos"],
 ] as const;
 
 /** A token as a swatch: the color, its name and what it is for. */
@@ -85,6 +86,12 @@ function DesignSystemPage() {
   const [choices, setChoices] = useState<string[]>(["ver"]);
   const filtered = samples.filter(row => row.name.toLowerCase().includes(term.toLowerCase()));
   const { current, visible } = paginate(filtered, page, pageSize);
+  const [tab, setTab] = useState("reporte");
+  const [segment, setSegment] = useState<"pendientes" | "aprobadas" | "rechazadas" | "todas">("pendientes");
+  const [picked, setPicked] = useState<string | null>(null);
+  const [project, setProject] = useState<string | null>(null);
+  const [amount, setAmount] = useState<number | null>(1250000);
+  const [rut, setRut] = useState("");
   const toggle = (key: string, on: boolean) => setChoices(list => (on ? [...list, key] : list.filter(value => value !== key)));
 
   return (
@@ -370,6 +377,98 @@ const { current, visible } = paginate(rows, page, pageSize);
                 <Button disabled>Deshabilitado</Button>
               </div>
             </Panel>
+          </Section>
+
+          <Section id="flujos" title="Flujos y selección" intro="Piezas para módulos con registros que avanzan por etapas, colas de decisión y catálogos largos (Abastecimiento las usa). Una página a todo el ancho, para grillas por mes, es Page full.">
+            <Example
+              title="PageTabs"
+              description="Pestañas entre las páginas de un mismo registro. Cada una es un enlace, así la URL dice cuál está abierta."
+              code={`
+<PageTabs label="Secciones del proyecto">
+  <PageTab asChild active><Link to="/abastecimiento/reporte/$projectId" params={{ projectId }}>Reporte</Link></PageTab>
+  <PageTab asChild><Link to="…/presupuesto" params={{ projectId }}>Presupuesto</Link></PageTab>
+</PageTabs>`}
+            >
+              <PageTabs label="Secciones del proyecto de ejemplo">
+                {[["reporte", "Reporte"], ["presupuesto", "Presupuesto"], ["plan", "Plan de abastecimiento"]].map(([key, label]) => (
+                  <PageTab key={key} href={`#${key}`} active={tab === key} onClick={event => { event.preventDefault(); setTab(key!); }}>{label}</PageTab>
+                ))}
+              </PageTabs>
+            </Example>
+            <Example
+              title="SegmentedFilter y Stepper"
+              description="El filtro de estado sobre una lista, con el conteo de cada uno; y en qué etapa va un registro. Una etapa failed marca dónde se detuvo."
+              code={`
+<SegmentedFilter label="Estado" value={status} onChange={setStatus}
+  options={[{ value: "pendientes", label: "Pendientes", count: 4 }, …]} />
+<Stepper label="Avance de la orden" steps={["Borrador", "Enviada", "Aprobada", "Pagada"]} current={1} />
+<Stepper label="Avance de la orden" steps={…} current={2} failed />`}
+            >
+              <SegmentedFilter label="Estado de las órdenes" value={segment} onChange={setSegment} options={[
+                { value: "pendientes", label: "Pendientes", count: 4 }, { value: "aprobadas", label: "Aprobadas", count: 12 },
+                { value: "rechazadas", label: "Rechazadas", count: 1 }, { value: "todas", label: "Todas", count: 17 },
+              ]} />
+              <Stepper label="Avance de una orden enviada" steps={["Borrador", "Enviada", "Aprobada", "Pagada"]} current={1} />
+              <Stepper label="Avance de una orden rechazada" steps={["Borrador", "Enviada", "Rechazada"]} current={2} failed />
+            </Example>
+            <Example
+              title="MasterDetail"
+              description="Una cola y el detalle de lo elegido, lado a lado. Cuando no cabe muestra uno a la vez, con un botón para volver a la lista."
+              code={`
+<MasterDetail label="Órdenes por aprobar" open={selected !== null} onBack={() => setSelected(null)}
+  list={<Panel flush>…</Panel>}
+  detail={selected && <Panel title={selected.code}>…</Panel>} />`}
+            >
+              <MasterDetail
+                label="Órdenes de ejemplo por aprobar"
+                open={picked !== null}
+                onBack={() => setPicked(null)}
+                list={
+                  <Panel flush>
+                    <ul className="dsg-queue">
+                      {[["OC-0412", "Ferretería Central", "$ 1.250.000"], ["OC-0415", "Arriendos del Norte", "$ 3.480.000"], ["OC-0419", "Comercial Austral", "$ 690.000"]].map(([code, vendor, total]) => (
+                        <li key={code}><button type="button" aria-pressed={picked === code} onClick={() => setPicked(code!)}><strong>{code}</strong><span className="ds-meta">{vendor}</span><span>{total}</span></button></li>
+                      ))}
+                    </ul>
+                  </Panel>
+                }
+                detail={picked
+                  ? <Panel title={picked} actions={<Badge tone="warning">Enviada</Badge>}><DescriptionList items={[{ term: "Proyecto", detail: "MLA260301 · Mantención molinos SAG" }, { term: "Cuenta", detail: "5.2 Materiales" }]} /></Panel>
+                  : <EmptyState inline title="Elige una orden">Su detalle aparece aquí.</EmptyState>}
+              />
+            </Example>
+            <Example
+              title="Combobox, MoneyInput y RutInput"
+              description="Elegir entre muchos con búsqueda (también por código o RUT), montos en pesos y RUT con dígito verificador."
+              code={`
+<Combobox id="project" options={projects.map(p => ({ value: p.id, label: p.name, hint: p.code }))}
+  value={projectId} onChange={setProjectId} placeholder="Elegir proyecto" searchPlaceholder="Nombre o código" />
+<MoneyInput id="amount" value={amount} onValueChange={setAmount} />
+<RutInput id="rut" value={rut} onValueChange={setRut} />
+<FieldError>{rutProblem(rut)}</FieldError>`}
+            >
+              <FormRow columns={3}>
+                <Field>
+                  <FieldLabel htmlFor="dsg-project">Proyecto</FieldLabel>
+                  <Combobox id="dsg-project" value={project} onChange={setProject} placeholder="Elegir proyecto" searchPlaceholder="Nombre o código" options={[
+                    { value: "prj-1", label: "Mantención molinos SAG", hint: "MLA260301" }, { value: "prj-3", label: "Fundaciones y estructura", hint: "CPA260501" },
+                    { value: "prj-5", label: "Colector principal", hint: "SDS251001" },
+                  ]} />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="dsg-amount">Monto neto</FieldLabel>
+                  <MoneyInput id="dsg-amount" value={amount} onValueChange={setAmount} />
+                </Field>
+                <Field data-invalid={Boolean(rutProblem(rut))}>
+                  <FieldLabel htmlFor="dsg-rut">RUT del proveedor</FieldLabel>
+                  <RutInput id="dsg-rut" value={rut} onValueChange={setRut} />
+                  <FieldError>{rutProblem(rut)}</FieldError>
+                </Field>
+              </FormRow>
+            </Example>
+            <Example title="DataListSkeleton" description="Una lista mientras carga, con la forma de DataList." code={`{isLoading ? <DataListSkeleton label="Proveedores" columns={5} /> : <DataList … />}`}>
+              <DataListSkeleton label="Lista de ejemplo" columns={4} rows={3} />
+            </Example>
           </Section>
 
           <Section id="datos" title="Datos" intro="Para cifras sueltas, Stat; para dashboards con gráficos, KpiRow, DashboardCard y los gráficos de components/dashboard/dashboard-ui.tsx, que siguen estos mismos tonos.">

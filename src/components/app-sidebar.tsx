@@ -1,12 +1,13 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
-import { ClipboardList, House, Palette, UsersRound } from "lucide-react";
+import { ClipboardList, House, Package, Palette, UsersRound } from "lucide-react";
 
-import { NavMain, type NavItem } from "@/components/nav-main";
+import { NavMain, navLinks as links, type NavEntry, type NavItem } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@/components/ui/sidebar";
 import { can, sessionEmployee, type PermissionCode } from "@/lib/access";
 import { useAccess } from "@/lib/access-store";
+import { procurementSections, reportView } from "@/lib/abastecimiento/navigation";
 
 const navigation: NavItem[] = [
   { title: "Inicio", to: "/", icon: House },
@@ -34,7 +35,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const signedIn = sessionEmployee(access) !== null;
   const people = accessLinks.filter(link => !signedIn || can(access, link.permission)).map(({ title, to }) => ({ title, to }));
   // Personas y accesos is a section of the Recursos Humanos module.
-  const modules: NavItem[] = people.length ? [...navigation, { title: "Recursos Humanos", icon: UsersRound, items: [{ title: "Personas y accesos", items: people }] }] : navigation;
+  const modules: NavItem[] = people.length ? [...navigation, { title: "Recursos Humanos", icon: UsersRound, items: [{ title: "Personas y accesos", items: people }] }] : [...navigation];
+  // Abastecimiento: Reporte, then its sections (Compras, Negocios, Administración); empty sections are left out.
+  const open = (permission: PermissionCode) => !signedIn || can(access, permission);
+  const procurement: NavEntry[] = [
+    ...(open(reportView.permission) ? [{ title: reportView.title, to: reportView.to }] : []),
+    ...procurementSections
+      .map(section => ({ title: section.title, items: section.views.filter(view => open(view.permission)).map(({ title, to }) => ({ title, to })) }))
+      .filter(section => section.items.length > 0),
+  ];
+  // "Usuarios y roles" only leads to Personas y accesos: it does not make the module worth showing on its own.
+  const ownViews = links(procurement).filter(link => link.to !== "/abastecimiento/admin/usuarios");
+  if (ownViews.length) modules.push({ title: "Abastecimiento", icon: Package, items: procurement });
   // The design system's live reference, last: it is for whoever builds the views.
   const items: NavItem[] = [...modules, { title: "Sistema de diseño", to: "/sistema-diseno", icon: Palette }];
   return (
