@@ -14,6 +14,7 @@ import {
   type DateField, type MyRequest, type RequestStatus, type RequestFilters, type RequestSort, type SortKey,
 } from "@/lib/my-requests";
 import type { Person } from "@/lib/organization";
+import { Badge, IconAction, Pagination, requestStatusTone } from "@/components/ds";
 
 export const statusClass: Record<RequestStatus, string> = {
   "Enviada": "status-sent",
@@ -30,7 +31,7 @@ export const formatDate = (iso: string) => dateFormat.format(new Date(`${iso}T00
 export const formatNumericDate = (iso: string) => iso.split("-").reverse().join("/");
 
 export function StatusBadge({ status }: { status: RequestStatus }) {
-  return <span className={`status-badge ${statusClass[status]}`}>{status}</span>;
+  return <Badge tone={requestStatusTone[status]}>{status}</Badge>;
 }
 
 export function DueWarning({ request, today }: { request: MyRequest; today: string }) {
@@ -53,18 +54,9 @@ export function PersonLink({ person, onOpen }: { person: Person; onOpen: () => v
   return <button type="button" className="authorizer-link" onClick={onOpen} title={`Abrir chat interno con ${person.name}`}>{person.name}</button>;
 }
 
+/** A row action of the request tables: the design system's `IconAction`; "Anular…" turns red on hover. */
 export function ActionButton({ label, onClick, disabled, children, reason }: { label: string; onClick: () => void; disabled?: boolean; children: ReactNode; reason?: string | undefined }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        {/* The wrapper keeps the tooltip reachable when the button is disabled. */}
-        <span tabIndex={disabled ? 0 : -1} className="action-wrapper">
-          <Button variant="ghost" size="icon" className="row-action" aria-label={label} disabled={disabled} onClick={onClick}>{children}</Button>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{disabled && reason ? reason : label}</TooltipContent>
-    </Tooltip>
-  );
+  return <IconAction label={label} onClick={onClick} disabled={disabled ?? false} reason={reason} danger={label.startsWith("Anular")}>{children}</IconAction>;
 }
 
 const pageSizes = [10, 25, 50];
@@ -128,23 +120,7 @@ export function DueDateCell({ request }: { request: MyRequest }) {
 
 export function PaginationFooter({ list }: { list: RequestList }) {
   const { pageData, visible, pageSize, setPageSize, setPage } = list;
-  return (
-    <footer className="pagination">
-      <div className="page-size">
-        <span id="page-size-label">Filas por página</span>
-        <Select value={String(pageSize)} onValueChange={value => { setPageSize(Number(value)); setPage(1); }}>
-          <SelectTrigger aria-labelledby="page-size-label" className="page-size-trigger"><SelectValue /></SelectTrigger>
-          <SelectContent>{pageSizes.map(size => <SelectItem key={size} value={String(size)}>{size}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
-      <span className="page-range" aria-live="polite">{visible.length ? `${pageData.start + 1}–${pageData.end} de ${visible.length}` : "0 de 0"}</span>
-      <div className="page-buttons">
-        <Button variant="outline" size="sm" onClick={() => setPage(pageData.page - 1)} disabled={pageData.page <= 1}><ChevronLeft />Anterior</Button>
-        <span className="page-number">Página {pageData.page} de {pageData.pageCount}</span>
-        <Button variant="outline" size="sm" onClick={() => setPage(pageData.page + 1)} disabled={pageData.page >= pageData.pageCount}>Siguiente<ChevronRight /></Button>
-      </div>
-    </footer>
-  );
+  return <Pagination page={pageData.page} pageSize={pageSize} totalCount={visible.length} sizes={pageSizes} onPage={setPage} onPageSize={size => { setPageSize(size); setPage(1); }} />;
 }
 
 /** A filter with several options in a popover, so the bar stays one row; the trigger says what is selected. */

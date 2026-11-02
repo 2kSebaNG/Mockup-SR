@@ -19,6 +19,7 @@ import { Route as PermisosRouteImport } from './routes/permisos'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as RecuperarContrasenaRouteImport } from './routes/recuperar-contrasena'
 import { Route as RevisionDepartamentoRouteImport } from './routes/revision-departamento'
+import { Route as SistemaDisenoRouteImport } from './routes/sistema-diseno'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as EmpleadosIndexRouteImport } from './routes/empleados.index'
 import { Route as EmpleadosIdRouteImport } from './routes/empleados.$id'
@@ -75,6 +76,11 @@ const RevisionDepartamentoRoute = RevisionDepartamentoRouteImport.update({
   path: '/revision-departamento',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SistemaDisenoRoute = SistemaDisenoRouteImport.update({
+  id: '/sistema-diseno',
+  path: '/sistema-diseno',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TerminosRoute = TerminosRouteImport.update({
   id: '/terminos',
   path: '/terminos',
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/privacidad': typeof PrivacidadRoute
   '/recuperar-contrasena': typeof RecuperarContrasenaRoute
   '/revision-departamento': typeof RevisionDepartamentoRoute
+  '/sistema-diseno': typeof SistemaDisenoRoute
   '/terminos': typeof TerminosRoute
   '/empleados/$id': typeof EmpleadosIdRoute
   '/roles/$id': typeof RolesIdRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/privacidad': typeof PrivacidadRoute
   '/recuperar-contrasena': typeof RecuperarContrasenaRoute
   '/revision-departamento': typeof RevisionDepartamentoRoute
+  '/sistema-diseno': typeof SistemaDisenoRoute
   '/terminos': typeof TerminosRoute
   '/empleados/$id': typeof EmpleadosIdRoute
   '/roles/$id': typeof RolesIdRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   '/privacidad': typeof PrivacidadRoute
   '/recuperar-contrasena': typeof RecuperarContrasenaRoute
   '/revision-departamento': typeof RevisionDepartamentoRoute
+  '/sistema-diseno': typeof SistemaDisenoRoute
   '/terminos': typeof TerminosRoute
   '/empleados/$id': typeof EmpleadosIdRoute
   '/roles/$id': typeof RolesIdRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
     | '/privacidad'
     | '/recuperar-contrasena'
     | '/revision-departamento'
+    | '/sistema-diseno'
     | '/terminos'
     | '/empleados/$id'
     | '/roles/$id'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/privacidad'
     | '/recuperar-contrasena'
     | '/revision-departamento'
+    | '/sistema-diseno'
     | '/terminos'
     | '/empleados/$id'
     | '/roles/$id'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/privacidad'
     | '/recuperar-contrasena'
     | '/revision-departamento'
+    | '/sistema-diseno'
     | '/terminos'
     | '/empleados/$id'
     | '/roles/$id'
@@ -218,6 +230,7 @@ export interface RootRouteChildren {
   PrivacidadRoute: typeof PrivacidadRoute
   RecuperarContrasenaRoute: typeof RecuperarContrasenaRoute
   RevisionDepartamentoRoute: typeof RevisionDepartamentoRoute
+  SistemaDisenoRoute: typeof SistemaDisenoRoute
   TerminosRoute: typeof TerminosRoute
   EmpleadosIdRoute: typeof EmpleadosIdRoute
   RolesIdRoute: typeof RolesIdRoute
@@ -297,6 +310,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RevisionDepartamentoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sistema-diseno': {
+      id: '/sistema-diseno'
+      path: '/sistema-diseno'
+      fullPath: '/sistema-diseno'
+      preLoaderRoute: typeof SistemaDisenoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terminos': {
       id: '/terminos'
       path: '/terminos'
@@ -346,6 +366,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadRoute: PrivacidadRoute,
   RecuperarContrasenaRoute: RecuperarContrasenaRoute,
   RevisionDepartamentoRoute: RevisionDepartamentoRoute,
+  SistemaDisenoRoute: SistemaDisenoRoute,
   TerminosRoute: TerminosRoute,
   EmpleadosIdRoute: EmpleadosIdRoute,
   RolesIdRoute: RolesIdRoute,

@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Loader2, Pencil, ShieldAlert, ShieldX, Trash2 } from "lucide-react";
+import { Loader2, Pencil, ShieldAlert, ShieldX, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AccessPage, EmployeeStatusBadge, ErrorAlert, useActor } from "@/components/access/access-ui";
 import { RoleDialog, RoleFields } from "@/components/access/role-form";
+import { BackLink, Callout, EmptyState, Page, PageHeader, Panel, Split, Stack } from "@/components/ds";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -15,12 +16,12 @@ export const Route = createFileRoute("/roles/$id")({
   head: () => ({ meta: [{ title: "Rol | Ecosistema X" }] }),
 });
 
-/** A button that, when locked, keeps a tooltip saying why. */
+/** A header button that, when locked, keeps a tooltip saying why. */
 function Locked({ reason, children }: { reason: string | null; children: ReactNode }) {
   if (!reason) return <>{children}</>;
   return (
     <Tooltip>
-      <TooltipTrigger asChild><span tabIndex={0} className="action-wrapper">{children}</span></TooltipTrigger>
+      <TooltipTrigger asChild><span tabIndex={0} className="ds-icon-action-wrap">{children}</span></TooltipTrigger>
       <TooltipContent>{reason}</TooltipContent>
     </Tooltip>
   );
@@ -38,10 +39,10 @@ function RolePage() {
 
   if (!role) {
     return (
-      <div className="my-requests">
-        <Link to="/roles" className="access-back"><ArrowLeft aria-hidden="true" />Roles</Link>
-        <div className="access-empty"><ShieldX aria-hidden="true" /><h2>El rol no existe</h2><p>Puede que lo hayan eliminado.</p><Button asChild variant="outline"><Link to="/roles">Ver roles</Link></Button></div>
-      </div>
+      <Page>
+        <BackLink to="/roles">Roles</BackLink>
+        <EmptyState icon={<ShieldX aria-hidden="true" />} title="El rol no existe" action={<Button asChild variant="outline"><Link to="/roles">Ver roles</Link></Button>}>Puede que lo hayan eliminado.</EmptyState>
+      </Page>
     );
   }
   const locks = roleLocks(state, role);
@@ -49,40 +50,38 @@ function RolePage() {
   const draft = { name: role.name, description: role.description ?? "", permissions: role.permissions };
 
   return (
-    <div className="my-requests">
-      <Link to="/roles" className="access-back"><ArrowLeft aria-hidden="true" />Roles</Link>
-      <p className="eyebrow">ROL</p>
-      <div className="access-heading">
-        <div>
-          <h1 className="page-heading">{roleLabel(role)}</h1>
-          <p className="page-description">{role.description ?? "Sin descripción."}</p>
-        </div>
-        <div className="access-heading-actions">
+    <Page>
+      <PageHeader
+        back={<BackLink to="/roles">Roles</BackLink>}
+        eyebrow="Rol"
+        title={roleLabel(role)}
+        description={role.description ?? "Sin descripción."}
+        actions={<>
           <Locked reason={locks.edit}><Button variant="outline" disabled={locks.edit !== null} onClick={() => setEditing(true)}><Pencil />Editar rol</Button></Locked>
           <Locked reason={locks.remove}><Button variant="destructive" disabled={locks.remove !== null} onClick={() => { setError(null); setDeleting(true); }}><Trash2 />Eliminar rol</Button></Locked>
-        </div>
-      </div>
-      {role.isSystem && <p className="requests-note access-note"><ShieldAlert aria-hidden="true" />El rol Administrador es del sistema: siempre tiene todos los permisos y no se puede editar ni eliminar.</p>}
-
-      <div className="role-layout">
-        <section className="access-card">
+        </>}
+      />
+      <Stack>
+      {role.isSystem && <Callout variant="note" icon={<ShieldAlert aria-hidden="true" />}>El rol Administrador es del sistema: siempre tiene todos los permisos y no se puede editar ni eliminar.</Callout>}
+      <Split>
+        <Panel>
           <RoleFields state={state} actor={actor} value={draft} onChange={() => undefined} readOnly error={null} idPrefix="role-view" />
-        </section>
-        <aside className="access-card role-members">
-          <h2 className="access-card-title">Empleados con este rol</h2>
+        </Panel>
+        <Panel as="aside" title="Empleados con este rol" className="role-members">
           {members.length === 0 ? <p className="text-sm text-muted-foreground">Nadie tiene este rol todavía.</p> : (
             <ul>
               {members.map(employee => (
                 <li key={employee.id}>
-                  <Link to="/empleados/$id" params={{ id: employee.id }} className="person-link">{fullName(employee)}</Link>
+                  <Link to="/empleados/$id" params={{ id: employee.id }} className="ds-link">{fullName(employee)}</Link>
                   <EmployeeStatusBadge status={employeeStatus(employee)} />
                 </li>
               ))}
             </ul>
           )}
           {members.length > 0 && <Link to="/empleados" search={{ rol: role.id }} className="access-demo-link">Ver en el listado de empleados</Link>}
-        </aside>
-      </div>
+        </Panel>
+      </Split>
+      </Stack>
 
       <RoleDialog state={state} actor={actor} role={role} open={editing} onOpenChange={setEditing} />
 
@@ -106,6 +105,6 @@ function RolePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </Page>
   );
 }

@@ -4,7 +4,7 @@ import { ChevronRight, type LucideIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from "@/components/ui/sidebar";
 
-type NavLink = { title: string; to: "/" | "/mis-solicitudes" | "/gestionar-solicitudes" | "/revision-departamento" | "/catalogo" | "/empleados" | "/roles" | "/permisos" };
+type NavLink = { title: string; to: "/" | "/mis-solicitudes" | "/gestionar-solicitudes" | "/revision-departamento" | "/catalogo" | "/empleados" | "/roles" | "/permisos" | "/sistema-diseno" };
 /** A sub-section inside a module (e.g. Recursos Humanos → Personas y accesos), opened like the module itself. */
 type NavSection = { title: string; items: NavLink[] };
 type NavEntry = NavLink | NavSection;

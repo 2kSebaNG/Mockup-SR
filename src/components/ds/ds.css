@@ -1,0 +1,202 @@
+/*
+ * Ecosistema X design system: the components in src/components/ds/*.tsx.
+ *
+ * Rules (docs/design-system.md):
+ * - Only tokens: colors from :root / .dark in styles.css, sizes from the --space-*, --text-*, --title-* and
+ *   --display-* scales. A literal value here means the scale lacks it: add the token, don't hardcode it.
+ * - Every class starts with ds- so it never collides with the older per-feature classes.
+ * - Tones (.ds-tone-*) set --tone (soft fill) and --tone-text (text that reads on it); components paint with those.
+ */
+
+/* ── Tones: the six soft status fills, by meaning ─────────────────────────── */
+.ds-tone-info { --tone: var(--status-sent); --tone-text: var(--status-sent-text); }
+.ds-tone-warning { --tone: var(--status-review); --tone-text: var(--status-review-text); }
+.ds-tone-progress { --tone: var(--status-managing); --tone-text: var(--status-managing-text); }
+.ds-tone-success { --tone: var(--status-completed); --tone-text: var(--status-completed-text); }
+.ds-tone-danger { --tone: var(--status-rejected); --tone-text: var(--status-rejected-text); }
+.ds-tone-neutral { --tone: var(--status-cancelled); --tone-text: var(--status-cancelled-text); }
+
+/* ── Page ─────────────────────────────────────────────────────────────────── */
+.ds-page { width: 100%; min-width: 0; box-sizing: border-box; max-width: var(--page-max); margin: 0 auto; padding: 43px var(--space-8) 120px; }
+.ds-page--narrow { max-width: 880px; }
+@media (min-width: 1450px) { .ds-page:not(.ds-page--narrow) { max-width: var(--page-wide-max); } }
+@media (max-width: 700px) { .ds-page { padding: var(--space-8) var(--space-5) 110px; } }
+
+.ds-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: var(--space-4); color: var(--muted-foreground); font-size: var(--text-md); font-weight: 600; }
+.ds-back:hover { color: var(--foreground); }
+.ds-back svg { width: 16px; height: 16px; }
+
+.ds-page-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3) var(--space-6); margin-bottom: 27px; }
+.ds-page-header-text { flex: 1 1 420px; min-width: 0; }
+.ds-page-header-actions { display: flex; flex-wrap: wrap; gap: var(--space-2) 10px; margin-top: 6px; }
+.ds-eyebrow { margin: 0 0 var(--space-2); color: var(--primary); font: 600 var(--text-sm) var(--font-display); text-transform: uppercase; }
+.ds-title { margin: 0 0 9px; font: 700 var(--display-lg)/1.1 var(--font-display); overflow-wrap: anywhere; }
+.ds-description { margin: 0; color: var(--muted-foreground); font-size: var(--text-lead); line-height: 1.45; }
+@media (max-width: 800px) { .ds-title { font-size: var(--display-md); } }
+@media (max-width: 600px) {
+  .ds-page-header-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .ds-page-header-actions > * { width: 100%; min-width: 0; white-space: normal; height: auto; min-height: 36px; }
+  .ds-page-header-actions > :only-child { grid-column: 1 / -1; }
+}
+
+/* ── Panel: the white card every block sits in ────────────────────────────── */
+.ds-panel { min-width: 0; padding: var(--space-5) 22px; background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.ds-panel--flush { padding: 0; overflow: hidden; }
+.ds-panel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: 14px; }
+.ds-panel--flush > .ds-panel-header { margin: 0; padding: var(--space-4) 18px; border-bottom: 1px solid var(--border); }
+.ds-panel-title { margin: 0; font: 700 var(--title-md) var(--font-display); }
+.ds-panel-description { margin: 2px 0 0; color: var(--muted-foreground); font-size: var(--text-sm); }
+.ds-stack { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+.ds-split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; gap: var(--space-5); }
+@media (max-width: 1100px) { .ds-split { grid-template-columns: 1fr; } }
+
+/* ── Badge (status) and Tag (labels like roles) ───────────────────────────── */
+.ds-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border: 1px solid var(--tone); border-radius: 999px; background: var(--tone); color: var(--tone-text); font-size: var(--text-xs); font-weight: 600; line-height: 1.35; white-space: nowrap; }
+.ds-badge svg { width: 12px; height: 12px; }
+.ds-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border: 1px solid var(--border); border-radius: 4px; background: var(--secondary); color: var(--secondary-foreground); font-size: var(--text-xs); font-weight: 600; white-space: nowrap; }
+a.ds-tag { color: var(--link); }
+a.ds-tag:hover { border-color: var(--link); }
+.ds-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── Callout: notes, warnings and errors inside the page ──────────────────── */
+.ds-callout { display: flex; gap: 10px; margin: 0; padding: var(--space-3) 14px; border-radius: var(--radius-lg); font-size: var(--text-md); line-height: 1.45; color: var(--foreground); }
+.ds-callout > svg { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
+.ds-callout-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ds-callout-title { font-weight: 700; }
+/* note: the graphite band with the brand border, for context the page wants read first. */
+.ds-callout--note { padding: var(--space-4) 18px; background: var(--surface); color: var(--surface-foreground); border-left: 3px solid var(--primary); border-radius: 4px; }
+.ds-callout--note > svg { color: var(--primary); }
+.ds-callout--info, .ds-callout--warning, .ds-callout--success { background: color-mix(in oklab, var(--tone) 24%, transparent); }
+.ds-callout--info > svg, .ds-callout--warning > svg, .ds-callout--success > svg { color: var(--tone-text); }
+.dark .ds-callout--info > svg, .dark .ds-callout--warning > svg, .dark .ds-callout--success > svg { color: var(--tone); }
+.ds-callout--danger { border-left: 3px solid var(--destructive); background: color-mix(in oklab, var(--destructive) 9%, transparent); }
+.ds-callout--danger > svg { color: var(--destructive); }
+/* sample: data on screen that is not real yet. */
+.ds-callout--sample { border: 1px dashed var(--due-soon); background: var(--card); }
+.ds-callout--sample > svg { color: var(--due-soon); }
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.ds-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 520px; margin: var(--space-6) auto; padding: var(--space-10) 28px; text-align: center; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.ds-empty--inline { max-width: none; margin: 0; border: 0; background: none; padding: var(--space-12) 18px; }
+.ds-empty > svg { width: 36px; height: 36px; color: var(--muted-foreground); }
+.ds-empty-title { margin: 0; font: 700 var(--title-lg) var(--font-display); }
+.ds-empty-text { margin: 0 0 6px; color: var(--muted-foreground); line-height: 1.5; }
+
+/* ── Description list: label → value pairs of a detail page ───────────────── */
+.ds-dl { display: grid; gap: var(--space-3); margin: 0; }
+.ds-dl > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: var(--space-3); font-size: var(--text-md); }
+.ds-dl dt { color: var(--muted-foreground); }
+.ds-dl dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .ds-dl > div { grid-template-columns: 1fr; gap: 2px; } }
+
+/* ── Filter bar ───────────────────────────────────────────────────────────── */
+.ds-filter-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px var(--space-4); margin-bottom: var(--space-6); padding: var(--space-4) 18px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.ds-filter-bar > .ds-field { flex: 1 1 180px; }
+.ds-filter-bar > .ds-field--grow { flex: 2 1 260px; }
+.ds-filter-bar-end { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-left: auto; }
+.ds-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.ds-field-label { padding: 0; font-size: var(--text-md); font-weight: 600; }
+.ds-search { position: relative; }
+.ds-search > svg { position: absolute; left: 12px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: var(--muted-foreground); pointer-events: none; }
+.ds-search input { height: 40px; padding-left: 36px; background: var(--card); }
+@media (max-width: 480px) { .ds-filter-bar { padding: 14px; } .ds-filter-bar > .ds-field, .ds-filter-bar-end { flex-basis: 100%; margin-left: 0; } }
+
+/* ── Data list: one column definition, a table when wide and cards when narrow ── */
+.ds-data { container: ds-data / inline-size; min-width: 0; }
+.ds-table th { height: 52px; padding: 0 18px; background: var(--secondary); color: var(--foreground); font: 600 var(--text-base) var(--font-display); text-transform: uppercase; white-space: nowrap; }
+.ds-table td { padding: 14px 18px; font-size: var(--text-md); vertical-align: middle; }
+.ds-table .ds-align-end { text-align: right; }
+.ds-table td.ds-align-end { font-variant-numeric: tabular-nums; }
+.ds-table td.ds-cell-actions { width: 1%; white-space: nowrap; }
+.ds-cards { display: none; margin: 0; padding: 0; list-style: none; }
+.ds-cards > li { display: flex; flex-direction: column; gap: 10px; padding: 14px var(--space-4); border-bottom: 1px solid var(--border); font-size: var(--text-md); }
+.ds-cards > li:last-child { border-bottom: 0; }
+.ds-card-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-weight: 600; }
+.ds-card-title > div + div { color: var(--muted-foreground); font-size: var(--text-sm); font-weight: 400; }
+.ds-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); min-width: 0; }
+.ds-card-head > .ds-card-title { flex: 1; }
+.ds-card-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(120px, 100%), 1fr)); gap: var(--space-2) var(--space-4); margin: 0; }
+.ds-card-fields dt { color: var(--muted-foreground); font-size: var(--text-xs); }
+.ds-card-fields dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.ds-card-actions { display: flex; flex-shrink: 0; justify-content: flex-end; gap: 2px; margin: -6px -8px 0 auto; }
+.ds-data-empty { padding: var(--space-12) 18px !important; color: var(--muted-foreground); text-align: center; }
+@container ds-data (max-width: 600px) { .ds-data--sm .ds-table-wrap { display: none; } .ds-data--sm .ds-cards { display: block; } }
+@container ds-data (max-width: 880px) { .ds-data--md .ds-table-wrap { display: none; } .ds-data--md .ds-cards { display: block; } }
+@container ds-data (max-width: 1100px) { .ds-data--lg .ds-table-wrap { display: none; } .ds-data--lg .ds-cards { display: block; } }
+
+/* Secondary text under a primary value in a cell or card. */
+.ds-meta { color: var(--muted-foreground); font-size: var(--text-xs); font-weight: 400; }
+.ds-link { color: var(--link); font-weight: 600; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; }
+.ds-link:hover { text-decoration-color: currentColor; }
+
+/* ── Pagination ───────────────────────────────────────────────────────────── */
+.ds-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3) var(--space-5); padding: 14px 18px; border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: var(--text-sm); }
+.ds-pagination-size, .ds-pagination-buttons { display: flex; align-items: center; gap: 10px; }
+.ds-pagination-size [role=combobox] { width: 72px; height: 32px; }
+@media (max-width: 700px) { .ds-pagination-page { display: none; } }
+
+/* ── Icon action: a row's ghost icon button with its tooltip ──────────────── */
+.ds-actions { display: flex; justify-content: flex-end; gap: 2px; }
+.ds-icon-action-wrap { display: inline-flex; border-radius: var(--radius-lg); }
+.ds-icon-action { color: var(--muted-foreground); }
+.ds-icon-action:hover { color: var(--foreground); }
+.ds-icon-action--danger:hover { color: var(--destructive); }
+
+/* ── Choice cards: checkbox or radio as a bordered card ───────────────────── */
+.ds-choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--ds-choice-min, 240px), 100%), 1fr)); gap: var(--space-2); }
+.ds-choice { display: flex; align-items: flex-start; gap: 10px; padding: var(--space-3) 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); cursor: pointer; }
+.ds-choice:not(.ds-choice--locked):hover { border-color: color-mix(in oklab, var(--foreground) 30%, var(--border)); }
+.ds-choice:has([data-state=checked]) { border-color: var(--primary); background: color-mix(in oklab, var(--primary) 5%, transparent); }
+.ds-choice > button { margin-top: 2px; }
+.ds-choice-text { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--text-md); }
+.ds-choice-text > span { color: var(--muted-foreground); font-size: var(--text-sm); line-height: 1.4; }
+.ds-choice--locked { cursor: default; opacity: 0.75; }
+
+/* ── Forms ────────────────────────────────────────────────────────────────── */
+.ds-form-row { display: grid; grid-template-columns: repeat(var(--ds-columns, 2), minmax(0, 1fr)); gap: var(--space-4); }
+@media (max-width: 600px) { .ds-form-row { grid-template-columns: 1fr; } }
+.ds-form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+.ds-optional { color: var(--muted-foreground); font-weight: 400; }
+/* Inside a scrolling dialog body the actions stick to the bottom edge. */
+.ds-form-actions--sticky { position: sticky; bottom: 0; z-index: var(--z-sticky); margin: 0 -28px -28px; padding: 14px 28px; background: var(--background); border-top: 1px solid var(--border); }
+
+/* ── Stat: a number with its label, in a tone ─────────────────────────────── */
+.ds-stat { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: var(--space-4) 18px var(--space-4) var(--space-5); overflow: hidden; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.ds-stat::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--tone, var(--border)); }
+.ds-stat-label { color: var(--muted-foreground); font-size: var(--text-md); font-weight: 600; }
+.ds-stat-value { font: 700 var(--display-sm)/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.ds-stat-hint { color: var(--muted-foreground); font-size: var(--text-sm); }
+.ds-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: var(--space-4); }
+
+/* ── Reference page only (/sistema-diseno): dsg-* ─────────────────────────── */
+.dsg-toc { position: sticky; top: 64px; z-index: 5; display: flex; gap: var(--space-1); margin: 0 0 var(--space-8); padding: var(--space-2) 0; overflow-x: auto; background: var(--background); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+.dsg-toc a { flex-shrink: 0; padding: 6px 10px; border-radius: var(--radius-lg); color: var(--muted-foreground); font-size: var(--text-md); font-weight: 600; }
+.dsg-toc a:hover { background: var(--secondary); color: var(--foreground); }
+.dsg-section { margin-bottom: var(--space-12); scroll-margin-top: 130px; }
+.dsg-section-title { margin: 0 0 6px; font: 700 var(--display-sm)/1.1 var(--font-display); }
+.dsg-section-intro { max-width: 760px; margin: 0 0 var(--space-5); color: var(--muted-foreground); font-size: var(--text-base); line-height: 1.5; }
+.dsg-text { margin: 0; color: var(--muted-foreground); font-size: var(--text-md); line-height: 1.5; }
+.dsg-principles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: var(--space-4); }
+.dsg-demo { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; padding: var(--space-5); border: 1px dashed var(--border); border-radius: var(--radius-lg); background: var(--background); }
+.dsg-frame .ds-page-header { margin-bottom: 0; }
+.dsg-code { margin: var(--space-3) 0 0; padding: var(--space-3) 14px; overflow-x: auto; border-radius: var(--radius-lg); background: var(--surface); color: var(--surface-foreground); font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.dsg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.dsg-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: var(--space-4); }
+.dsg-swatch { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; font-size: var(--text-sm); }
+.dsg-swatch-color { width: 100%; height: 56px; margin-bottom: 4px; border: 1px solid; border-radius: var(--radius-lg); }
+.dsg-swatch code, .dsg-type-row code, .dsg-spaces code, .dsg-radii code { font: 600 var(--text-xs) ui-monospace, SFMono-Regular, Menlo, monospace; }
+.dsg-swatch > span:last-child { color: var(--muted-foreground); }
+.dsg-series { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.dsg-series span { height: 40px; border-radius: var(--radius-sm); }
+.dsg-type { display: flex; flex-direction: column; }
+.dsg-type-row { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: baseline; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+.dsg-type-row:last-child { border-bottom: 0; }
+.dsg-type-row > span { margin: 0; }
+.dsg-type-md { font-size: var(--text-md); }
+.dsg-spaces { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--space-6); }
+.dsg-spaces > div { display: grid; grid-template-columns: 110px auto 1fr; align-items: center; gap: var(--space-3); }
+.dsg-spaces > div > span:nth-child(2) { height: 14px; border-radius: 2px; background: var(--primary); }
+.dsg-radii { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr)); gap: var(--space-4); }
+.dsg-radii > div { display: flex; flex-direction: column; gap: 4px; }
+.dsg-radii > div > span:first-child { width: 72px; height: 48px; border: 2px solid var(--primary); background: color-mix(in oklab, var(--primary) 8%, transparent); }
+@media (max-width: 600px) { .dsg-type-row { grid-template-columns: 1fr; gap: 4px; } .dsg-demo { padding: var(--space-3); } }

@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, CircleAlert, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { Badge, Callout, EmptyState, Page, PageHeader, Pagination, type Tone } from "@/components/ds";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PAGE_SIZES, can, permissionName, sessionEmployee, statusLabels, type AccessError, type AccessState, type Employee, type EmployeeStatus, type PermissionCode } from "@/lib/access";
 import { useAccess, useAccessReady } from "@/lib/access-store";
 
-// Employee statuses wear the request status tones: active reads as done, pending as sent, expired as waiting, deactivated as off.
-const statusTone: Record<EmployeeStatus, string> = { active: "status-completed", pending: "status-sent", expired: "status-review", deactivated: "status-cancelled" };
+// Employee statuses in the design system tones: active reads as done, pending as sent, expired as waiting, deactivated as off.
+const statusTone: Record<EmployeeStatus, Tone> = { active: "success", pending: "info", expired: "warning", deactivated: "neutral" };
 
 export function EmployeeStatusBadge({ status }: { status: EmployeeStatus }) {
-  return <span className={`status-badge ${statusTone[status]}`}>{statusLabels[status]}</span>;
+  return <Badge tone={statusTone[status]}>{statusLabels[status]}</Badge>;
 }
 
 const dateTime = new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -27,7 +27,7 @@ export const initials = (name: string) => name.split(" ").map(part => part[0]).s
 /** An API error as an alert: the fixed message, which the backend already writes for people. */
 export function ErrorAlert({ error }: { error: AccessError | null }) {
   if (!error) return null;
-  return <p role="alert" className="access-alert"><CircleAlert aria-hidden="true" />{error.message}</p>;
+  return <Callout variant="danger">{error.message}</Callout>;
 }
 
 /** Field errors arrive in `details`; the form shows each under its field. */
@@ -85,39 +85,18 @@ export function AccessPage({ trail, title, permission, children }: { trail: stri
   if (!ready || !signedIn) content = <AccessSkeleton title={title} />;
   else if (!can(state, permission)) {
     content = (
-      <div className="my-requests">
-        <h1 className="page-heading">{title}</h1>
-        <div className="access-empty">
-          <Lock aria-hidden="true" />
-          <h2>No tienes permiso para ver esta página</h2>
-          <p>Necesitas el permiso <strong>{permissionName(permission)}</strong>. Pídele a un administrador que lo agregue a uno de tus roles.</p>
-          <Button asChild variant="outline"><Link to="/">Volver al inicio</Link></Button>
-        </div>
-      </div>
+      <Page>
+        <PageHeader title={title} />
+        <EmptyState icon={<Lock aria-hidden="true" />} title="No tienes permiso para ver esta página" action={<Button asChild variant="outline"><Link to="/">Volver al inicio</Link></Button>}>
+          Necesitas el permiso <strong>{permissionName(permission)}</strong>. Pídele a un administrador que lo agregue a uno de tus roles.
+        </EmptyState>
+      </Page>
     );
   } else content = children;
   return <AppShell trail={trail}><TooltipProvider delayDuration={200}>{content}</TooltipProvider></AppShell>;
 }
 
 /** Page size 5, 10 or 25 and previous / next, as the API pages its lists. */
-export function AccessPagination({ page, pageSize, totalCount, onPage, onPageSize }: { page: number; pageSize: number; totalCount: number; onPage: (page: number) => void; onPageSize: (size: number) => void }) {
-  const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
-  const start = totalCount ? (page - 1) * pageSize + 1 : 0;
-  return (
-    <footer className="pagination">
-      <div className="page-size">
-        <span id="access-page-size">Filas por página</span>
-        <Select value={String(pageSize)} onValueChange={value => onPageSize(Number(value))}>
-          <SelectTrigger aria-labelledby="access-page-size" className="page-size-trigger"><SelectValue /></SelectTrigger>
-          <SelectContent>{PAGE_SIZES.map(size => <SelectItem key={size} value={String(size)}>{size}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
-      <span className="page-range" aria-live="polite">{totalCount ? `${start}–${Math.min(totalCount, page * pageSize)} de ${totalCount}` : "0 de 0"}</span>
-      <div className="page-buttons">
-        <Button variant="outline" size="sm" onClick={() => onPage(page - 1)} disabled={page <= 1}><ChevronLeft />Anterior</Button>
-        <span className="page-number">Página {page} de {pageCount}</span>
-        <Button variant="outline" size="sm" onClick={() => onPage(page + 1)} disabled={page >= pageCount}>Siguiente<ChevronRight /></Button>
-      </div>
-    </footer>
-  );
+export function AccessPagination(props: { page: number; pageSize: number; totalCount: number; onPage: (page: number) => void; onPageSize: (size: number) => void }) {
+  return <Pagination sizes={PAGE_SIZES} {...props} />;
 }

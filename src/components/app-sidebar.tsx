@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
-import { ClipboardList, House, UsersRound } from "lucide-react";
+import { ClipboardList, House, Palette, UsersRound } from "lucide-react";
 
 import { NavMain, type NavItem } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -34,7 +34,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const signedIn = sessionEmployee(access) !== null;
   const people = accessLinks.filter(link => !signedIn || can(access, link.permission)).map(({ title, to }) => ({ title, to }));
   // Personas y accesos is a section of the Recursos Humanos module.
-  const items: NavItem[] = people.length ? [...navigation, { title: "Recursos Humanos", icon: UsersRound, items: [{ title: "Personas y accesos", items: people }] }] : navigation;
+  const modules: NavItem[] = people.length ? [...navigation, { title: "Recursos Humanos", icon: UsersRound, items: [{ title: "Personas y accesos", items: people }] }] : navigation;
+  // The design system's live reference, last: it is for whoever builds the views.
+  const items: NavItem[] = [...modules, { title: "Sistema de diseño", to: "/sistema-diseno", icon: Palette }];
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>

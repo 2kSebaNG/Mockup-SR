@@ -1,6 +1,8 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+/* Design system components (ds-*): built only on the tokens below. */
+@import "./components/ds/ds.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -150,6 +152,33 @@
   --tooltip: oklch(0.2 0.006 260);
   --tooltip-foreground: oklch(0.98 0 0);
   --link: oklch(0.5 0.15 250);
+  /* Design system scales (docs/design-system.md). Theme-independent: only colors change with the theme. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-base: 15px;
+  --text-lead: 17px;
+  --title-sm: 18px;
+  --title-md: 20px;
+  --title-lg: 24px;
+  --display-sm: 32px;
+  --display-md: 40px;
+  --display-lg: 48px;
+  --page-max: 1280px;
+  --page-wide-max: 1330px;
+  --shadow-raised: 0 8px 20px oklch(0.2 0 0 / 8%);
+  --shadow-overlay: 0 12px 40px oklch(0.2 0 0 / 16%);
+  --z-header: 20;
+  --z-sticky: 2;
 }
 
 .dark {
